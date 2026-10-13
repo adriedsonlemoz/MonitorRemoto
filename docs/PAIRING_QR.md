@@ -1,4 +1,4 @@
-# Pareamento por QR (v0.1.0-alpha.8)
+# Pareamento por QR (v0.1.0-alpha.9)
 
 ## Uso
 
@@ -18,16 +18,22 @@ O QR guarda `monitorremoto://pair?v=1&host=IPv4_PRIVADO&port=37841&sid=ID&secret
 - A chave permanente só trafega **criptografada e autenticada** pela chave temporária, com AES-256-GCM. Somente a chave permanente é armazenada no controlador via Keystore.
 - Um atacante com acesso físico à tela do QR durante sua validade pode tentar se parear primeiro. Por isso, mostre apenas a pessoas autorizadas. O sistema não substitui proteção física do aparelho, autenticação do Android nem revisão criptográfica independente.
 - Se o pareamento falhar, gere um QR novo. Relógios de ambos devem estar razoavelmente sincronizados (janela de 2 minutos para evitar reutilização).
-- Scanner ZXing Android Embedded 4.3.0; câmera usada localmente, **não** enviada pela rede nem gravada. Projeto deve manter a declaração de câmera como hardware opcional.
+- Camera2 nativo com ZXing Core 3.5.4; câmera usada localmente, **não** enviada pela rede nem gravada. Projeto deve manter a declaração de câmera como hardware opcional.
 
 ## Estado do Play Protect
 
 A captura de notificações permanece declarada no manifesto da variante atual. Um QR Code **não resolve nem contorna** a classificação `App nocivo bloqueado`. A página do Google para desenvolvedores diferencia esse aviso de um mero alerta de aplicativo não verificado e orienta revisão de políticas/contestações. Não desative o Play Protect. Para desenvolver versão apenas de bateria sem acesso às notificações, será necessário uma variante manifest distinta e um novo teste de classificação.
 
-## Estabilidade do scanner alpha.7
+## Fluxo QR alpha.9
 
-O código usa uma `QrScanActivity` explícita no Manifest (não exportada), com permissão `CAMERA` solicitada antes de abrir a câmera, tratamento de negação e leitura só de QR. A biblioteca original já inclui um `CaptureActivity`, mas o aplicativo não depende mais das configurações de tarefa dessa Activity genérica. **Ainda faltam testes físicos.** Para identificar a causa exata de um encerramento, capturar logcat (`FATAL EXCEPTION`, `MonitorRemotoQR`, `Camera`) imediatamente após tocar em Ler QR. Sem esse registro não há comprovação de correção para todos os dispositivos.
+A tela `QrScanActivity` agora controla a câmera **nativamente com Camera2**, não usa mais a Activity `CaptureActivity` do ZXing Embedded. Permissão CAMERA é solicitada na tela de controle, e o leitor apresenta erros na própria tela, com botão Cancelar. O conteúdo do QR não é registrado em logs nem em arquivos. O decoder ZXing Core trabalha sobre frames YUV em memória.
+
+Se a câmera continuar indisponível, é possível usar **Inserir código QR manualmente** no Controle, com o URI temporário completo obtido por um leitor de QR externo. Copiar o URI para a área de transferência expõe temporariamente o segredo a outros apps que tenham acesso ao clipboard; use apenas aparelhos confiáveis e não compartilhe o código. **Faltam testes físicos.** Para identificar a causa original exata do encerramento anterior, capturar logcat (`FATAL EXCEPTION`, `MonitorRemotoQR`, `Camera`) imediatamente após tocar em Ler QR.
 
 ### Correção de build alpha.8
 
 Foi removida a duplicidade de `onRequestPermissionsResult` que impedia gerar o APK alpha.7. O scanner continua dependendo de permissão explícita e de teste em hardware; nenhum logcat foi disponibilizado para confirmar a causa do fechamento original.
+
+### Mudança de implementação alpha.9
+
+A alpha.8 ainda usava a Activity do ZXing Embedded e o encerramento foi relatado novamente. A alpha.9 removeu o componente de captura antigo e oferece Camera2 nativo, decoder ZXing Core e fallback manual. Isso é uma alteração preventiva de arquitetura, **não comprova** qual foi a exceção original nem que todos os aparelhos estarão livres de falhas.

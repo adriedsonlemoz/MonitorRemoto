@@ -18,8 +18,8 @@ android {
         applicationId = "br.dev.monitorremoto"
         minSdk = 26
         targetSdk = 36
-        versionCode = 8
-        versionName = "0.1.0-alpha.8"
+        versionCode = 9
+        versionName = "0.1.0-alpha.9"
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -47,6 +47,6 @@ android {
 }
 
 dependencies {
-    implementation("com.journeyapps:zxing-android-embedded:4.3.0")
+    implementation("com.google.zxing:core:3.5.4")
     testImplementation("junit:junit:4.13.2")
 }

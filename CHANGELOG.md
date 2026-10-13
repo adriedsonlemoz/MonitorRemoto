@@ -1,11 +1,11 @@
 # Histórico de versões
 
-## 0.1.0-alpha.8 (13/10/2026)
+## 0.1.0-alpha.9 (13/10/2026)
 
 - Correção do build GitHub Actions #7: duplicidade do override de `onRequestPermissionsResult` em `MainActivity.kt` (422 e 580) causava `Conflicting overloads`. Unificado em callback único com tratamento independente de câmera e permissão de notificações.
 - `POST_NOTIFICATIONS` mantém solicitação condicional a Android 13+ para ativar monitor; `CAMERA` permanece solicitada apenas quando o usuário abre o leitor QR.
 - Workflow não tenta criar Artifact vazio caso Gradle pare antes da geração do APK.
-- Teste estrutural regressivo exige callback único e os dois fluxos distintos; documentação sincronizada, `versionCode 8`.
+- Teste estrutural regressivo exige callback único e os dois fluxos distintos; documentação sincronizada, `versionCode 9`.
 - Mantida compatibilidade com a keystore Release gerada anteriormente (nenhuma chave nova).
 - Build Android e QR no dispositivo ainda dependem do GitHub Actions e de ensaios físicos.
 

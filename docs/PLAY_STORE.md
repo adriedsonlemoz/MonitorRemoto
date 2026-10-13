@@ -33,3 +33,7 @@ Fontes oficiais:
 ## Observação alpha.4: Google Play Protect
 
 A instalação da alpha.3 foi classificada como `App nocivo bloqueado` pelo Play Protect. Isso **não** equivale a simples aviso de aplicativo desconhecido; a origem exata não foi confirmada. Verificar permissões e comportamento da distribuição, consultar as orientações oficiais de contestação e nunca instruir usuário a desativar proteção. QR e remoção de ZIP não resolvem automaticamente essa classificação. A variante atual ainda contém `NotificationListenerService`.
+
+## Alpha.9
+
+Scanner QR usa Android Camera2 e ZXing Core offline, sem integração com serviços Google de leitura. A permissão CAMERA continua solicitada em tempo de uso, não no início. Essa modificação **não garante** que qualquer classificação prévia do Play Protect tenha sido resolvida; investigar por vias oficiais.

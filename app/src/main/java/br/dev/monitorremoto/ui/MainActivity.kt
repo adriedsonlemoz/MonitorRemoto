@@ -9,6 +9,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -38,10 +39,8 @@ import br.dev.monitorremoto.transport.RemoteClient
 import br.dev.monitorremoto.transport.PairingCode
 import br.dev.monitorremoto.transport.PairingSession
 import br.dev.monitorremoto.transport.WireProtocol
-import com.google.zxing.client.android.Intents
 import com.google.zxing.BarcodeFormat
-import com.journeyapps.barcodescanner.BarcodeEncoder
-import com.google.zxing.integration.android.IntentIntegrator
+import com.google.zxing.qrcode.QRCodeWriter
 import org.json.JSONObject
 import java.net.Inet4Address
 import java.net.NetworkInterface
@@ -61,6 +60,7 @@ class MainActivity : Activity() {
     private val handler = Handler(Looper.getMainLooper())
     private var mode = 0 // 0: monitorado, 1: controle
     private val cameraPermissionRequest = 4317
+    private val qrScanRequest = 4318
     private val notificationPermissionRequest = 101
     private var active = false
     private var fetching = false
@@ -162,7 +162,7 @@ class MainActivity : Activity() {
     private fun render() {
         content.removeAllViews()
         addText("MONITOR REMOTO", 22f, strong = true)
-        addText("v0.1.0-alpha.8  ·  Privado e criptografado", 12f, muted = true)
+        addText("v0.1.0-alpha.9  ·  Privado e criptografado", 12f, muted = true)
         gap(14)
         val tabs = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         fun addTab(title: String, which: Int) {
@@ -322,7 +322,8 @@ class MainActivity : Activity() {
             } catch (error: Exception) { message("Não foi possível salvar: ${error.message}") }
         })
         content.addView(button("Ler QR Code do outro celular", emphasis = true) { startQrScanner() })
-        addText("Aponte a câmera para o QR exibido no Monitorado. Permissão de câmera somente durante a leitura.", 12f, muted = true)
+        content.addView(button("Inserir código QR manualmente") { askQrText() })
+        addText("Câmera local nativa (Camera2). Se a câmera falhar, use o código do QR manualmente, sem necessidade de acesso a mensagens.", 12f, muted = true)
         content.addView(button("Atualizar agora") { refreshRemote(silent = false) })
         addText("Atualização automática a cada 15 segundos somente enquanto esta tela estiver aberta.", 12f, muted = true)
         gap(14)
@@ -366,7 +367,12 @@ class MainActivity : Activity() {
         val offer = PairingSession.issue()
         try {
             val code = PairingCode.encode(offer.copy(host = ip))
-            val bitmap = BarcodeEncoder().encodeBitmap(code, BarcodeFormat.QR_CODE, 600, 600)
+            val matrix = QRCodeWriter().encode(code, BarcodeFormat.QR_CODE, 600, 600)
+            val pixels = IntArray(600 * 600) { index ->
+                if (matrix[index % 600, index / 600]) Color.BLACK else Color.WHITE
+            }
+            val bitmap = Bitmap.createBitmap(600, 600, Bitmap.Config.ARGB_8888)
+            bitmap.setPixels(pixels, 0, 600, 0, 0, 600, 600)
             val panel = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 setPadding(dp(16), dp(8), dp(16), dp(8))
@@ -440,32 +446,36 @@ class MainActivity : Activity() {
 
     private fun launchQrCapture() {
         try {
-            // Activity explícita e não exportada; não herda clearTaskOnLaunch do Manifest da biblioteca.
-            val scanner = IntentIntegrator(this)
-            scanner.setCaptureActivity(QrScanActivity::class.java)
-            scanner.setDesiredBarcodeFormats(IntentIntegrator.QR_CODE)
-            scanner.setPrompt("Aponte para o QR do celular monitorado")
-            scanner.setOrientationLocked(false)
-            scanner.setBeepEnabled(false)
-            scanner.setBarcodeImageEnabled(false)
-            scanner.initiateScan()
-        } catch (e: RuntimeException) {
-            android.util.Log.e("MonitorRemotoQR", "Falha ao iniciar Activity de leitura", e)
-            message("Leitor QR indisponível: ${e.javaClass.simpleName}. Use IP/chave manual ou capture o logcat.")
+            // Activity nativa: elimina a antiga Activity de câmera da biblioteca ZXing Embedded.
+            startActivityForResult(Intent(this, QrScanActivity::class.java), qrScanRequest)
+        } catch (e: Exception) {
+            android.util.Log.e("MonitorRemotoQR", "Falha ao abrir câmera nativa", e)
+            message("Falha ao abrir leitor (${e.javaClass.simpleName}). Use código QR manual ou consulte logcat.")
         }
     }
 
-    @Deprecated("API Activity legada para compatibilidade com a Activity Android nativa")
+    @Deprecated("Compatibilidade com a Activity Android nativa")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        val scan = IntentIntegrator.parseActivityResult(requestCode, resultCode, data) ?: return
-        if (scan.contents == null) {
-            if (data?.getBooleanExtra(Intents.Scan.MISSING_CAMERA_PERMISSION, false) == true) {
-                message("Não foi possível acessar a câmera. Verifique a permissão nas Configurações.")
-            }
-            return // Scanner cancelado; a tela Controle permanece aberta.
+        if (requestCode != qrScanRequest || resultCode != Activity.RESULT_OK) return
+        val scanned = data?.getStringExtra(QrScanActivity.EXTRA_QR_RESULT) ?: return
+        confirmQrCode(scanned)
+    }
+
+    private fun askQrText() {
+        val input = field("monitorremoto://pair?...", "").apply {
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
         }
-        val text = scan.contents
+        AlertDialog.Builder(this)
+            .setTitle("Código de pareamento temporário")
+            .setMessage("Insira o conteúdo completo do QR apenas se for do seu aparelho monitorado. Não compartilhe este código.")
+            .setView(input)
+            .setNegativeButton("Cancelar", null)
+            .setPositiveButton("Validar") { _, _ -> confirmQrCode(input.text.toString().trim()) }
+            .show()
+    }
+
+    private fun confirmQrCode(text: String) {
         try {
             val code = PairingCode.decode(text)
             AlertDialog.Builder(this)

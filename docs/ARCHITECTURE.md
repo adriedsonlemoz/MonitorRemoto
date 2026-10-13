@@ -1,4 +1,4 @@
-# Arquitetura (0.1.0-alpha.8)
+# Arquitetura (0.1.0-alpha.9)
 
 ```text
 MONITORADO                                      CONTROLE
@@ -19,9 +19,9 @@ O FGS `connectedDevice` mantém o socket de escuta durante monitoramento ativo. 
 
 ## Distribuição e assinatura
 
-O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.8` e `versionCode=8`.
+O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.9` e `versionCode=9`.
 
-- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.8.apk`.
+- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.9.apk`.
 - `upload-artifact` sempre distribui um ZIP; GitHub Releases recebe o **arquivo APK direto**.
 - Com quatro Secrets, Gradle gera APK Release assinado e AAB. Sem Secrets, o arquivo é Debug de teste e não preserva necessariamente a assinatura entre execuções.
 - Releases são prévias, não substituem a futura revisão da Google Play e nem os ensaios reais.
@@ -38,3 +38,7 @@ O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é 
 ## Permissões independentes (alpha.8)
 
 `MainActivity` usa um único override de `onRequestPermissionsResult`. Os códigos `cameraPermissionRequest` e `notificationPermissionRequest` seguem separados no `when`. Concessão da câmera inicia somente a captura QR; concessão de `POST_NOTIFICATIONS` inicia apenas o serviço solicitado pelo usuário. Negação de qualquer autorização não ativa o outro caminho.
+
+## Scanner QR alpha.9
+
+`MainActivity` pede CAMERA e abre `QrScanActivity` não exportada; Camera2 entrega frames YUV na memória, `QrFrameDecoder` usa somente ZXing Core 3.5.4 e devolve o texto ao `MainActivity` para validação de `PairingCode` e confirmação do usuário. Camera2 é fechada no `onPause()`. Leitor não depende de Google Play Services nem de Activity de terceiros. Texto do QR pode ser inserido manualmente como fallback, sempre sujeito às validações anteriores.

@@ -88,3 +88,14 @@
 - [ ] Executar `:app:assembleRelease :app:bundleRelease` com os quatro Secrets de assinatura **já configurados**.
 - [ ] Validar leitura QR, recusa/concessão de permissão, orientação, retorno ao Controle e pareamento em dois aparelhos Android.
 - [ ] Confirmar que alpha.8 assinada com a **mesma** keystore consegue atualizar a alpha.7 se esta foi instalada com a assinatura Release equivalente.
+
+## alpha.9: substituir caminho de captura que continuava encerrando
+
+- [x] Remover `zxing-android-embedded` do Gradle e `CaptureActivity` do fluxo; implementar scanner Camera2 nativo independente.
+- [x] Adicionar `QrFrameDecoderTest` para luminância de QR gerado e entrada inválida (código do teste presente).
+- [x] Adicionar fallback manual do texto do QR com confirmação do destino.
+- [ ] Executar testes unitários Android pelo Gradle/CI, inclusive `QrFrameDecoderTest`.
+- [ ] Confirmar que abrir QR com permissão concedida/negada não fecha o app.
+- [ ] Testar câmera traseira, orientação, autofocus e leitura de QR entre dois aparelhos.
+- [ ] Se ainda houver encerramento, coletar logcat com `FATAL EXCEPTION` e `MonitorRemotoQR` sem compartilhar QR ou chaves.
+- [ ] Confirmar continuidade da assinatura no update da alpha.8 para alpha.9.
