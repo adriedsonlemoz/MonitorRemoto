@@ -1,5 +1,16 @@
 # Histórico de versões
 
+## 0.1.0-alpha.16 (13/10/2026)
+
+- Início passa ao modo Monitorado, com botão Home no cabeçalho ao lado da engrenagem; o menu hambúrguer foi removido sem eliminar acesso ao Controle por conexão remota.
+- Modo Monitorado mostra Gerar QR Code, Mostrar minhas informações (IP/chave em pop-up) e Interromper monitoramento quando ativo.
+- Pop-up de informações usa IP privado atual (prioriza Wi-Fi), chave inicialmente oculta, FLAG_SECURE, cópia explícita de ambos e compartilhamento com confirmação antes do Android Sharesheet.
+- Seção compacta Conectados recentemente na página inicial: até dois atalhos, acesso à lista completa e opção de conectar outro aparelho.
+- Sobre o aplicativo migra para Configurações. Home preserva o serviço monitorado e não apaga credenciais.
+- Sem mudanças no protocolo, QR temporário, histórico de pares, sincronização a cada 15 s ou permissões.
+- Build Android e testes reais de tela, compartilhamento e Keystore permanecem pendentes.
+
+
 ## 0.1.0-alpha.15 (13/10/2026)
 
 - Conectar/Reconectar passa a abrir uma escolha rápida: QR Code, Manualmente, colagem de URI QR e até 5 aparelhos anteriores.
@@ -10,7 +21,7 @@
 - Protocolo, permissões, prazo e uso único do QR, histórico e atualização periódica de 15 segundos preservados.
 - Testes físicos e compilação Gradle/Android continuam pendentes de CI.
 
-## 0.1.0-alpha.15 (13/10/2026)
+## 0.1.0-alpha.14 (13/10/2026)
 
 - Revisão visual do Painel Controle: cartão principal reorganizado para destacar nome do aparelho, estado, atualização e ação principal **Conectar/Desconectar**.
 - Revisão visual dos diálogos **Menu**, **Configurações**, **Aparência**, **Aparelhos recentes**, **Permissões e notificações**, **Segurança e pareamento**, **Serviço e inicialização** e **Diagnóstico**, agora com cartões, subtítulos e melhor hierarquia.

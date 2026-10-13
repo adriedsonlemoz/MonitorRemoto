@@ -1,4 +1,4 @@
-# Arquitetura (0.1.0-alpha.15)
+# Arquitetura (0.1.0-alpha.16)
 
 ```text
 MONITORADO                                      CONTROLE
@@ -19,9 +19,9 @@ O FGS `connectedDevice` mantém o socket de escuta durante monitoramento ativo. 
 
 ## Distribuição e assinatura
 
-O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.15` e `versionCode=15`.
+O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.16` e `versionCode=16`.
 
-- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.15.apk`.
+- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.16.apk`.
 - `upload-artifact` sempre distribui um ZIP; GitHub Releases recebe o **arquivo APK direto**.
 - Com quatro Secrets, Gradle gera APK Release assinado e AAB. Sem Secrets, o arquivo é Debug de teste e não preserva necessariamente a assinatura entre execuções.
 - Releases são prévias, não substituem a futura revisão da Google Play e nem os ensaios reais.
@@ -59,3 +59,5 @@ Na alpha.13, o Painel Controle deixa o botão Conectar no próprio cartão do di
 Na alpha.14, os pop-ups internos passam a seguir um padrão visual comum com cartões e subtítulos, enquanto o Painel Controle reorganiza o cartão principal para reduzir textos repetidos e reforçar a ação principal de conexão.
 
 Na alpha.15, a interface separa escolha de conexão e formulário manual. Aparelhos salvos têm ações diretas; scanner Camera2 opera como janela de Activity em tema Dialog, mantendo o protocolo e a confirmação antes do pareamento.
+
+Na alpha.16, a tela inicial volta a ser Monitorado, com retorno por Home. Controle só é aberto após conectar a outro celular pela seção de recentes ou escolha de conexão. Informações manuais são exibidas em diálogo protegido por `FLAG_SECURE`, com segredo oculto inicialmente, confirmação ao compartilhar e IP de rede lido a cada abertura. Nenhuma alteração no transporte criptografado.

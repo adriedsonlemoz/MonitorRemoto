@@ -1,6 +1,6 @@
 # Monitor Remoto
 
-**v0.1.0-alpha.15 / versionCode 15** · Android 8.0+ · Kotlin 2.2.21 · AGP 8.13.2 · Gradle 8.13
+**v0.1.0-alpha.16 / versionCode 16** · Android 8.0+ · Kotlin 2.2.21 · AGP 8.13.2 · Gradle 8.13
 
 Dois modos no mesmo APK: **Monitorado** (servidor) e **Controle** (cliente).
 
@@ -20,11 +20,11 @@ Dois modos no mesmo APK: **Monitorado** (servidor) e **Controle** (cliente).
 
 ## Como utilizar
 
-1. Execute GitHub Actions > **Gerar APK e Release** > Run workflow. Para baixar **APK sem ZIP**, use Releases > `v0.1.0-alpha.15` > Assets > **`MonitorRemoto-v0.1.0-alpha.15.apk`**. Em Actions > Artifacts, um APK de contingência (quando presente) continua vindo em ZIP por comportamento padrão do GitHub. Instale o mesmo APK nos dois aparelhos.
+1. Execute GitHub Actions > **Gerar APK e Release** > Run workflow. Para baixar **APK sem ZIP**, use Releases > `v0.1.0-alpha.16` > Assets > **`MonitorRemoto-v0.1.0-alpha.16.apk`**. Em Actions > Artifacts, um APK de contingência (quando presente) continua vindo em ZIP por comportamento padrão do GitHub. Instale o mesmo APK nos dois aparelhos.
 2. No telefone secundário: abra modo **Monitorado**; autorize a notificação de serviço; ative o monitoramento; autorize notificações em Configurações. Selecione explicitamente os aplicativos cujas notificações deseja compartilhar.
-3. Na tela Monitorado, toque em **Gerar QR Code para parear**; escolha o IP local acessível (normalmente interface Wi-Fi). O QR expira em 2 minutos e é válido para um único pareamento.
-4. No telefone principal: modo **Controle**; toque em **Conectar > QR Code**, aponte a câmera na janela compacta e confirme os dados do aparelho antes do pareamento. IP e chave de acesso são salvos automaticamente. A digitação manual de IP e chave continua disponível.
-5. Na internet: configure **Tailscale/WireGuard** em ambos, conecte-os à mesma rede privada VPN e, no Controle, substitua o IP Wi-Fi pelo IP/nome acessível na VPN. Não abra a porta no roteador à internet pública.
+3. Na tela Monitorado, toque em **Gerar QR Code**; escolha o IP local acessível (normalmente interface Wi-Fi). O QR expira em 2 minutos e é válido para um único pareamento.
+4. No telefone principal: na tela inicial Monitorado, toque em **Conectados recentemente > Conectar outro aparelho > QR Code**, aponte a câmera na janela compacta e confirme os dados do aparelho antes do pareamento. IP e chave de acesso são salvos automaticamente. A digitação manual de IP e chave continua disponível.
+5. Na internet: configure **Tailscale/WireGuard** em ambos, conecte-os à mesma rede privada VPN e, em **Conectar outro aparelho > Manualmente**, informe o IP/nome acessível na VPN. Não abra a porta no roteador à internet pública.
 6. Com o secundário bloqueado, consulte os dados no principal. Depois de desligar/reiniciar, o serviço pode precisar ser reiniciado dependendo do Android, ROM, economia de bateria e permissões.
 
 **Nota:** a versão alpha usa QR e/ou IP/hostname manual, mas não faz descoberta automática NSD/mDNS de aparelhos. O segundo aparelho requer preparação inicial presencial. O app não acessa dados sem consentimento/permissões. A notificação de monitoramento permanece visível.
@@ -47,7 +47,7 @@ Requer Android SDK API 36, Java 17, Gradle 8.13. O repositório ainda não inclu
 gradle :app:testDebugUnitTest :app:assembleDebug
 ```
 
-APK local de teste: `app/build/outputs/apk/debug/app-debug.apk`. O workflow copia esse arquivo ou o Release assinado como **`MonitorRemoto-v0.1.0-alpha.15.apk`**. Baixe diretamente na aba GitHub **Releases**. **O APK não está incluído neste ZIP de código-fonte.** Veja `docs/PAIRING_QR.md` para segurança do QR.
+APK local de teste: `app/build/outputs/apk/debug/app-debug.apk`. O workflow copia esse arquivo ou o Release assinado como **`MonitorRemoto-v0.1.0-alpha.16.apk`**. Baixe diretamente na aba GitHub **Releases**. **O APK não está incluído neste ZIP de código-fonte.** Veja `docs/PAIRING_QR.md` para segurança do QR.
 
 Opcional: configure os quatro Secrets de assinatura para gerar APK Release assinado e AAB. Ver `docs/APK_DOWNLOAD.md`. Preservar a mesma keystore entre builds é essencial para atualizações sem reinstalação.
 
@@ -59,8 +59,8 @@ Opcional: configure os quatro Secrets de assinatura para gerar APK Release assin
 ## Interface Controle (alpha.11)
 
 - Visual claro por padrão, com opções em **⚙ Configurações > Aparência**: claro, escuro e seguir sistema; escolha guardada apenas neste aparelho.
-- Tela inicial agora abre direto no **Painel Controle**, sem abas fixas. O modo **Monitorado** fica acessível pelo menu **☰**, mantendo as duas funções no mesmo APK com menos poluição visual.
-- Cabeçalho do Controle com **☰** e **⚙**; no cartão do aparelho, botão compacto **Conectar/Reconectar/Desconectar** junto ao nome e **↻ Atualizar** colorido à direita; chips de versão e estado do monitorado; atualização manual e polling automático a cada 15 s.
+- **Histórico alpha.11:** a tela inicial abria no Painel Controle via menu ☰. **Na alpha.16**, a tela inicial passou a ser o modo Monitorado e a navegação usa Home (⌂), Configurações (⚙) e Conectados recentemente.
+- Cabeçalho com **⌂ Home** e **⚙ Configurações**; no cartão do aparelho, botão compacto **Conectar/Reconectar/Desconectar** junto ao nome e **↻ Atualizar** colorido à direita; chips de versão e estado do monitorado; atualização manual e polling automático a cada 15 s.
 - A etapa inicial **Conectar aparelho** oferece QR Code, Manualmente, Inserir código QR e aparelhos salvos com botões Conectar/Renomear/Esquecer. Somente Manualmente abre os blocos IP e chave com Colar/Limpar.
 - Até cinco aparelhos recentes com renomear/esquecer. Cada chave é protegida individualmente pelo Android Keystore, com migração da credencial antiga sem novo pareamento. O histórico registra somente nome/IP e último sucesso, **não** mensagens.
 - A informação "Conectado" representa a **última consulta autenticada** e não um socket persistentemente conectado; em falha, status troca para "Sem resposta" e dados anteriores permanecem rotulados.
@@ -138,3 +138,13 @@ A tela Monitorado apresenta o estado real do serviço e IP local. Ativar, gerar 
 - Cada cartão salvo traz os botões verticais **Conectar**, **Renomear** e **Esquecer**. Esquecer requer confirmação e apaga a chave do aparelho no Android Keystore.
 - QR escaneado **não conecta automaticamente**: apresenta endereço e nome local se o aparelho já estiver salvo; se for novo, apresenta «Não identificado (novo)» até ser autenticado. **Confirmar** inicia o pareamento e **Cancelar** o interrompe.
 - No painel, botões menores ficam alinhados à direita: ação de conexão junto ao título e **↻ Atualizar** em azul. As consultas continuam a cada 15 s com a tela aberta.
+
+## Tela inicial e informações manuais (alpha.16)
+
+- O aplicativo inicia no modo Monitorado; **⌂ Home** no cabeçalho retorna a esse modo sem interromper o serviço. O modo Controle abre ao conectar por QR, manualmente ou por dispositivo salvo.
+- Com o monitor ativo, as ações **Gerar QR Code**, **Mostrar minhas informações** e **Interromper monitoramento** ficam juntas.
+- **Mostrar minhas informações** abre uma janela protegida por `FLAG_SECURE` com o IP privado local atual (preferindo Wi-Fi) e a chave guardada no Android Keystore, oculta até o usuário solicitar.
+- **Copiar informações** copia IP e chave, marcando conteúdo como sensível em Android 13+. **Compartilhar** exige confirmação e abre o menu nativo do Android. Evite enviar chaves a terceiros; apague o clipboard após utilização.
+- Abaixo das ações, **Conectados recentemente** mostra atalhos compactos de até dois aparelhos, botão **Ver todos** (escolha QR/Manual/Salvos) e **Conectar outro aparelho**.
+- **Sobre o aplicativo** agora está dentro de **Configurações**. O diálogo de conexão existente da alpha.15 permanece disponível.
+- A compilação Gradle/Android e teste real de interface e compartilhamento permanecem pendentes de CI e aparelho.

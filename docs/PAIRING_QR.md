@@ -1,4 +1,4 @@
-# Pareamento por QR (v0.1.0-alpha.15)
+# Pareamento por QR (v0.1.0-alpha.16)
 
 ## Uso
 
@@ -41,3 +41,7 @@ A alpha.8 ainda usava a Activity do ZXing Embedded e o encerramento foi relatado
 ## Interface de confirmação alpha.15
 
 A captura usa janela flutuante centralizada, não tela cheia. O leitor mostra **Aponte para o QR Code** e oferece **Cancelar**. Depois de decodificar, a confirmação informa IP e porta, além de um nome apenas quando já salvo localmente; QR temporário não contém nome autenticado. Sem confirmação, nenhuma tentativa de pareamento é feita.
+
+## Compartilhamento manual (alpha.16)
+
+A janela **Minhas informações** só permite consultar a chave com o serviço Monitorado em execução e IP privado disponível. O texto fica oculto inicialmente; a janela bloqueia capturas de tela com `FLAG_SECURE`. A cópia de IP e chave é intencional, assinalada como sensível no Android 13+ (não impede leitura por apps que já tenham acesso à área de transferência). Antes de invocar o compartilhamento padrão do Android há alerta explícito de risco. Não salvar ou registrar essa chave em logs.

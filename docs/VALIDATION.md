@@ -186,3 +186,12 @@
 - [ ] Verificar layout dos cartões em telas estreitas e fontes ampliadas.
 
 **Validação executada localmente:** `python3 tools/check_distribution.py` passou; 20 fontes Kotlin sem erros sintáticos no parser PSI (arquivos main/test); Manifest XML válido; workflow YAML válido. **Não** equivale a `assembleDebug` nem teste em hardware.
+
+## alpha.16: início Monitorado e compartilhamento manual (13/10/2026)
+
+- [x] Fonte reorganizada: Home, Configurações com Sobre, QR e informações manuais na tela Monitorado e aparelhos recentes compactos.
+- [x] Pop-up manual com IP atual e Keystore, chave oculta, `FLAG_SECURE`, cópia marcada sensível (API 33+) e confirmação para compartilhar pelo sistema.
+- [x] Fluxo alpha.15 QR/Manual/Salvos e serviço/polling mantidos no código.
+- [x] Verificação local de invariantes `tools/check_distribution.py`: 8 grupos aprovados. Parser PSI Kotlin: 25 fontes, nenhum erro sintático. XML e workflow YAML válidos.
+- [ ] Compilar `:app:testDebugUnitTest :app:assembleDebug` em CI; **não inferir APK gerado a partir das verificações estáticas**.
+- [ ] Testar em aparelho: botão Home com serviço em execução, lista de recentes, cópia, share sheet, ocultação de segredo, aparelho sem Wi-Fi e rotação da tela.

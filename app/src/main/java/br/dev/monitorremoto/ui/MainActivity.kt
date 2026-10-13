@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.ClipData
+import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.ComponentName
 import android.content.Context
@@ -20,6 +21,7 @@ import android.view.WindowManager
 import android.widget.ImageView
 import android.os.Build
 import android.os.Bundle
+import android.os.PersistableBundle
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
@@ -105,7 +107,7 @@ class MainActivity : Activity() {
         setTheme(if (darkTheme()) android.R.style.Theme_Material_NoActionBar else android.R.style.Theme_Material_Light_NoActionBar)
         super.onCreate(savedInstanceState)
         RecentDevices.migrateLegacy(this)
-        mode = savedInstanceState?.getInt("active_mode", 1) ?: 1
+        mode = savedInstanceState?.getInt("active_mode", 0) ?: 0
         window.statusBarColor = bg
         window.navigationBarColor = bg
         window.decorView.systemUiVisibility = if (darkTheme()) 0 else
@@ -287,13 +289,18 @@ class MainActivity : Activity() {
             ellipsize = android.text.TextUtils.TruncateAt.END
         })
         header.addView(title, LinearLayout.LayoutParams(0, -2, 1f))
-        header.addView(actionButton("☰") { showMainMenu() }, LinearLayout.LayoutParams(dp(45), dp(43)))
+        header.addView(actionButton("⌂") { navigateHome() }.apply {
+            contentDescription = "Início: voltar ao modo monitorado"
+            textSize = 22f
+        }, LinearLayout.LayoutParams(dp(45), dp(43)))
         header.addView(View(this), LinearLayout.LayoutParams(dp(7), 1))
-        header.addView(actionButton("⚙") { showSettingsDialog() }, LinearLayout.LayoutParams(dp(45), dp(43)))
+        header.addView(actionButton("⚙") { showSettingsDialog() }.apply {
+            contentDescription = "Configurações"
+        }, LinearLayout.LayoutParams(dp(45), dp(43)))
         content.addView(header)
 
         val metaRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        metaRow.addView(infoChip("v0.1.0-alpha.15"))
+        metaRow.addView(infoChip("v0.1.0-alpha.16"))
         metaRow.addView(View(this), LinearLayout.LayoutParams(dp(8), 1))
         val monitorActive = SettingsStore.isMonitorEnabled(this) && MonitorService.isRunning
         metaRow.addView(infoChip(if (monitorActive) "Monitorado ativo" else "Monitorado inativo", accent = monitorActive))
@@ -308,24 +315,17 @@ class MainActivity : Activity() {
         addText("Somente em aparelhos próprios ou autorizados. Notificações permitidas são temporárias e filtradas.", 11f, muted = true)
     }
 
-    private fun showMainMenu() {
-        showOptionDialog(
-            "Menu",
-            listOf(
-                OptionItem("Painel controle", "Consultar e atualizar outro aparelho") { mode = 1; render() },
-                OptionItem("Modo monitorado", "Disponibilizar dados deste celular") { mode = 0; render() },
-                OptionItem("Aparelhos recentes", "Escolher um dispositivo salvo") { showRecentDevicesDialog() },
-                OptionItem("Sobre o aplicativo", "Versão, foco do projeto e segurança") { showAboutDialog() },
-            )
-        )
+    /** Home sempre retorna ao modo Monitorado, sem desligar o serviço ou revogar pareamentos. */
+    private fun navigateHome() {
+        if (mode != 0) { mode = 0; render() }
     }
 
     private fun showAboutDialog() {
         val (wrapper, layout) = dialogWrapper()
         dialogIntro(layout, "Resumo rápido do foco atual do projeto.")
         val card = panel(14)
-        card.addView(dialogMetricRow("Versão", "0.1.0-alpha.15"))
-        card.addView(dialogMetricRow("Tela inicial", "Painel Controle"))
+        card.addView(dialogMetricRow("Versão", "0.1.0-alpha.16"))
+        card.addView(dialogMetricRow("Tela inicial", "Modo monitorado"))
         card.addView(dialogMetricRow("Modo monitorado", "No mesmo APK"))
         card.addView(dialogMetricRow("Segurança", "Pareamento local e Android Keystore"))
         layout.addView(card)
@@ -337,8 +337,6 @@ class MainActivity : Activity() {
             .show()
     }
 
-    private fun showRecentDevicesDialog() = showConnectionChooser()
-
     private fun showSettingsDialog() {
         showOptionDialog(
             "Configurações",
@@ -348,13 +346,14 @@ class MainActivity : Activity() {
                 OptionItem("Segurança e pareamento", "Mostrar chave ou revogar acessos") { showSecuritySettings() },
                 OptionItem("Serviço e inicialização", "Reiniciar serviço e início automático") { showServiceSettings() },
                 OptionItem("Diagnóstico", "IP, porta, estado do serviço e permissões") { showDiagnostics() },
+                OptionItem("Sobre o aplicativo", "Versão, objetivos e segurança") { showAboutDialog() },
             )
         )
     }
 
     private fun showOptionDialog(title: String, items: List<OptionItem>) {
         val (wrapper, layout) = dialogWrapper()
-        dialogIntro(layout, if (title == "Menu") "Navegue rapidamente entre as áreas principais do aplicativo." else "Ajustes agrupados para reduzir a quantidade de informações na tela principal.")
+        dialogIntro(layout, "Ajustes agrupados para reduzir a quantidade de informações na tela principal.")
         var popup: AlertDialog? = null
         items.forEachIndexed { index, item ->
             layout.addView(dialogCardRow(item.title, item.subtitle) {
@@ -511,14 +510,14 @@ class MainActivity : Activity() {
         card.addView(label(state, 15f, strong = true).apply {
             setTextColor(if (enabled && running) highlight else if (enabled) Color.rgb(190, 88, 61) else dim)
         })
-        val ips = availableLocalIps()
-        val preferred = ips.firstOrNull { it.first.startsWith("wlan") } ?: ips.firstOrNull()
-        card.addView(label("IP: ${preferred?.second ?: "rede local indisponível"}", 14f))
+        val preferred = preferredLocalAddress()
+        card.addView(label("IP: ${preferred ?: "rede local indisponível"}", 14f))
         card.addView(label("Dados disponíveis somente para aparelhos autorizados.", 12f, muted = true))
         content.addView(card)
         gap(14)
         if (enabled && running) {
-            content.addView(button("Gerar QR Code", emphasis = true) { chooseQrAddress() })
+            content.addView(button("▣  Gerar QR Code", emphasis = true) { chooseQrAddress() })
+            content.addView(button("⚿  Mostrar minhas informações") { showMyConnectionInfo() })
             content.addView(button("Interromper monitoramento") {
                 SettingsStore.setMonitorEnabled(this, false)
                 stopService(Intent(this, MonitorService::class.java))
@@ -528,9 +527,154 @@ class MainActivity : Activity() {
             content.addView(button(if (enabled) "Reiniciar monitoramento" else "Ativar monitoramento", emphasis = true) {
                 if (enabled) startServiceExplicitly() else requestStart()
             })
+            content.addView(button("⚿  Mostrar minhas informações") { showMyConnectionInfo() })
         }
-        gap(6)
+        gap(8)
+        renderRecentDevicesHome()
+        gap(10)
         addText("Permissões, chaves e detalhes técnicos: ⚙ Configurações.", 12f, muted = true)
+    }
+
+    /** Lista pequena no início; gerenciador detalhado permanece na escolha Conectar. */
+    private fun renderRecentDevicesHome() {
+        val recent = RecentDevices.list(this)
+        val card = panel(14)
+        val row = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        row.addView(label("Conectados recentemente", 14f, strong = true).apply {
+            maxLines = 2
+        }, LinearLayout.LayoutParams(0, -2, 1f))
+        row.addView(actionButton("Ver todos ›") { showConnectionChooser() }.apply {
+            textSize = 12f
+        }, LinearLayout.LayoutParams(dp(98), dp(40)))
+        card.addView(row)
+        if (recent.isEmpty()) {
+            card.addView(label("Nenhum aparelho salvo ainda.", 12f, muted = true))
+        } else {
+            recent.take(2).forEach { device ->
+                sectionGap(card, 7)
+                card.addView(dialogCardRow(device.name, device.host, trailing = "›") {
+                    showSavedDeviceOptions(device)
+                })
+            }
+        }
+        sectionGap(card, 8)
+        card.addView(actionButton("Conectar outro aparelho", emphasis = true) {
+            showConnectionChooser()
+        }, LinearLayout.LayoutParams(-1, dp(44)))
+        content.addView(card)
+    }
+
+    private fun showSavedDeviceOptions(item: RecentDevices.Device) {
+        val (wrapper, layout) = dialogWrapper()
+        dialogIntro(layout, "${item.name} · ${item.host}")
+        var popup: AlertDialog? = null
+        layout.addView(dialogCardRow("Conectar", "Consultar este aparelho", accent = true) {
+            popup?.dismiss()
+            connectSavedDevice(item)
+        })
+        sectionGap(layout, 8)
+        layout.addView(dialogCardRow("Renomear", "Alterar o nome exibido") {
+            popup?.dismiss()
+            renameSavedDevice(item)
+        })
+        sectionGap(layout, 8)
+        layout.addView(dialogCardRow("Esquecer", "Apagar a credencial salva") {
+            popup?.dismiss()
+            forgetSavedDevice(item)
+        })
+        popup = AlertDialog.Builder(this).setTitle("Aparelho salvo")
+            .setView(wrapper).setNegativeButton("Fechar", null).create()
+        popup.show()
+    }
+
+    /** Prefere a interface Wi-Fi no instante de abertura, evitando IP antigo em cache. */
+    private fun preferredLocalAddress(): String? {
+        val ips = availableLocalIps()
+        return (ips.firstOrNull { it.first.startsWith("wlan", ignoreCase = true) }
+            ?: ips.firstOrNull())?.second
+    }
+
+    /** IP + segredo só são lidos após solicitação explícita, e não ficam na tela principal. */
+    private fun showMyConnectionInfo() {
+        if (!SettingsStore.isMonitorEnabled(this) || !MonitorService.isRunning) {
+            AlertDialog.Builder(this)
+                .setTitle("Monitoramento inativo")
+                .setMessage("Ative o monitoramento para compartilhar os dados de conexão deste aparelho.")
+                .setPositiveButton("Entendi", null).show()
+            return
+        }
+        val ip = preferredLocalAddress()
+        if (ip == null) {
+            AlertDialog.Builder(this)
+                .setTitle("Rede indisponível")
+                .setMessage("Nenhum IP privado disponível. Conecte o aparelho a uma rede Wi-Fi ou VPN compatível e tente novamente.")
+                .setPositiveButton("OK", null).show()
+            return
+        }
+        val key = try { CryptoBox.encode(SecretVault.getOrCreateMonitorKey(this)) }
+            catch (error: Exception) {
+                message("Não foi possível acessar a chave protegida: ${error.message}")
+                return
+            }
+        val (wrapper, layout) = dialogWrapper()
+        dialogIntro(layout, "Use somente entre aparelhos próprios ou autorizados. A chave permite acesso aos dados monitorados.")
+        val card = panel(14)
+        card.addView(label("Endereço IP atual", 12f, muted = true))
+        card.addView(label(ip, 17f, strong = true))
+        sectionGap(card, 6)
+        card.addView(label("Chave de pareamento", 12f, muted = true))
+        val keyLabel = label("••••••••••••••••", 14f).apply {
+            setTextIsSelectable(false)
+            maxLines = 3
+            setTextColor(ink)
+        }
+        card.addView(keyLabel)
+        var shown = false
+        lateinit var revealButton: Button
+        revealButton = actionButton("Mostrar chave") {
+            shown = !shown
+            keyLabel.text = if (shown) key else "••••••••••••••••"
+            revealButton.text = if (shown) "Ocultar chave" else "Mostrar chave"
+        }
+        card.addView(revealButton, LinearLayout.LayoutParams(-1, dp(42)))
+        layout.addView(card)
+        sectionGap(layout, 12)
+        val payload = "Monitor Remoto\nIP: $ip\nChave: $key"
+        layout.addView(actionButton("Copiar informações", emphasis = true) {
+            val clip = ClipData.newPlainText("Monitor Remoto: IP e chave", payload)
+            if (Build.VERSION.SDK_INT >= 33) {
+                clip.description.extras = PersistableBundle().apply {
+                    putBoolean(ClipDescription.EXTRA_IS_SENSITIVE, true)
+                }
+            }
+            (getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(clip)
+            message("IP e chave copiados. Apague o conteúdo da área de transferência após o uso.")
+        }, LinearLayout.LayoutParams(-1, dp(46)))
+        sectionGap(layout, 8)
+        layout.addView(actionButton("Compartilhar") {
+            AlertDialog.Builder(this)
+                .setTitle("Compartilhar credencial?")
+                .setMessage("O compartilhamento incluirá IP e chave de pareamento. Envie somente para um aparelho ou pessoa autorizada. Não publique em grupos ou redes sociais.")
+                .setNegativeButton("Cancelar", null)
+                .setPositiveButton("Escolher aplicativo") { _, _ ->
+                    val intent = Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_TEXT, payload)
+                    }
+                    try { startActivity(Intent.createChooser(intent, "Compartilhar informações de conexão")) }
+                    catch (_: Exception) { message("Nenhum aplicativo de compartilhamento disponível.") }
+                }.show()
+        }, LinearLayout.LayoutParams(-1, dp(46)))
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("Minhas informações")
+            .setView(wrapper)
+            .setNegativeButton("Fechar", null)
+            .create()
+        dialog.window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        dialog.show()
     }
 
     private fun selectNotificationApps() {

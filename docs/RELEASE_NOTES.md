@@ -1,29 +1,21 @@
-# Monitor Remoto v0.1.0-alpha.15
+# Monitor Remoto v0.1.0-alpha.16
 
-## Novidades da alpha.15
+## Novidades da alpha.16
 
-- Nova tela compacta de escolha: QR Code, Manualmente, Inserir código QR e aparelhos salvos.
-- Aparelhos anteriores com Conectar, Renomear e Esquecer empilhados.
-- Leitor QR Camera2 em pop-up central; confirmação do IP/nome local antes de tentar parear.
-- Conectar/Reconectar compacto ao lado do nome do dispositivo; **↻ Atualizar** azul à direita.
-- Mantidos Keystore, QR temporário, protocolo cifrado e atualização de 15 segundos.
+- Nova tela inicial no modo Monitorado, com botão **⌂ Home** junto às Configurações.
+- Gerar QR Code, **Mostrar minhas informações** e Interromper monitoramento agrupados.
+- Nova janela manual mostra IP atual e chave oculta, com **Copiar informações** e **Compartilhar** (com confirmação).
+- **Conectados recentemente** na página inicial, com atalhos e acesso ao gerenciador de aparelhos salvos.
+- **Sobre o aplicativo** transferido para Configurações.
+- Permanecem a escolha QR/Manual/Salvos, cartões Conectar/Renomear/Esquecer, segurança no Keystore e sincronização a cada 15 s.
 
-## Histórico de funcionalidades
+## Histórico resumido (alpha.15)
 
-- Modo Monitorado simplificado e dinâmico: status, IP, QR e ligar/desligar. Ajustes avançados agrupados na engrenagem.
-
-- Tela inicial abre direto no Painel Controle, sem abas fixas na tela principal.
-- Cabeçalho reorganizado com **Conectar**, **☰** e **⚙**; chips de versão e do estado do monitorado; atualização manual pelo ícone **↻** e automática a cada 15 s com tela aberta.
-- Pop-up **Conectar aparelho** redesenhado em blocos separados: endereço, chave, QR Code e aparelhos recentes, com campos mais visíveis e ações **Colar/Limpar**.
-- Aparelhos recentes (máximo 5) seguem com reconexão por toque, renomear e esquecer; credenciais separadas por aparelho e migradas do formato alpha.9 quando possível.
-- Temas **claro (padrão)**, escuro e automático; escolha persistida localmente.
-- Status "Conectado" vinculado a resposta autenticada recente. Falha marcada "Sem resposta", preservando data do último sucesso.
-- Configuração antiga do GitHub Actions, assinatura Release opcional e geração AAB mantidas. **Reutilizar os Secrets/keystore da alpha.7**, não criar outra chave.
+- Entrada compacta QR/Manual/Colar QR/Salvos com confirmação antes do pareamento.
+- Scanner Camera2 em pop-up; botão Conectar/Reconectar compacto no painel e **↻ Atualizar** à direita.
+- Assinatura Release depende dos Secrets existentes; não criar outra keystore.
 
 ## Validação pendente
 
-- Build Android completo e testes em dois aparelhos ainda não executados neste ambiente. A leitura da câmera Camera2 ainda precisa de teste real.
-- A classificação anterior do Play Protect exige investigação por meios oficiais; a mudança visual não altera essa classificação comprovadamente.
-
-- Conectar saiu do cabeçalho e foi movido para o cartão do aparelho; quando a consulta está ativa, o botão vira **Desconectar**.
-- Menu e Configurações receberam linhas mais legíveis com subtítulos, reduzindo sensação de lista crua.
+- Build Android completo, instalação em dois celulares e teste do pop-up de IP/chave, copiar/compartilhar, QR, navegação Home e aparelhos salvos.
+- Conferir tema claro/escuro, tela pequena, Android 8–16 e situação anterior do Google Play Protect por meios oficiais.
