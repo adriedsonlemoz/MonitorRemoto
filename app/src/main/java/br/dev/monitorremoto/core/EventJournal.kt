@@ -2,6 +2,7 @@ package br.dev.monitorremoto.core
 
 import org.json.JSONArray
 import org.json.JSONObject
+import java.util.ArrayDeque
 import java.util.UUID
 
 /** Buffer VOLÁTIL e limitado: nenhuma mensagem é persistida no armazenamento. */
@@ -31,8 +32,20 @@ object EventJournal {
         while (records.size > CAPACITY) records.removeFirst()
     }
 
-    @Synchronized fun latestJson(): JSONArray = JSONArray().apply {
-        records.takeLast(30).forEach { put(it.toJson()) }
+    /** Remove imediatamente eventos quando o acesso do usuário é interrompido. */
+    @Synchronized fun clear() {
+        records.clear()
+    }
+
+    /** Remove eventos de aplicativos não mais autorizados, inclusive do buffer antigo. */
+    @Synchronized fun retainAllowed(allowedPackages: Set<String>) {
+        records.removeAll { it.app !in allowedPackages }
+    }
+
+    /** Revalida a lista positiva ao ENVIAR, inclusive contra notificações em trânsito. */
+    @Synchronized fun latestJson(allowedPackages: Set<String>): JSONArray = JSONArray().apply {
+        records.filter { it.app in allowedPackages }.takeLast(30)
+            .forEach { put(it.toJson()) }
     }
 
     /** Defesa parcial. O filtro não substitui cuidados com dados sensíveis. */

@@ -153,7 +153,7 @@ class MainActivity : Activity() {
     private fun render() {
         content.removeAllViews()
         addText("MONITOR REMOTO", 22f, strong = true)
-        addText("v0.1.0-alpha.5  ·  Privado e criptografado", 12f, muted = true)
+        addText("v0.1.0-alpha.6  ·  Privado e criptografado", 12f, muted = true)
         gap(14)
         val tabs = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         fun addTab(title: String, which: Int) {

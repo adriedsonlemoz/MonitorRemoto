@@ -48,3 +48,14 @@
 - Ajuste: `IntentIntegrator.QR_CODE` com configuração independente do scanner; API comprovada no código da dependência JourneyApps 4.3.0.
 - Verificações locais: sintaxe Kotlin, testes isolados de classes independentes de Android, testes de integridade e regras de distribuição.
 - Não foi realizada compilação Android completa neste ambiente.
+
+## alpha.6 (13/10/2026)
+
+- [x] Análise dos pontos de retenção: desligar monitoramento, iniciar nova sessão, editar lista permitida e gerar resposta.
+- [x] Adicionados testes unitários `EventJournalTest` para limpar, podar eventos revogados e filtrar no envio.
+- [ ] Validar os testes JUnit pela tarefa Gradle oficial no CI.
+- [ ] Confirmar em dois celulares o comportamento da revogação quando há notificações simultâneas.
+- [ ] Testar tráfego abusivo e reconexão do servidor com cargas reais.
+- [ ] Investigar classificação Play Protect com diagnóstico da versão/build/assinatura.
+
+**Verificações locais concluídas nesta entrega:** 16 asserções Kotlin/JVM sobre classes reais do projeto (com implementação mínima de `org.json` somente no harness externo ao ZIP); compilação Kotlin isolada de `MonitorServer`, `SettingsStore`, `EventJournal` e transportes com stubs mínimos; `tools/check_distribution.py`; parse do `AndroidManifest.xml` e do YAML da CI; validação de ausência de keystore no ZIP. A compilação Android oficial via Gradle, os testes JUnit no plugin Android e os testes físicos **não foram executados** neste ambiente.

@@ -12,10 +12,10 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.5" and code.group(1) == "5", "Versões incompatíveis"
+assert version == "0.1.0-alpha.6" and code.group(1) == "6", "Versões incompatíveis"
 assert version in ui, "Tela de versão desatualizada"
 assert f"versionCode={code.group(1)}" in (root / 'docs/ARCHITECTURE.md').read_text(), "Arquitetura com versionCode desatualizado"
-# GitHub Actions #4: QR_CODE_TYPES não existe em IntentIntegrator 4.3.0; QR_CODE existe.
+# GitHub Actions #4 (regressão alpha.5): QR_CODE_TYPES não existe em IntentIntegrator 4.3.0; QR_CODE existe.
 assert 'IntentIntegrator.QR_CODE_TYPES' not in ui, "QR_CODE_TYPES inválido no ZXing"
 assert 'scanner.setDesiredBarcodeFormats(IntentIntegrator.QR_CODE)' in ui, "Leitor QR sem formato suportado"
 assert 'scanner.setPrompt(' in ui and 'scanner.initiateScan()' in ui, "Fluxo do scanner incompleto"
@@ -37,3 +37,14 @@ manifest = (root / "app/src/main/AndroidManifest.xml").read_text(encoding="utf-8
 assert 'android.permission.RECEIVE_SMS' not in manifest
 assert 'android.accessibilityservice' not in manifest
 print(f"PASSOU: versionName={version}, versionCode={code.group(1)}, nome APK, Release, assinatura, AAB e permissões")
+
+# Privacidade: limpeza efetiva e verificação na hora da transmissão.
+journal = (root / 'app/src/main/java/br/dev/monitorremoto/core/EventJournal.kt').read_text(encoding='utf-8')
+settings = (root / 'app/src/main/java/br/dev/monitorremoto/core/SettingsStore.kt').read_text(encoding='utf-8')
+server = (root / 'app/src/main/java/br/dev/monitorremoto/transport/MonitorServer.kt').read_text(encoding='utf-8')
+assert 'fun clear()' in journal and 'fun retainAllowed(' in journal and 'allowedPackages' in journal
+assert 'if (!enabled || !wasEnabled) EventJournal.clear()' in settings
+assert 'EventJournal.retainAllowed(packages)' in settings
+assert 'EventJournal.latestJson(SettingsStore.notificationAllowlist(context))' in server
+assert 'ArrayBlockingQueue<Runnable>(12)' in server and 'ThreadPoolExecutor.AbortPolicy()' in server
+print('PASSOU: limpeza por revogação e limite de fila do servidor declarados')

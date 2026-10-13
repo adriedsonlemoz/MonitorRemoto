@@ -10,6 +10,7 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
+import br.dev.monitorremoto.core.EventJournal
 import br.dev.monitorremoto.core.SettingsStore
 import br.dev.monitorremoto.security.SecretVault
 import br.dev.monitorremoto.transport.MonitorServer
@@ -81,6 +82,8 @@ class MonitorService : Service() {
     }
 
     override fun onDestroy() {
+        // O processo pode continuar vivo após a interrupção do serviço.
+        EventJournal.clear()
         PairingSession.revoke()
         server?.stop()
         server = null

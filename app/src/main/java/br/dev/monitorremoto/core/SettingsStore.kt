@@ -7,12 +7,21 @@ object SettingsStore {
     private fun prefs(context: Context) = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
 
     fun isMonitorEnabled(context: Context) = prefs(context).getBoolean("monitor_enabled", false)
-    fun setMonitorEnabled(context: Context, enabled: Boolean) = prefs(context).edit().putBoolean("monitor_enabled", enabled).apply()
+    fun setMonitorEnabled(context: Context, enabled: Boolean) {
+        val preferences = prefs(context)
+        val wasEnabled = preferences.getBoolean("monitor_enabled", false)
+        preferences.edit().putBoolean("monitor_enabled", enabled).apply()
+        // Nunca reutilizar eventos da sessão anterior, mesmo com uma captura em trânsito.
+        if (!enabled || !wasEnabled) EventJournal.clear()
+    }
 
     fun notificationAllowlist(context: Context): Set<String> =
         prefs(context).getStringSet("notification_allowlist", emptySet())?.toSet() ?: emptySet()
-    fun setNotificationAllowlist(context: Context, packages: Set<String>) =
-        prefs(context).edit().putStringSet("notification_allowlist", packages).apply()
+    fun setNotificationAllowlist(context: Context, packages: Set<String>) {
+        // Retirar a autorização também apaga os eventos já capturados desses apps.
+        prefs(context).edit().putStringSet("notification_allowlist", packages.toSet()).apply()
+        EventJournal.retainAllowed(packages)
+    }
 
     fun autoStartEnabled(context: Context) = prefs(context).getBoolean("autostart", false)
     fun setAutoStart(context: Context, enabled: Boolean) = prefs(context).edit().putBoolean("autostart", enabled).apply()

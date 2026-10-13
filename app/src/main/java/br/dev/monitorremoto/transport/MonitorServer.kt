@@ -3,6 +3,7 @@ package br.dev.monitorremoto.transport
 import android.content.Context
 import br.dev.monitorremoto.core.BatteryReader
 import br.dev.monitorremoto.core.EventJournal
+import br.dev.monitorremoto.core.SettingsStore
 import br.dev.monitorremoto.security.CryptoBox
 import br.dev.monitorremoto.security.SecretVault
 import org.json.JSONObject
@@ -10,14 +11,20 @@ import java.net.ServerSocket
 import java.net.Socket
 import java.net.SocketException
 import java.util.LinkedHashSet
-import java.util.concurrent.Executors
+import java.util.concurrent.ArrayBlockingQueue
+import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.TimeUnit
 import kotlin.math.abs
 
 /** Porta única: consulta autenticada e pareamento QR temporário em canal AES-GCM. */
 class MonitorServer(private val context: Context) {
     private var server: ServerSocket? = null
     @Volatile private var running = false
-    private val workers = Executors.newFixedThreadPool(3)
+    // Fila limitada evita retenção ilimitada de sockets em caso de tráfego abusivo na LAN.
+    private val workers = ThreadPoolExecutor(
+        3, 3, 0L, TimeUnit.MILLISECONDS, ArrayBlockingQueue<Runnable>(12),
+        ThreadPoolExecutor.AbortPolicy()
+    )
     private val seenNonces = LinkedHashSet<String>()
 
     @Synchronized fun start() {
@@ -77,7 +84,9 @@ class MonitorServer(private val context: Context) {
                         put("v", WireProtocol.VERSION)
                         put("serverMs", now)
                         put("battery", BatteryReader.snapshot(context))
-                        put("events", EventJournal.latestJson())
+                        put("events", if (SettingsStore.isMonitorEnabled(context))
+                            EventJournal.latestJson(SettingsStore.notificationAllowlist(context))
+                            else org.json.JSONArray())
                         put("epoch", EventJournal.epoch)
                     }
                     WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(permanentKey, response))
