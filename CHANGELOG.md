@@ -1,5 +1,13 @@
 # Histórico de versões
 
+## 0.1.0-alpha.14 (13/10/2026)
+
+- Revisão visual do Painel Controle: cartão principal reorganizado para destacar nome do aparelho, estado, atualização e ação principal **Conectar/Desconectar**.
+- Revisão visual dos diálogos **Menu**, **Configurações**, **Aparência**, **Aparelhos recentes**, **Permissões e notificações**, **Segurança e pareamento**, **Serviço e inicialização** e **Diagnóstico**, agora com cartões, subtítulos e melhor hierarquia.
+- Mensagens rápidas e ações secundárias passam a usar o mesmo padrão visual dos demais pop-ups, reduzindo inconsistência entre telas.
+- Mantidos protocolo local, pareamento por QR, chaves no Android Keystore, aparelhos recentes e polling de 15 s.
+- Compilação Android completa e testes físicos continuam pendentes.
+
 ## 0.1.0-alpha.13 (13/10/2026)
 
 - Polimento visual do Painel Controle: o botão **Conectar** saiu do cabeçalho e foi movido para o cartão do aparelho remoto, ao lado do nome/status.

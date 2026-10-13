@@ -159,3 +159,19 @@
 - **PASSOU:** 16 testes Kotlin/JVM locais (runner compatível construído localmente) para `EventJournal`, `Ipv4Suggestion`, `SensitiveContent`, `CryptoBox` e `PairingCode/PairingSession`.
 - **PASSOU:** integridade do ZIP final.
 - **NÃO EXECUTADO:** compilação Android completa com Gradle/SDK, testes físicos da interface, geração do APK/AAB nesta sessão e testes Camera2 em hardware.
+
+## alpha.14: revisão visual de diálogos e painel
+
+- [x] Reorganizar o cartão principal do Painel Controle para reduzir repetição e dar mais destaque à ação principal.
+- [x] Padronizar Menu, Configurações e subdiálogos com cartões e subtítulos.
+- [x] Melhorar Aparelhos recentes, Diagnóstico e mensagens simples com hierarquia visual mais clara.
+- [x] Preservar pareamento QR, segurança do Keystore, histórico de aparelhos e fluxo de consulta.
+- [ ] Compilar `:app:assembleDebug`/`:app:testDebugUnitTest` com Gradle/SDK Android.
+- [ ] Testar visualmente em aparelho físico todos os pop-ups revisados.
+
+### Resultado local da alpha.14 (13/10/2026)
+
+- **PASSOU:** `python3 tools/check_distribution.py` após sincronização de versão/documentação.
+- **PASSOU:** 16 testes Kotlin/JVM locais (runner compatível construído localmente) para `EventJournal`, `Ipv4Suggestion`, `SensitiveContent`, `CryptoBox` e `PairingCode/PairingSession`.
+- **PASSOU:** integridade do ZIP final.
+- **NÃO EXECUTADO:** compilação Android completa com Gradle/SDK, geração real de APK/AAB nesta sessão, testes físicos de interface e testes Camera2 em hardware.

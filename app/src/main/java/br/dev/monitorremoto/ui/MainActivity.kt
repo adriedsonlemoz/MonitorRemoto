@@ -222,6 +222,56 @@ class MainActivity : Activity() {
         setPadding(dp(12), dp(8), dp(12), dp(8))
     }
 
+    private fun dialogWrapper(): Pair<ScrollView, LinearLayout> {
+        val wrapper = ScrollView(this)
+        val layout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(18), dp(10), dp(18), dp(10))
+        }
+        wrapper.addView(layout)
+        return wrapper to layout
+    }
+
+    private fun dialogIntro(parent: LinearLayout, text: String) {
+        if (text.isBlank()) return
+        parent.addView(label(text, 12.5f, muted = true).apply { setPadding(0, 0, 0, dp(6)) })
+    }
+
+    private fun dialogCardRow(
+        title: String,
+        subtitle: String = "",
+        trailing: String = "›",
+        accent: Boolean = false,
+        onClick: (() -> Unit)? = null
+    ): LinearLayout = LinearLayout(this).apply {
+        orientation = LinearLayout.HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+        background = shape(fieldColor, 16, true)
+        setPadding(dp(14), dp(13), dp(14), dp(13))
+        val textBlock = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.VERTICAL }
+        textBlock.addView(label(title, 15f, strong = true).apply {
+            setTextColor(if (accent) highlight else ink)
+            setPadding(0, 0, 0, if (subtitle.isBlank()) 0 else dp(2))
+        })
+        if (subtitle.isNotBlank()) textBlock.addView(label(subtitle, 11.5f, muted = true).apply { setPadding(0, 0, 0, 0) })
+        addView(textBlock, LinearLayout.LayoutParams(0, -2, 1f))
+        if (trailing.isNotBlank()) addView(label(trailing, 18f, strong = accent, muted = !accent).apply { gravity = Gravity.CENTER_VERTICAL })
+        if (onClick != null) {
+            isClickable = true
+            isFocusable = true
+            setOnClickListener { onClick() }
+        }
+    }
+
+    private fun dialogMetricRow(name: String, value: String): LinearLayout = LinearLayout(this).apply {
+        orientation = LinearLayout.HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+        setPadding(0, dp(5), 0, dp(5))
+        addView(label(name, 12f, muted = true), LinearLayout.LayoutParams(0, -2, 1f))
+        addView(label(value, 14f, strong = true))
+    }
+
+
     private fun render() {
         content.removeAllViews()
         val header = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
@@ -242,7 +292,7 @@ class MainActivity : Activity() {
         content.addView(header)
 
         val metaRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        metaRow.addView(infoChip("v0.1.0-alpha.13"))
+        metaRow.addView(infoChip("v0.1.0-alpha.14"))
         metaRow.addView(View(this), LinearLayout.LayoutParams(dp(8), 1))
         val monitorActive = SettingsStore.isMonitorEnabled(this) && MonitorService.isRunning
         metaRow.addView(infoChip(if (monitorActive) "Monitorado ativo" else "Monitorado inativo", accent = monitorActive))
@@ -270,14 +320,18 @@ class MainActivity : Activity() {
     }
 
     private fun showAboutDialog() {
+        val (wrapper, layout) = dialogWrapper()
+        dialogIntro(layout, "Resumo rápido do foco atual do projeto.")
+        val card = panel(14)
+        card.addView(dialogMetricRow("Versão", "0.1.0-alpha.14"))
+        card.addView(dialogMetricRow("Tela inicial", "Painel Controle"))
+        card.addView(dialogMetricRow("Modo monitorado", "No mesmo APK"))
+        card.addView(dialogMetricRow("Segurança", "Pareamento local e Android Keystore"))
+        layout.addView(card)
+        layout.addView(label("O aplicativo prioriza uso local, privacidade, baixo consumo e preparação para futura publicação na Google Play.", 12f, muted = true))
         AlertDialog.Builder(this)
             .setTitle("Sobre o Monitor Remoto")
-            .setMessage(
-                "Versão 0.1.0-alpha.13\n\n" +
-                    "Tela inicial: Painel Controle.\n" +
-                    "Modo Monitorado continua no mesmo APK e pode ser acessado pelo menu.\n" +
-                    "Conexões locais usam pareamento com chave protegida pelo Android Keystore."
-            )
+            .setView(wrapper)
             .setPositiveButton("OK", null)
             .show()
     }
@@ -288,25 +342,30 @@ class MainActivity : Activity() {
             message("Nenhum aparelho recente salvo ainda.")
             return
         }
-        val names = items.map {
-            val seen = if (it.lastSuccessMs == 0L) "salvo" else formatDate(it.lastSuccessMs)
-            if (it.name == it.host) "${it.host} · $seen" else "${it.name} · ${it.host} · $seen"
-        }.toTypedArray()
-        AlertDialog.Builder(this)
-            .setTitle("Aparelhos recentes")
-            .setItems(names) { _, which ->
-                val item = items[which]
+        val (wrapper, layout) = dialogWrapper()
+        dialogIntro(layout, "Toque em um aparelho para selecionar rapidamente ou abra o fluxo Conectar para informar IP, chave e QR Code.")
+        var popup: AlertDialog? = null
+        items.forEachIndexed { index, item ->
+            val seen = if (item.lastSuccessMs == 0L) "Pareado, sem consulta recente" else "Última consulta ${formatDate(item.lastSuccessMs)}"
+            val title = if (item.name == item.host) item.host else item.name
+            val subtitle = if (item.name == item.host) seen else "${item.host} · $seen"
+            layout.addView(dialogCardRow(title, subtitle) {
                 SettingsStore.setRemoteHost(this, item.host)
                 mode = 1
                 lastResult = null; lastResultHost = ""; lastSuccessfulMs = 0L
                 connectionState = "idle"; connectionMessage = null
-                render(); refreshRemote(silent = false)
-            }
-            .setNeutralButton("Abrir Conectar") { _, _ ->
-                showConnectionDialog()
-            }
+                popup?.dismiss(); render(); refreshRemote(silent = false)
+            })
+            if (index != items.lastIndex) sectionGap(layout, 8)
+        }
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("Aparelhos recentes")
+            .setView(wrapper)
             .setNegativeButton("Fechar", null)
-            .show()
+            .setPositiveButton("Abrir Conectar") { _, _ -> showConnectionDialog() }
+            .create()
+        popup = dialog
+        dialog.show()
     }
 
     private fun showSettingsDialog() {
@@ -323,29 +382,13 @@ class MainActivity : Activity() {
     }
 
     private fun showOptionDialog(title: String, items: List<OptionItem>) {
-        val wrapper = ScrollView(this)
-        val layout = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(18), dp(8), dp(18), dp(8))
-        }
-        wrapper.addView(layout)
+        val (wrapper, layout) = dialogWrapper()
+        dialogIntro(layout, if (title == "Menu") "Navegue rapidamente entre as áreas principais do aplicativo." else "Ajustes agrupados para reduzir a quantidade de informações na tela principal.")
         var popup: AlertDialog? = null
         items.forEachIndexed { index, item ->
-            val row = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-                background = shape(fieldColor, 16, true)
-                setPadding(dp(14), dp(12), dp(14), dp(12))
-                isClickable = true
-                isFocusable = true
-                setOnClickListener { popup?.dismiss(); item.action() }
-            }
-            val texts = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-            texts.addView(label(item.title, 15f, strong = true).apply { setPadding(0, 0, 0, dp(2)) })
-            if (item.subtitle.isNotBlank()) texts.addView(label(item.subtitle, 11.5f, muted = true).apply { setPadding(0, 0, 0, 0) })
-            row.addView(texts, LinearLayout.LayoutParams(0, -2, 1f))
-            row.addView(label("›", 24f, muted = true))
-            layout.addView(row)
+            layout.addView(dialogCardRow(item.title, item.subtitle) {
+                popup?.dismiss(); item.action()
+            })
             if (index != items.lastIndex) sectionGap(layout, 8)
         }
         val dialog = AlertDialog.Builder(this)
@@ -358,37 +401,64 @@ class MainActivity : Activity() {
     }
 
     private fun showAppearanceDialog() {
-        val choices = arrayOf("Claro (padrão)", "Escuro", "Acompanhar o sistema")
-        val options = arrayOf("light", "dark", "system")
-        val selected = options.indexOf(SettingsStore.theme(this)).coerceAtLeast(0)
-        AlertDialog.Builder(this).setTitle("Aparência")
-            .setSingleChoiceItems(choices, selected) { dialog, which ->
-                if (options[which] != SettingsStore.theme(this)) {
-                    SettingsStore.setTheme(this, options[which]); dialog.dismiss(); recreate()
-                } else dialog.dismiss()
-            }.setNegativeButton("Fechar", null).show()
+        val options = listOf(
+            Triple("light", "Claro (padrão)", "Visual mais leve para uso diário"),
+            Triple("dark", "Escuro", "Mais confortável em ambientes pouco iluminados"),
+            Triple("system", "Acompanhar o sistema", "Segue o tema configurado no Android")
+        )
+        val current = SettingsStore.theme(this)
+        val (wrapper, layout) = dialogWrapper()
+        dialogIntro(layout, "Escolha a aparência padrão do aplicativo.")
+        var popup: AlertDialog? = null
+        options.forEachIndexed { index, option ->
+            val selected = option.first == current
+            layout.addView(dialogCardRow(option.second, option.third, if (selected) "●" else "○", accent = selected) {
+                if (option.first != SettingsStore.theme(this)) {
+                    SettingsStore.setTheme(this, option.first)
+                    popup?.dismiss()
+                    recreate()
+                } else popup?.dismiss()
+            })
+            if (index != options.lastIndex) sectionGap(layout, 8)
+        }
+        val dialog = AlertDialog.Builder(this).setTitle("Aparência").setView(wrapper).setNegativeButton("Fechar", null).create()
+        popup = dialog
+        dialog.show()
     }
 
     private fun showPermissionSettings() {
-        val state = if (hasListener()) "autorizado" else "não autorizado"
-        AlertDialog.Builder(this).setTitle("Permissões e notificações")
-            .setItems(arrayOf("Acesso às notificações: $state", "Aplicativos permitidos: ${SettingsStore.notificationAllowlist(this).size}")) { _, index ->
-                if (index == 0) {
-                    AlertDialog.Builder(this).setTitle("Acesso a notificações (opcional)")
-                        .setMessage("O Android concede acesso geral às notificações, que podem conter informações sensíveis. Apenas aplicativos escolhidos são transmitidos, com filtros não infalíveis. Você pode revogar o acesso nas Configurações Android. O monitoramento da bateria não exige essa permissão.")
-                        .setNegativeButton("Cancelar", null)
-                        .setPositiveButton("Configurar no Android") { _, _ ->
-                            startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
-                        }.show()
-                } else selectNotificationApps()
-            }.setNegativeButton("Fechar", null).show()
+        val state = if (hasListener()) "Autorizado" else "Sem acesso"
+        val count = SettingsStore.notificationAllowlist(this).size
+        val (wrapper, layout) = dialogWrapper()
+        dialogIntro(layout, "O monitoramento da bateria funciona sem esta permissão. As notificações só são enviadas para apps autorizados e não financeiros.")
+        layout.addView(dialogCardRow("Acesso às notificações", state, "›") {
+            AlertDialog.Builder(this).setTitle("Acesso a notificações (opcional)")
+                .setMessage("O Android concede acesso geral às notificações, que podem conter informações sensíveis. Apenas aplicativos escolhidos são transmitidos, com filtros não infalíveis. Você pode revogar o acesso nas Configurações Android. O monitoramento da bateria não exige essa permissão.")
+                .setNegativeButton("Cancelar", null)
+                .setPositiveButton("Configurar no Android") { _, _ ->
+                    startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+                }.show()
+        })
+        sectionGap(layout, 8)
+        layout.addView(dialogCardRow("Aplicativos autorizados", "$count selecionado(s)", "›") { selectNotificationApps() })
+        AlertDialog.Builder(this)
+            .setTitle("Permissões e notificações")
+            .setView(wrapper)
+            .setNegativeButton("Fechar", null)
+            .show()
     }
 
     private fun showSecuritySettings() {
-        AlertDialog.Builder(this).setTitle("Segurança e pareamento")
-            .setItems(arrayOf("Mostrar/copiar chave de pareamento", "Trocar chave e revogar acessos")) { _, option ->
-                if (option == 0) showMonitorKey() else confirmRotateMonitorKey()
-            }.setNegativeButton("Fechar", null).show()
+        val (wrapper, layout) = dialogWrapper()
+        dialogIntro(layout, "As credenciais são protegidas pelo Android Keystore. Compartilhe a chave somente entre seus próprios aparelhos.")
+        layout.addView(dialogCardRow("Mostrar/copiar chave de pareamento", "Usar conexão manual com IP e chave", "›") { showMonitorKey() })
+        sectionGap(layout, 8)
+        layout.addView(dialogCardRow("Trocar chave e revogar acessos", "Todos os controladores precisarão parear novamente", "›") { confirmRotateMonitorKey() })
+        AlertDialog.Builder(this)
+            .setTitle("Segurança e pareamento")
+            .setView(wrapper)
+            .setNegativeButton("Fechar", null)
+            .show()
     }
 
     private fun showMonitorKey() {
@@ -420,28 +490,41 @@ class MainActivity : Activity() {
 
     private fun showServiceSettings() {
         val autostart = SettingsStore.autoStartEnabled(this)
-        AlertDialog.Builder(this).setTitle("Serviço e inicialização")
-            .setItems(arrayOf("Reiniciar serviço", if (autostart) "Desativar início após reiniciar" else "Ativar início após reiniciar")) { _, option ->
-                if (option == 0) {
-                    if (SettingsStore.isMonitorEnabled(this)) startServiceExplicitly()
-                    else message("Ative o monitoramento antes de iniciar o serviço.")
-                } else {
-                    SettingsStore.setAutoStart(this, !autostart)
-                    message("Preferência salva. A inicialização depende das restrições do Android e do fabricante.")
-                }
-            }.setNegativeButton("Fechar", null).show()
+        val (wrapper, layout) = dialogWrapper()
+        dialogIntro(layout, "Controle o comportamento do serviço monitorado neste aparelho.")
+        layout.addView(dialogCardRow("Reiniciar serviço", "Reativa o monitoramento se ele já estiver autorizado", "›") {
+            if (SettingsStore.isMonitorEnabled(this)) startServiceExplicitly()
+            else message("Ative o monitoramento antes de iniciar o serviço.")
+        })
+        sectionGap(layout, 8)
+        layout.addView(dialogCardRow(if (autostart) "Desativar início após reiniciar" else "Ativar início após reiniciar", "Depende das restrições do Android e do fabricante", "›") {
+            SettingsStore.setAutoStart(this, !autostart)
+            message("Preferência salva. A inicialização depende das restrições do Android e do fabricante.")
+        })
+        AlertDialog.Builder(this)
+            .setTitle("Serviço e inicialização")
+            .setView(wrapper)
+            .setNegativeButton("Fechar", null)
+            .show()
     }
 
     private fun showDiagnostics() {
         val running = MonitorService.isRunning
-        AlertDialog.Builder(this).setTitle("Diagnóstico")
-            .setMessage("Serviço: ${if (running) "ativo" else "parado"}\n" +
-                "Monitoramento autorizado: ${if (SettingsStore.isMonitorEnabled(this)) "sim" else "não"}\n" +
-                "Porta TCP: ${WireProtocol.PORT}\n" +
-                "IP local: ${localIps().ifBlank { "indisponível" }}\n" +
-                "Notificações: ${if (hasListener()) "autorizadas" else "sem acesso"}\n" +
-                "Apps permitidos: ${SettingsStore.notificationAllowlist(this).size}")
-            .setPositiveButton("Fechar", null).show()
+        val (wrapper, layout) = dialogWrapper()
+        dialogIntro(layout, "Resumo técnico do serviço local e das permissões relacionadas.")
+        val card = panel(14)
+        card.addView(dialogMetricRow("Serviço", if (running) "Ativo" else "Parado"))
+        card.addView(dialogMetricRow("Monitoramento autorizado", if (SettingsStore.isMonitorEnabled(this)) "Sim" else "Não"))
+        card.addView(dialogMetricRow("Porta TCP", WireProtocol.PORT.toString()))
+        card.addView(dialogMetricRow("IP local", localIps().ifBlank { "Indisponível" }))
+        card.addView(dialogMetricRow("Notificações", if (hasListener()) "Autorizadas" else "Sem acesso"))
+        card.addView(dialogMetricRow("Apps permitidos", SettingsStore.notificationAllowlist(this).size.toString()))
+        layout.addView(card)
+        AlertDialog.Builder(this)
+            .setTitle("Diagnóstico")
+            .setView(wrapper)
+            .setNegativeButton("Fechar", null)
+            .show()
     }
 
     private fun renderMonitor() {
@@ -513,39 +596,35 @@ class MainActivity : Activity() {
         val lastDeviceName = lastResult?.optJSONObject("battery")?.optString("device")
             ?.takeIf { lastResultHost == host && it.isNotBlank() }
 
-        val top = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        val descriptor = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         currentDeviceTitle = label(
             if (savedDevice?.customName == true) savedDevice.name else lastDeviceName ?: savedDevice?.name ?: "Nenhum aparelho selecionado",
-            18f,
+            19f,
             strong = true
         )
-        descriptor.addView(currentDeviceTitle)
+        card.addView(currentDeviceTitle)
         currentStatus = label("", 13f, strong = true)
-        descriptor.addView(currentStatus)
-        top.addView(descriptor, LinearLayout.LayoutParams(0, -2, 1f))
+        card.addView(currentStatus)
+        currentUpdated = label("", 12f, muted = true).apply { setPadding(0, dp(2), 0, dp(6)) }
+        card.addView(currentUpdated)
 
-        val actions = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.END }
+        val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
         currentConnectButton = actionButton("Conectar", emphasis = true) {
             val actualState = effectiveConnectionState()
             if (actualState == "connected" || actualState == "loading") disconnectCurrent() else showConnectionDialog()
-        }.apply { minWidth = dp(118) }
-        actions.addView(currentConnectButton, LinearLayout.LayoutParams(-2, dp(42)))
-        actions.addView(View(this), LinearLayout.LayoutParams(1, dp(8)))
-        actions.addView(actionButton("↻") { refreshRemote(silent = false) }, LinearLayout.LayoutParams(dp(48), dp(42)).apply { gravity = Gravity.END })
-        top.addView(actions)
-        card.addView(top)
+        }
+        actions.addView(currentConnectButton, LinearLayout.LayoutParams(0, dp(46), 1f))
+        actions.addView(View(this), LinearLayout.LayoutParams(dp(8), 1))
+        actions.addView(actionButton("↻") { refreshRemote(silent = false) }, LinearLayout.LayoutParams(dp(52), dp(46)))
+        card.addView(actions)
+        sectionGap(card, 12)
 
-        currentUpdated = label("", 12f, muted = true)
-        card.addView(currentUpdated)
-        sectionGap(card, 10)
         resultBox = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         card.addView(resultBox)
         content.addView(card)
         updateConnectionLabels()
         val cached = lastResult
         if (cached != null && lastResultHost == host) displayResult(cached, fromCache = true)
-        else resultBox?.addView(label("Toque em Conectar para escolher o aparelho, ler o QR Code ou colar a chave de pareamento.", 13f, muted = true))
+        else resultBox?.addView(label("Use Conectar para informar IP, ler o QR Code ou usar um aparelho recente com chave salva.", 13f, muted = true))
         gap(12)
         addText("Atualização automática a cada 15 segundos enquanto esta tela estiver aberta.", 11f, muted = true)
     }
@@ -587,7 +666,7 @@ class MainActivity : Activity() {
             else -> "Conectar"
         }
         currentUpdated?.text = when {
-            !hasKey -> "Escolha um aparelho ou toque em Conectar para informar IP, chave ou ler o QR"
+            !hasKey -> "Use Conectar para informar IP, ler o QR Code ou usar um aparelho recente"
             lastSuccessfulMs > 0 && lastResultHost == host ->
                 "Última atualização: ${formatDate(lastSuccessfulMs)}" +
                     if (actualState == "offline") " · dados anteriores" else ""
@@ -724,25 +803,33 @@ class MainActivity : Activity() {
     }
 
     private fun showDeviceActions(item: RecentDevices.Device, popup: AlertDialog?) {
-        AlertDialog.Builder(this).setTitle(item.name)
-            .setItems(arrayOf("Renomear", "Esquecer aparelho")) { _, option ->
-                if (option == 0) {
-                    val input = field("Nome do aparelho", item.name)
-                    AlertDialog.Builder(this).setTitle("Renomear aparelho").setView(input)
-                        .setNegativeButton("Cancelar", null)
-                        .setPositiveButton("Salvar") { _, _ ->
-                            RecentDevices.rename(this, item.host, input.text.toString())
-                            popup?.dismiss(); render()
-                        }.show()
-                } else AlertDialog.Builder(this).setTitle("Esquecer aparelho?")
-                    .setMessage("A credencial de ${item.name} será apagada deste celular. Um novo pareamento será necessário para acessá-lo novamente.")
-                    .setNegativeButton("Cancelar", null)
-                    .setPositiveButton("Esquecer") { _, _ ->
-                        RecentDevices.forget(this, item.host)
-                        popup?.dismiss(); lastResult = null; lastResultHost = ""
-                        lastSuccessfulMs = 0L; connectionState = "idle"; render()
-                    }.show()
-            }.show()
+        val (wrapper, layout) = dialogWrapper()
+        dialogIntro(layout, "Gerencie o nome exibido e remova o pareamento salvo deste aparelho.")
+        layout.addView(dialogCardRow("Renomear", "Alterar o nome exibido na lista e no painel", "›") {
+            val input = field("Nome do aparelho", item.name)
+            AlertDialog.Builder(this).setTitle("Renomear aparelho").setView(input)
+                .setNegativeButton("Cancelar", null)
+                .setPositiveButton("Salvar") { _, _ ->
+                    RecentDevices.rename(this, item.host, input.text.toString())
+                    popup?.dismiss(); render()
+                }.show()
+        })
+        sectionGap(layout, 8)
+        layout.addView(dialogCardRow("Esquecer aparelho", "Apaga a credencial salva e exige novo pareamento", "›") {
+            AlertDialog.Builder(this).setTitle("Esquecer aparelho?")
+                .setMessage("A credencial de ${item.name} será apagada deste celular. Um novo pareamento será necessário para acessá-lo novamente.")
+                .setNegativeButton("Cancelar", null)
+                .setPositiveButton("Esquecer") { _, _ ->
+                    RecentDevices.forget(this, item.host)
+                    popup?.dismiss(); lastResult = null; lastResultHost = ""
+                    lastSuccessfulMs = 0L; connectionState = "idle"; render()
+                }.show()
+        })
+        AlertDialog.Builder(this)
+            .setTitle(item.name)
+            .setView(wrapper)
+            .setNegativeButton("Fechar", null)
+            .show()
     }
 
     private fun availableLocalIps(): List<Pair<String, String>> = try {
@@ -1081,6 +1168,11 @@ class MainActivity : Activity() {
     private fun formatDate(timestamp: Long): String = SimpleDateFormat("dd/MM HH:mm:ss", Locale.getDefault()).format(Date(timestamp))
 
     private fun message(message: String) {
-        AlertDialog.Builder(this).setMessage(message).setPositiveButton("OK", null).show()
+        val (wrapper, layout) = dialogWrapper()
+        layout.addView(label(message, 15f).apply { setPadding(0, dp(6), 0, dp(8)) })
+        AlertDialog.Builder(this)
+            .setView(wrapper)
+            .setPositiveButton("OK", null)
+            .show()
     }
 }

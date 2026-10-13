@@ -12,7 +12,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.13" and code.group(1) == "13", "Versões incompatíveis"
+assert version == "0.1.0-alpha.14" and code.group(1) == "14", "Versões incompatíveis"
 assert version in ui, "Tela de versão desatualizada"
 assert f"versionCode={code.group(1)}" in (root / 'docs/ARCHITECTURE.md').read_text(), "Arquitetura com versionCode desatualizado"
 # alpha.9 remove a Activity antiga do ZXing Embedded; Camera2 + ZXing Core offline.
@@ -102,4 +102,4 @@ assert 'const val LIMIT = 5' in profiles and 'fun forget(' in profiles and 'fun 
 assert 'profileKeyName(' in secret and 'MessageDigest.getInstance("SHA-256")' in secret
 assert 'fun prefix(' in ip_suggestion
 assert (root / 'app/src/test/java/br/dev/monitorremoto/core/Ipv4SuggestionTest.kt').is_file()
-print('PASSOU: UI alpha.13, migração única, Keystore por host, tema e sugestão de IP')
+print('PASSOU: UI alpha.14, migração única, Keystore por host, tema e sugestão de IP')
