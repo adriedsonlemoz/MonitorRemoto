@@ -9,6 +9,9 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.res.Configuration
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.Typeface
@@ -30,6 +33,8 @@ import android.widget.ScrollView
 import android.widget.TextView
 import br.dev.monitorremoto.capture.NotificationCaptureService
 import br.dev.monitorremoto.core.BatteryReader
+import br.dev.monitorremoto.core.RecentDevices
+import br.dev.monitorremoto.core.Ipv4Suggestion
 import br.dev.monitorremoto.core.SettingsStore
 import br.dev.monitorremoto.core.SensitiveContent
 import br.dev.monitorremoto.security.CryptoBox
@@ -51,11 +56,18 @@ import kotlin.concurrent.thread
 
 /** Interface Android Views sem dependências adicionais; ambos os modos no mesmo APK. */
 class MainActivity : Activity() {
-    private val bg = Color.rgb(14, 22, 35)
-    private val surface = Color.rgb(28, 41, 58)
-    private val ink = Color.rgb(233, 239, 247)
-    private val dim = Color.rgb(167, 184, 203)
-    private val highlight = Color.rgb(90, 214, 188)
+    private fun darkTheme(): Boolean = when (SettingsStore.theme(this)) {
+        "dark" -> true
+        "system" -> (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        else -> false
+    }
+    private val bg get() = if (darkTheme()) Color.rgb(14, 22, 35) else Color.rgb(247, 249, 252)
+    private val surface get() = if (darkTheme()) Color.rgb(28, 41, 58) else Color.WHITE
+    private val ink get() = if (darkTheme()) Color.rgb(233, 239, 247) else Color.rgb(23, 34, 48)
+    private val dim get() = if (darkTheme()) Color.rgb(167, 184, 203) else Color.rgb(92, 109, 128)
+    private val highlight get() = if (darkTheme()) Color.rgb(90, 214, 188) else Color.rgb(24, 166, 146)
+    private val highlightText get() = if (darkTheme()) Color.rgb(14, 22, 35) else Color.WHITE
+    private val lineColor get() = if (darkTheme()) Color.rgb(47, 64, 83) else Color.rgb(224, 231, 239)
     private lateinit var content: LinearLayout
     private val handler = Handler(Looper.getMainLooper())
     private var mode = 0 // 0: monitorado, 1: controle
@@ -64,9 +76,17 @@ class MainActivity : Activity() {
     private val notificationPermissionRequest = 101
     private var active = false
     private var fetching = false
+    private var fetchingHost: String = ""
     private var resultBox: LinearLayout? = null
-    private var errorBox: TextView? = null
     private var pairingInProgress = false
+    private var lastResult: JSONObject? = null
+    private var lastResultHost: String = ""
+    private var lastSuccessfulMs: Long = 0L
+    private var connectionState: String = "idle" // idle / loading / connected / offline
+    private var connectionMessage: String? = null
+    private var currentStatus: TextView? = null
+    private var currentDeviceTitle: TextView? = null
+    private var currentUpdated: TextView? = null
     private val poller = object : Runnable {
         override fun run() {
             if (active && mode == 1) {
@@ -77,11 +97,14 @@ class MainActivity : Activity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        setTheme(if (darkTheme()) android.R.style.Theme_Material_NoActionBar else android.R.style.Theme_Material_Light_NoActionBar)
         super.onCreate(savedInstanceState)
+        RecentDevices.migrateLegacy(this)
         mode = savedInstanceState?.getInt("active_mode", 0) ?: 0
         window.statusBarColor = bg
         window.navigationBarColor = bg
-        window.decorView.systemUiVisibility = 0
+        window.decorView.systemUiVisibility = if (darkTheme()) 0 else
+            View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
         val scroll = ScrollView(this).apply { setBackgroundColor(bg); isFillViewport = true }
         content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -108,12 +131,18 @@ class MainActivity : Activity() {
     override fun onPause() {
         active = false
         handler.removeCallbacks(poller)
+        // Uma resposta anterior não significa que ainda haja conexão ao voltar ao app.
+        if (mode == 1 && connectionState == "connected") {
+            connectionState = "idle"
+            updateConnectionLabels()
+        }
         super.onPause()
     }
 
     private fun dp(value: Int) = (resources.displayMetrics.density * value).toInt()
-    private fun shape(color: Int, corner: Int = 13) = GradientDrawable().apply {
+    private fun shape(color: Int, corner: Int = 13, stroke: Boolean = false) = GradientDrawable().apply {
         setColor(color); cornerRadius = dp(corner).toFloat()
+        if (stroke) setStroke(dp(1), lineColor)
     }
 
     private fun label(value: String, size: Float = 15f, strong: Boolean = false, muted: Boolean = false): TextView =
@@ -135,7 +164,7 @@ class MainActivity : Activity() {
             text = title
             isAllCaps = false
             textSize = 14f
-            setTextColor(if (emphasis) bg else ink)
+            setTextColor(if (emphasis) highlightText else ink)
             background = shape(if (emphasis) highlight else surface)
             setPadding(dp(8), dp(8), dp(8), dp(8))
             val params = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(52))
@@ -159,15 +188,51 @@ class MainActivity : Activity() {
         layoutParams = params
     }
 
+    private fun actionButton(title: String, emphasis: Boolean = false, onClick: () -> Unit): Button =
+        Button(this).apply {
+            text = title; isAllCaps = false; textSize = 13f
+            setTextColor(if (emphasis) highlightText else ink)
+            background = shape(if (emphasis) highlight else surface, 12, !emphasis)
+            setPadding(dp(9), 0, dp(9), 0)
+            minHeight = dp(42)
+            setOnClickListener { onClick() }
+        }
+
+    private fun panel(pad: Int = 16): LinearLayout = LinearLayout(this).apply {
+        orientation = LinearLayout.VERTICAL
+        background = shape(surface, 18, true)
+        setPadding(dp(pad), dp(pad), dp(pad), dp(pad))
+    }
+
+    private fun sectionGap(parent: LinearLayout, pixels: Int = 12) {
+        parent.addView(View(this), LinearLayout.LayoutParams(1, dp(pixels)))
+    }
+
     private fun render() {
         content.removeAllViews()
-        addText("MONITOR REMOTO", 22f, strong = true)
-        addText("v0.1.0-alpha.9  ·  Privado e criptografado", 12f, muted = true)
+        val header = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+        val title = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        title.addView(label("MONITOR REMOTO", 18f, strong = true).apply {
+            maxLines = 1
+            ellipsize = android.text.TextUtils.TruncateAt.END
+        })
+        title.addView(label("v0.1.0-alpha.10  ·  Privado e criptografado", 10f, muted = true).apply {
+            maxLines = 1
+            ellipsize = android.text.TextUtils.TruncateAt.END
+        })
+        header.addView(title, LinearLayout.LayoutParams(0, -2, 1f))
+        if (mode == 1) {
+            header.addView(actionButton("⌁ Conectar", emphasis = true) { showConnectionDialog() },
+                LinearLayout.LayoutParams(-2, dp(43)))
+            header.addView(View(this), LinearLayout.LayoutParams(dp(7), 1))
+        }
+        header.addView(actionButton("⚙") { showSettingsDialog() }, LinearLayout.LayoutParams(dp(45), dp(43)))
+        content.addView(header)
         gap(14)
         val tabs = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         fun addTab(title: String, which: Int) {
-            val tab = button(title, emphasis = mode == which) {
-                mode = which; render()
+            val tab = actionButton(title, emphasis = mode == which) {
+                if (mode != which) { mode = which; render() }
             }
             val params = LinearLayout.LayoutParams(0, dp(48), 1f)
             if (which == 0) params.rightMargin = dp(8)
@@ -176,13 +241,29 @@ class MainActivity : Activity() {
         addTab("MONITORADO", 0)
         addTab("CONTROLE", 1)
         content.addView(tabs)
-        gap(14)
+        gap(15)
         if (mode == 0) renderMonitor() else {
             renderController()
             content.post { if (active && mode == 1) refreshRemote(silent = true) }
         }
         gap(20)
-        addText("Apenas em aparelhos próprios ou com autorização expressa. As mensagens são mantidas somente na memória enquanto o processo estiver ativo.", 12f, muted = true)
+        addText("Somente em aparelhos próprios ou autorizados. Notificações permitidas são temporárias e filtradas.", 11f, muted = true)
+    }
+
+    private fun showSettingsDialog() {
+        val choices = arrayOf("Claro (padrão)", "Escuro", "Acompanhar o sistema")
+        val options = arrayOf("light", "dark", "system")
+        val selected = options.indexOf(SettingsStore.theme(this)).coerceAtLeast(0)
+        AlertDialog.Builder(this)
+            .setTitle("⚙ Configurações · Aparência")
+            .setSingleChoiceItems(choices, selected) { dialog, which ->
+                if (options[which] != SettingsStore.theme(this)) {
+                    SettingsStore.setTheme(this, options[which])
+                    dialog.dismiss()
+                    recreate()
+                } else dialog.dismiss()
+            }
+            .setNegativeButton("Fechar", null).show()
     }
 
     private fun renderMonitor() {
@@ -295,41 +376,183 @@ class MainActivity : Activity() {
     }
 
     private fun renderController() {
-        addText("Consultar outro celular", 17f, strong = true)
-        addText("Use o IP Wi-Fi do monitorado ou o IPv4/nome da VPN privada. Não informe http:// nem porta.", 13f, muted = true)
-        gap()
-        val host = field("Ex.: 192.168.1.50 ou celular.tailnet.ts.net", SettingsStore.getRemoteHost(this))
-        val key = field(if (SecretVault.load(this, SecretVault.CONTROLLER_KEY) == null)
-            "Cole a chave de pareamento (43 caracteres)" else "Chave já salva. Deixe vazio para mantê-la")
-        content.addView(host)
-        content.addView(key)
-        content.addView(button("Salvar acesso", emphasis = true) {
-            try {
-                val address = host.text.toString().trim()
-                require(address.isNotEmpty() && address.length <= 253 &&
-                    !address.contains('/') && !address.contains(':') && !address.contains(' ')) {
-                    "Informe um IP IPv4 ou hostname válido."
-                }
-                val typedKey = key.text.toString().trim()
-                if (typedKey.isNotEmpty()) {
-                    SecretVault.save(this, SecretVault.CONTROLLER_KEY, CryptoBox.decodeKey(typedKey))
-                    key.text.clear()
-                }
-                require(SecretVault.load(this, SecretVault.CONTROLLER_KEY) != null) { "Cole primeiro a chave do outro celular." }
-                SettingsStore.setRemoteHost(this, address)
-                message("Acesso salvo com chave protegida pelo Android Keystore.")
-                refreshRemote(silent = false)
-            } catch (error: Exception) { message("Não foi possível salvar: ${error.message}") }
-        })
-        content.addView(button("Ler QR Code do outro celular", emphasis = true) { startQrScanner() })
-        content.addView(button("Inserir código QR manualmente") { askQrText() })
-        addText("Câmera local nativa (Camera2). Se a câmera falhar, use o código do QR manualmente, sem necessidade de acesso a mensagens.", 12f, muted = true)
-        content.addView(button("Atualizar agora") { refreshRemote(silent = false) })
-        addText("Atualização automática a cada 15 segundos somente enquanto esta tela estiver aberta.", 12f, muted = true)
-        gap(14)
-        errorBox = label("Aguardando primeira consulta…", muted = true).also { content.addView(it) }
+        val host = SettingsStore.getRemoteHost(this)
+        val card = panel()
+        val top = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+        val descriptor = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        val savedDevice = RecentDevices.list(this).firstOrNull { it.host == host }
+        val lastDeviceName = lastResult?.optJSONObject("battery")?.optString("device")
+            ?.takeIf { lastResultHost == host && it.isNotBlank() }
+        currentDeviceTitle = label(if (savedDevice?.customName == true) savedDevice.name
+            else lastDeviceName ?: savedDevice?.name ?: "Nenhum aparelho selecionado", 17f, strong = true)
+        descriptor.addView(currentDeviceTitle)
+        currentStatus = label("", 13f)
+        descriptor.addView(currentStatus)
+        top.addView(descriptor, LinearLayout.LayoutParams(0, -2, 1f))
+        top.addView(actionButton("↻") { refreshRemote(silent = false) },
+            LinearLayout.LayoutParams(dp(44), dp(44)))
+        card.addView(top)
+        currentUpdated = label("", 12f, muted = true)
+        card.addView(currentUpdated)
+        sectionGap(card, 7)
         resultBox = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        content.addView(resultBox)
+        card.addView(resultBox)
+        content.addView(card)
+        updateConnectionLabels()
+        val cached = lastResult
+        if (cached != null && lastResultHost == host) displayResult(cached, fromCache = true)
+        else resultBox?.addView(label("Toque em Conectar para escolher um aparelho ou atualizar o selecionado.", 13f, muted = true))
+        gap(12)
+        addText("Atualização automática a cada 15 segundos enquanto esta tela estiver aberta.", 11f, muted = true)
+    }
+
+    private fun updateConnectionLabels() {
+        val host = SettingsStore.getRemoteHost(this)
+        val hasKey = host.isNotBlank() && RecentDevices.key(this, host) != null
+        val actualState = if (!hasKey) "idle" else connectionState
+        val text = when (actualState) {
+            "connected" -> "● Conectado"
+            "offline" -> "● Sem resposta"
+            "loading" -> "◌ Atualizando…"
+            else -> "○ Desconectado"
+        }
+        currentStatus?.text = text
+        currentStatus?.setTextColor(if (actualState == "connected") highlight else
+            if (actualState == "offline") Color.rgb(190, 88, 61) else dim)
+        currentUpdated?.text = when {
+            !hasKey -> "Configure a conexão pelo botão Conectar"
+            lastSuccessfulMs > 0 && lastResultHost == host ->
+                "Última atualização: ${formatDate(lastSuccessfulMs)}" +
+                    if (actualState == "offline") " · dados anteriores" else ""
+            else -> connectionMessage ?: "Aguardando resposta de $host"
+        }
+    }
+
+    /** Apenas o IP da interface de rede Wi-Fi ativa; sem supor prefixos de outras redes. */
+    private fun localWifiPrefix(): String? {
+        return try {
+            val manager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+            val network = manager.activeNetwork
+            val capabilities = network?.let { manager.getNetworkCapabilities(it) }
+            if (network == null || capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) != true) null
+            else manager.getLinkProperties(network)?.linkAddresses?.firstNotNullOfOrNull { link ->
+                val ip = link.address as? Inet4Address ?: return@firstNotNullOfOrNull null
+                if (!ip.isSiteLocalAddress) return@firstNotNullOfOrNull null
+                Ipv4Suggestion.prefix(ip.hostAddress.orEmpty(), link.prefixLength)
+            }
+        } catch (_: Exception) { null }
+    }
+
+    private fun showConnectionDialog() {
+        RecentDevices.migrateLegacy(this)
+        val wrapper = ScrollView(this)
+        val layout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(20), dp(7), dp(20), dp(8))
+        }
+        wrapper.addView(layout)
+        val existing = SettingsStore.getRemoteHost(this)
+        val host = field("IP local ou nome da VPN", existing.ifBlank { localWifiPrefix().orEmpty() })
+        host.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
+        layout.addView(label("Endereço IP ou nome da VPN", 14f, strong = true))
+        layout.addView(host)
+        layout.addView(label("Sugestão automática da rede Wi-Fi. Você pode editar o endereço completo.", 11f, muted = true))
+        sectionGap(layout, 8)
+        layout.addView(label("Chave de pareamento", 14f, strong = true))
+        val keyRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+        val key = field("Cole a chave de acesso").apply {
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+            val hasSaved = RecentDevices.key(this@MainActivity, existing) != null
+            if (hasSaved) hint = "Chave salva (deixe vazio para manter)"
+        }
+        keyRow.addView(key, LinearLayout.LayoutParams(0, dp(52), 1f))
+        keyRow.addView(View(this), LinearLayout.LayoutParams(dp(7), 1))
+        keyRow.addView(actionButton("Colar") {
+            val clip = (getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).primaryClip
+            val pasted = clip?.getItemAt(0)?.coerceToText(this)?.toString().orEmpty().trim()
+            if (pasted.isNotBlank()) key.setText(pasted) else message("Área de transferência vazia.")
+        }, LinearLayout.LayoutParams(-2, dp(48)))
+        layout.addView(keyRow)
+        sectionGap(layout, 6)
+        val methods = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        var popup: AlertDialog? = null
+        methods.addView(actionButton("▣ Ler QR", true) {
+            popup?.dismiss(); startQrScanner()
+        }, LinearLayout.LayoutParams(0, dp(46), 1f))
+        methods.addView(View(this), LinearLayout.LayoutParams(dp(8), 1))
+        methods.addView(actionButton("Inserir QR") {
+            popup?.dismiss(); askQrText()
+        }, LinearLayout.LayoutParams(0, dp(46), 1f))
+        layout.addView(methods)
+        sectionGap(layout, 13)
+        layout.addView(label("Aparelhos recentes", 15f, strong = true))
+        val items = RecentDevices.list(this)
+        if (items.isEmpty()) layout.addView(label("Nenhum aparelho salvo ainda.", 12f, muted = true))
+        items.forEach { item ->
+            val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+            val name = if (item.name == item.host) item.host else "${item.name} · ${item.host}"
+            val lastSeen = if (item.lastSuccessMs == 0L) "Salvo" else "Visto ${formatDate(item.lastSuccessMs)}"
+            val entry = actionButton("▸ $name · $lastSeen") {
+                SettingsStore.setRemoteHost(this, item.host)
+                lastResult = null; lastResultHost = ""; lastSuccessfulMs = 0L
+                connectionState = "idle"; connectionMessage = null
+                popup?.dismiss(); render(); refreshRemote(silent = false)
+            }
+            entry.textSize = 11.5f; entry.maxLines = 2
+            row.addView(entry, LinearLayout.LayoutParams(0, dp(47), 1f))
+            row.addView(View(this), LinearLayout.LayoutParams(dp(5), 1))
+            row.addView(actionButton("⋮") { showDeviceActions(item, popup) },
+                LinearLayout.LayoutParams(dp(43), dp(45)))
+            layout.addView(row)
+            sectionGap(layout, 5)
+        }
+        val dialog = AlertDialog.Builder(this).setTitle("Conectar aparelho")
+            .setView(wrapper)
+            .setNegativeButton("Cancelar", null)
+            .setPositiveButton("Conectar", null)
+            .create()
+        popup = dialog
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                try {
+                    val address = host.text.toString().trim()
+                    require(address.isNotEmpty() && address.length <= 253 &&
+                        !address.contains('/') && !address.contains(':') && address.none { it.isWhitespace() } &&
+                        !address.endsWith('.')) { "Complete o endereço IP ou hostname, sem porta." }
+                    val typedKey = key.text.toString().trim()
+                    val parsedKey = if (typedKey.isNotEmpty()) CryptoBox.decodeKey(typedKey)
+                        else RecentDevices.key(this, address)
+                    require(parsedKey != null) { "Informe a chave desse aparelho ou escolha um aparelho recente." }
+                    RecentDevices.save(this, address, parsedKey)
+                    lastResult = null; lastResultHost = ""; lastSuccessfulMs = 0L
+                    connectionState = "loading"; connectionMessage = null
+                    key.text.clear(); dialog.dismiss(); render(); refreshRemote(silent = false)
+                } catch (ex: Exception) { message("Não foi possível conectar: ${ex.message}") }
+            }
+        }
+        dialog.show()
+    }
+
+    private fun showDeviceActions(item: RecentDevices.Device, popup: AlertDialog?) {
+        AlertDialog.Builder(this).setTitle(item.name)
+            .setItems(arrayOf("Renomear", "Esquecer aparelho")) { _, option ->
+                if (option == 0) {
+                    val input = field("Nome do aparelho", item.name)
+                    AlertDialog.Builder(this).setTitle("Renomear aparelho").setView(input)
+                        .setNegativeButton("Cancelar", null)
+                        .setPositiveButton("Salvar") { _, _ ->
+                            RecentDevices.rename(this, item.host, input.text.toString())
+                            popup?.dismiss(); render()
+                        }.show()
+                } else AlertDialog.Builder(this).setTitle("Esquecer aparelho?")
+                    .setMessage("A credencial de ${item.name} será apagada deste celular. Um novo pareamento será necessário para acessá-lo novamente.")
+                    .setNegativeButton("Cancelar", null)
+                    .setPositiveButton("Esquecer") { _, _ ->
+                        RecentDevices.forget(this, item.host)
+                        popup?.dismiss(); lastResult = null; lastResultHost = ""
+                        lastSuccessfulMs = 0L; connectionState = "idle"; render()
+                    }.show()
+            }.show()
     }
 
     private fun availableLocalIps(): List<Pair<String, String>> = try {
@@ -499,8 +722,7 @@ class MainActivity : Activity() {
                 if (isFinishing || isDestroyed) return@runOnUiThread
                 result.onSuccess { key ->
                     try {
-                        SecretVault.save(this, SecretVault.CONTROLLER_KEY, key)
-                        SettingsStore.setRemoteHost(this, code.host)
+                        RecentDevices.save(this, code.host, key)
                         mode = 1
                         render()
                         message("Pareamento concluído. IP e chave salvos com proteção do Android Keystore.")
@@ -514,52 +736,93 @@ class MainActivity : Activity() {
     }
 
     private fun refreshRemote(silent: Boolean) {
-        if (fetching || mode != 1) return
+        if (mode != 1) return
         val host = SettingsStore.getRemoteHost(this)
-        val key = SecretVault.load(this, SecretVault.CONTROLLER_KEY)
+        if (fetching && fetchingHost == host) return
+        val key = if (host.isBlank()) null else RecentDevices.key(this, host)
         if (host.isBlank() || key == null) {
-            if (!silent) errorBox?.text = "Salve o IP/nome e a chave primeiro."
+            connectionState = "idle"; connectionMessage = "Configure um aparelho em Conectar."
+            updateConnectionLabels()
             return
         }
         fetching = true
-        if (!silent) errorBox?.text = "Conectando…"
+        fetchingHost = host
+        connectionState = "loading"; connectionMessage = null
+        updateConnectionLabels()
         thread(name = "MonitorRemoto-client") {
             val result = runCatching { RemoteClient.snapshot(host, key) }
             runOnUiThread {
+                if (fetchingHost != host) return@runOnUiThread
                 fetching = false
-                if (!active || mode != 1) return@runOnUiThread
-                result.onSuccess { displayResult(it) }
-                    .onFailure { errorBox?.text = "Sem conexão: ${it.message ?: it.javaClass.simpleName}. Verifique serviço, rede/VPN e chave." }
+                if (!active || mode != 1 || SettingsStore.getRemoteHost(this) != host) return@runOnUiThread
+                result.onSuccess {
+                    lastSuccessfulMs = System.currentTimeMillis()
+                    lastResult = it; lastResultHost = host
+                    connectionState = "connected"
+                    val name = it.optJSONObject("battery")?.optString("device").orEmpty()
+                    RecentDevices.markSuccess(this, host, name, lastSuccessfulMs)
+                    currentDeviceTitle?.text = RecentDevices.list(this).firstOrNull { d -> d.host == host }
+                        ?.name ?: name.ifBlank { host }
+                    displayResult(it)
+                }.onFailure {
+                    connectionState = "offline"
+                    connectionMessage = "Sem resposta: ${it.javaClass.simpleName}"
+                    if (!silent && lastResultHost != host) {
+                        resultBox?.removeAllViews()
+                        resultBox?.addView(label("Não foi possível consultar o aparelho. Confira Wi-Fi/VPN, endereço e chave.", 13f, muted = true))
+                    }
+                }
+                updateConnectionLabels()
             }
         }
     }
 
-    private fun displayResult(root: JSONObject) {
+    private fun displayResult(root: JSONObject, fromCache: Boolean = false) {
         val panel = resultBox ?: return
         panel.removeAllViews()
-        val battery = root.getJSONObject("battery")
-        errorBox?.text = "Conectado · ${formatDate(root.optLong("serverMs"))}"
-        val header = label(battery.optString("device", "Android"), 16f, true)
-        panel.addView(header)
-        panel.addView(label(batterySummary(battery), 15f))
-        panel.addView(label("Leituras de corrente são estimativas do que o Android fornece: negativas = descarga; positivas = entrada líquida.", 12f, muted = true))
+        val battery = root.optJSONObject("battery") ?: return
+        val level = if (battery.isNull("levelPercent")) "—" else "${battery.optDouble("levelPercent").toInt()}%"
+        val charging = if (battery.optBoolean("charging")) "Carregando" else "Descarregando"
+        val metrics = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+        val chargePanel = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        chargePanel.addView(label("Bateria", 12f, muted = true))
+        chargePanel.addView(label("▰ $level", 27f, strong = true))
+        chargePanel.addView(label(charging, 12f, muted = true))
+        metrics.addView(chargePanel, LinearLayout.LayoutParams(0, -2, 1f))
+        val tempPanel = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        tempPanel.addView(label("Temperatura", 12f, muted = true))
+        tempPanel.addView(label(if (battery.isNull("temperatureC")) "—" else
+            String.format(Locale.getDefault(), "%.1f °C", battery.optDouble("temperatureC")), 20f, strong = true))
+        metrics.addView(tempPanel, LinearLayout.LayoutParams(0, -2, 1f))
+        panel.addView(metrics)
+        sectionGap(panel, 11)
+        val voltage = if (battery.isNull("voltageMv")) "—" else "${battery.optInt("voltageMv")} mV"
+        fun current(name: String): String = if (battery.isNull(name)) "—" else
+            String.format(Locale.getDefault(), "%.0f mA", battery.optDouble(name))
+        panel.addView(label("Tensão: $voltage", 13f))
+        panel.addView(label("Corrente instantânea: ${current("currentMa")}", 13f))
+        panel.addView(label("Corrente média: ${current("averageMa")}", 13f))
+        panel.addView(label("Corrente informada pelo Android; pode ser indisponível ou imprecisa.", 11f, muted = true))
+        if (fromCache && connectionState == "offline")
+            panel.addView(label("Dados anteriores. Conexão indisponível.", 12f, muted = true))
+        gap(5)
         val events = root.optJSONArray("events")
-        panel.addView(label("Últimos eventos (${events?.length() ?: 0})", 17f, true))
+        panel.addView(label("Últimos eventos (${events?.length() ?: 0})", 16f, true))
         if (events == null || events.length() == 0) {
-            panel.addView(label("Nenhuma notificação foi capturada desde o início do processo.", 13f, muted = true))
+            panel.addView(label("Nenhuma notificação autorizada capturada.", 12f, muted = true))
         } else {
             for (index in events.length() - 1 downTo 0) {
                 val event = events.optJSONObject(index) ?: continue
                 val item = LinearLayout(this).apply {
                     orientation = LinearLayout.VERTICAL
-                    background = shape(surface)
-                    setPadding(dp(13), dp(10), dp(13), dp(10))
+                    background = shape(bg, 12)
+                    setPadding(dp(12), dp(8), dp(12), dp(8))
                 }
                 item.addView(label("${event.optString("type").uppercase(Locale.getDefault())} · ${event.optString("app")}", 11f, muted = true))
-                item.addView(label(event.optString("title"), 15f, strong = true))
-                item.addView(label(event.optString("preview"), 13f))
+                item.addView(label(event.optString("title"), 14f, strong = true))
+                item.addView(label(event.optString("preview"), 12f))
                 item.addView(label(formatDate(event.optLong("whenMs")), 11f, muted = true))
-                panel.addView(item, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(9) })
+                panel.addView(item, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(8) })
             }
         }
     }

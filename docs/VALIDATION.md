@@ -99,3 +99,23 @@
 - [ ] Testar câmera traseira, orientação, autofocus e leitura de QR entre dois aparelhos.
 - [ ] Se ainda houver encerramento, coletar logcat com `FATAL EXCEPTION` e `MonitorRemotoQR` sem compartilhar QR ou chaves.
 - [ ] Confirmar continuidade da assinatura no update da alpha.8 para alpha.9.
+
+## alpha.10: interface e segurança dos aparelhos recentes
+
+- [x] Inspeção do código alpha.9 como fonte; versionCode atualizado para 10.
+- [x] Inserido cartão Controle com botão pequeno ↻, status por consulta e última atualização real.
+- [x] Diálogo Conectar com sugestão CIDR baseada em Wi-Fi, botão Colar, QR e lista recente.
+- [x] Separadas credenciais por aparelho e definida migração única das antigas, sem exportar chaves.
+- [x] Tema claro padrão e opções escuro/sistema, guardados em preferências.
+- [ ] Compilar :app:testDebugUnitTest :app:assembleDebug no GitHub Actions e verificar se dialogs cabem em tela reduzida.
+- [ ] Testar fluxo de migração alpha.9 -> alpha.10 em celular sem perder pareamento e com APK de mesma assinatura.
+- [ ] Testar QR Camera2, reconexão, múltiplos aparelhos, Wi-Fi com máscara diferente de /24 e VPN.
+
+### Resultado local da alpha.10 (13/10/2026)
+
+- **PASSOU:** `python3 tools/check_distribution.py` (6 grupos de invariantes de versões, segurança, scanner e interface).
+- **PASSOU:** parser PSI de Kotlin: 25 arquivos `.kt`, zero erros sintáticos.
+- **PASSOU:** 16 testes unitários Kotlin/JVM executados com executor JUnit compatível local (12 anteriores + 4 novos de IP/CIDR). Os testes antigos foram executados a partir das classes compiladas previamente da alpha.9, cujo código de produção não foi alterado na alpha.10, e os quatro novos foram compilados da fonte atual. Esse procedimento **não** substitui o Gradle/Android.
+- **PASSOU:** parsing de Manifest XML e workflow YAML; CRC/ZIP da distribuição.
+- **NÃO EXECUTADO:** compilação `:app:compileDebugKotlin`, `:app:assembleDebug` e testes JUnit pelo Gradle devido à ausência de Android SDK/Gradle completo no ambiente local.
+- **NÃO EXECUTADO:** migração de credenciais em Android físico, comportamento dos temas/popup em telas reduzidas, QR Camera2 em aparelho real e atualização do APK assinado.

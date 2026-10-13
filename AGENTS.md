@@ -1,3 +1,4 @@
+# Monitor Remoto 0.1.0-alpha.10
 # Convenções permanentes do projeto Monitor Remoto
 
 - Toda alteração de código incrementa sequencialmente `versionCode` e `versionName` (ex.: `0.1.0-alpha.8` -> `0.1.0-alpha.9`). Sincronizar tela, README, CHANGELOG, RELEASE_NOTES e documentação.
@@ -16,3 +17,8 @@
 
 - Alpha.9: leitura QR usa **Camera2 nativo** (`ui/QrScanActivity.kt`) + `ui/QrFrameDecoder.kt` (ZXing Core). Não voltar a `IntentIntegrator`, `CaptureActivity` do ZXing Embedded ou permissões ocultas sem diagnóstico e testes.
 - Para problemas de abertura: conferir o logcat `FATAL EXCEPTION` e tag `MonitorRemotoQR`, ciclo de vida Activity/SurfaceTexture/CameraDevice/ImageReader. Não registrar conteúdo do QR (segredo temporário). Oferecer sempre inserção manual do URI.
+
+- Alpha.10: manter tema **claro padrão**, as opções da engrenagem, janela Conectar, botão de atualização compacto, lista de até 5 aparelhos recentes e os dados do Controle no topo. Não reintroduzir formulário longo na tela principal.
+- Credenciais por dispositivo usam `RecentDevices` + `SecretVault.profileKeyName`, com migração única da alpha.9. Não reaproveitar `CONTROLLER_KEY` antigo para IPs novos nem gravar segredo em preferências sem criptografia. Esquecer apaga o segredo correspondente.
+- Respostas HTTP/TCP não são conexão persistente. Exibir "Conectado" apenas após consulta autenticada bem-sucedida e "Sem resposta" após erro. Não inventar tempos de atualização.
+- Próxima versão sequencial: `0.1.0-alpha.11`, `versionCode 11`.

@@ -26,6 +26,13 @@ object SettingsStore {
     fun autoStartEnabled(context: Context) = prefs(context).getBoolean("autostart", false)
     fun setAutoStart(context: Context, enabled: Boolean) = prefs(context).edit().putBoolean("autostart", enabled).apply()
 
+    /** Aparência: claro por padrão; nunca depende de tema escolhido no sistema. */
+    fun theme(context: Context) = prefs(context).getString("theme", "light") ?: "light"
+    fun setTheme(context: Context, value: String) {
+        require(value in setOf("light", "dark", "system"))
+        prefs(context).edit().putString("theme", value).apply()
+    }
+
     fun getRemoteHost(context: Context) = prefs(context).getString("remote_host", "").orEmpty()
     fun setRemoteHost(context: Context, host: String) = prefs(context).edit().putString("remote_host", host).apply()
 }

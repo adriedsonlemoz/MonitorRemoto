@@ -1,6 +1,6 @@
 # Monitor Remoto
 
-**v0.1.0-alpha.9 / versionCode 9** · Android 8.0+ · Kotlin 2.2.21 · AGP 8.13.2 · Gradle 8.13
+**v0.1.0-alpha.10 / versionCode 10** · Android 8.0+ · Kotlin 2.2.21 · AGP 8.13.2 · Gradle 8.13
 
 Dois modos no mesmo APK: **Monitorado** (servidor) e **Controle** (cliente).
 
@@ -20,10 +20,10 @@ Dois modos no mesmo APK: **Monitorado** (servidor) e **Controle** (cliente).
 
 ## Como utilizar
 
-1. Execute GitHub Actions > **Gerar APK e Release** > Run workflow. Para baixar **APK sem ZIP**, use Releases > `v0.1.0-alpha.9` > Assets > **`MonitorRemoto-v0.1.0-alpha.9.apk`**. Em Actions > Artifacts, um APK de contingência (quando presente) continua vindo em ZIP por comportamento padrão do GitHub. Instale o mesmo APK nos dois aparelhos.
+1. Execute GitHub Actions > **Gerar APK e Release** > Run workflow. Para baixar **APK sem ZIP**, use Releases > `v0.1.0-alpha.10` > Assets > **`MonitorRemoto-v0.1.0-alpha.10.apk`**. Em Actions > Artifacts, um APK de contingência (quando presente) continua vindo em ZIP por comportamento padrão do GitHub. Instale o mesmo APK nos dois aparelhos.
 2. No telefone secundário: abra modo **Monitorado**; autorize a notificação de serviço; ative o monitoramento; autorize notificações em Configurações. Selecione explicitamente os aplicativos cujas notificações deseja compartilhar.
 3. Na tela Monitorado, toque em **Gerar QR Code para parear**; escolha o IP local acessível (normalmente interface Wi-Fi). O QR expira em 2 minutos e é válido para um único pareamento.
-4. No telefone principal: modo **Controle**; toque em **Ler QR Code do outro celular**, aponte a câmera e confirme. IP e chave de acesso são salvos automaticamente. A digitação manual de IP e chave continua disponível.
+4. No telefone principal: modo **Controle**; toque em **Conectar > Ler QR**, aponte a câmera e confirme. IP e chave de acesso são salvos automaticamente. A digitação manual de IP e chave continua disponível.
 5. Na internet: configure **Tailscale/WireGuard** em ambos, conecte-os à mesma rede privada VPN e, no Controle, substitua o IP Wi-Fi pelo IP/nome acessível na VPN. Não abra a porta no roteador à internet pública.
 6. Com o secundário bloqueado, consulte os dados no principal. Depois de desligar/reiniciar, o serviço pode precisar ser reiniciado dependendo do Android, ROM, economia de bateria e permissões.
 
@@ -47,7 +47,7 @@ Requer Android SDK API 36, Java 17, Gradle 8.13. O repositório ainda não inclu
 gradle :app:testDebugUnitTest :app:assembleDebug
 ```
 
-APK local de teste: `app/build/outputs/apk/debug/app-debug.apk`. O workflow copia esse arquivo ou o Release assinado como **`MonitorRemoto-v0.1.0-alpha.9.apk`**. Baixe diretamente na aba GitHub **Releases**. **O APK não está incluído neste ZIP de código-fonte.** Veja `docs/PAIRING_QR.md` para segurança do QR.
+APK local de teste: `app/build/outputs/apk/debug/app-debug.apk`. O workflow copia esse arquivo ou o Release assinado como **`MonitorRemoto-v0.1.0-alpha.10.apk`**. Baixe diretamente na aba GitHub **Releases**. **O APK não está incluído neste ZIP de código-fonte.** Veja `docs/PAIRING_QR.md` para segurança do QR.
 
 Opcional: configure os quatro Secrets de assinatura para gerar APK Release assinado e AAB. Ver `docs/APK_DOWNLOAD.md`. Preservar a mesma keystore entre builds é essencial para atualizações sem reinstalação.
 
@@ -55,6 +55,15 @@ Opcional: configure os quatro Secrets de assinatura para gerar APK Release assin
 
 - Ao desligar o monitoramento ou reativar uma nova sessão, o buffer de notificações na memória é apagado. Ao retirar um aplicativo da lista permitida, seus eventos previamente coletados são removidos. Antes de responder ao Controle, a lista atual é verificada novamente para evitar a transmissão de eventos de permissões revogadas.
 - O servidor limita a 3 o número de requisições simultâneas e a 12 a fila de conexões pendentes; conexões excedentes são fechadas sem fila ilimitada. Isso reduz o risco de consumo de recursos na rede local, mas não substitui um firewall nem testes de estresse.
+
+## Interface Controle (alpha.10)
+
+- Visual claro por padrão, com opções em **⚙ Configurações > Aparência**: claro, escuro e seguir sistema; escolha guardada apenas neste aparelho.
+- Botão **Conectar** no topo abre um diálogo com IP/VPN, credencial, botão **Colar**, leitor QR e entrada manual do texto do QR. Prefixo IPv4 da interface **Wi-Fi ativa** é sugerido conforme máscara (ex.: `192.168.100.` em `/24`), mas jamais é aplicado como IP completo. VPN e redes sem prefixo utilizam campo livre.
+- Painel do aparelho passa ao início da tela com status de consulta (Conectado/Sem resposta), data real do último sucesso, indicadores compactos de bateria/temperatura/tensão/corrente e botão discreto **↻**.
+- Até cinco aparelhos recentes com renomear/esquecer. Cada chave é protegida individualmente pelo Android Keystore, com migração da única credencial antiga sem necessidade de reparear. O histórico registra somente nome/IP e último sucesso, **não** mensagens.
+- A informação "Conectado" representa a **última consulta autenticada** e não um socket persistentemente conectado; em falha, status troca para "Sem resposta" e dados anteriores permanecem rotulados.
+- QR continua com Camera2 (alpha.9); teste físico e compilação completa ainda pendentes.
 
 ## Próximas evoluções
 

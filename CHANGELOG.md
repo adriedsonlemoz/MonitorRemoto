@@ -1,5 +1,14 @@
 # Histórico de versões
 
+## 0.1.0-alpha.10 (13/10/2026)
+
+- Controle redesenhado com cabeçalho **Conectar** e **⚙**, cartão compacto de monitoramento, atualização discreta e estados de consulta ligados a sucesso/erro autenticado.
+- Diálogo Conectar reúne IPv4/hostname, sugestão de prefixo Wi-Fi/CIDR, colar chave, ler QR Camera2, digitar conteúdo do QR e lista dos cinco aparelhos recentes.
+- `RecentDevices` mantém nomes, hosts e última consulta, com chave individual protegida no `SecretVault`; migra a credencial antiga sem repareamento e impede reutilização acidental de chave entre hosts.
+- Tema claro padrão, escuro e sistema, aplicado em atividades Android Views e armazenado nas preferências.
+- Preservados protocolo criptografado, permissões, firmware remoto, QR, workflow de APK/AAB e assinatura estável da alpha.7.
+- Sem confirmação de compilação Android completa ou comportamento físico nesta entrega.
+
 ## 0.1.0-alpha.9 (13/10/2026)
 
 - Correção do build GitHub Actions #7: duplicidade do override de `onRequestPermissionsResult` em `MainActivity.kt` (422 e 580) causava `Conflicting overloads`. Unificado em callback único com tratamento independente de câmera e permissão de notificações.

@@ -12,7 +12,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.9" and code.group(1) == "9", "Versões incompatíveis"
+assert version == "0.1.0-alpha.10" and code.group(1) == "10", "Versões incompatíveis"
 assert version in ui, "Tela de versão desatualizada"
 assert f"versionCode={code.group(1)}" in (root / 'docs/ARCHITECTURE.md').read_text(), "Arquitetura com versionCode desatualizado"
 # alpha.9 remove a Activity antiga do ZXing Embedded; Camera2 + ZXing Core offline.
@@ -85,3 +85,21 @@ assert 'android:name=".ui.QrScanActivity"' in manifest and 'android:exported="fa
 assert 'CaptureActivity' not in scan, 'Dependência da Activity antiga voltou'
 assert (root / 'app/src/test/java/br/dev/monitorremoto/ui/QrFrameDecoderTest.kt').exists()
 print('PASSOU: Camera2, YUV, ZXing Core, cancelamento, fallback manual e testes de QR presentes')
+
+# alpha.10: regressões de UI, temas, histórico e credenciais separadas por host.
+profiles = (root / 'app/src/main/java/br/dev/monitorremoto/core/RecentDevices.kt').read_text()
+secret = (root / 'app/src/main/java/br/dev/monitorremoto/security/SecretVault.kt').read_text()
+ip_suggestion = (root / 'app/src/main/java/br/dev/monitorremoto/core/Ipv4Suggestion.kt').read_text()
+assert 'private fun showConnectionDialog()' in ui and 'private fun showSettingsDialog()' in ui
+assert 'private fun renderController()' in ui and 'private fun updateConnectionLabels()' in ui
+assert 'private fun localWifiPrefix()' in ui and 'TRANSPORT_WIFI' in ui
+assert 'Ipv4Suggestion.prefix(' in ui and 'prefixLength' in ui
+assert 'RecentDevices.migrateLegacy(this)' in ui and 'RecentDevices.save(' in ui
+assert 'RecentDevices.key(this, host)' in ui and 'RecentDevices.markSuccess(' in ui
+assert 'private var lastSuccessfulMs' in ui and 'connectionState = "offline"' in ui
+assert 'fun setTheme(' in settings and '"light"' in settings and '"dark"' in settings
+assert 'const val LIMIT = 5' in profiles and 'fun forget(' in profiles and 'fun rename(' in profiles
+assert 'profileKeyName(' in secret and 'MessageDigest.getInstance("SHA-256")' in secret
+assert 'fun prefix(' in ip_suggestion
+assert (root / 'app/src/test/java/br/dev/monitorremoto/core/Ipv4SuggestionTest.kt').is_file()
+print('PASSOU: UI alpha.10, migração única, Keystore por host, tema e sugestão de IP')

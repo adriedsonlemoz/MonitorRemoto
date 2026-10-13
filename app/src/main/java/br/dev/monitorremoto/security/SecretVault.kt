@@ -5,6 +5,7 @@ import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
 import java.security.KeyStore
+import java.security.MessageDigest
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
@@ -16,6 +17,18 @@ object SecretVault {
     private const val PREFS = "monitor_remoto_private"
     const val MONITOR_KEY = "monitor_key"
     const val CONTROLLER_KEY = "controller_key"
+
+    /** Um identificador opaco por endereço impede reutilizar a chave de outro aparelho. */
+    fun profileKeyName(host: String): String {
+        val canonical = host.trim().lowercase(java.util.Locale.ROOT)
+        require(canonical.isNotBlank() && canonical.length <= 253)
+        val bytes = MessageDigest.getInstance("SHA-256").digest(canonical.toByteArray(Charsets.UTF_8))
+        return "profile_" + bytes.joinToString("") { "%02x".format(it) }
+    }
+
+    private fun validName(name: String) =
+        name == MONITOR_KEY || name == CONTROLLER_KEY ||
+            (name.startsWith("profile_") && name.length == 72 && name.substring(8).all { it in "0123456789abcdef" })
 
     private fun key(): SecretKey {
         val store = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
@@ -33,7 +46,7 @@ object SecretVault {
     }
 
     @Synchronized fun save(context: Context, name: String, bytes: ByteArray) {
-        require(name == MONITOR_KEY || name == CONTROLLER_KEY)
+        require(validName(name))
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
         cipher.init(Cipher.ENCRYPT_MODE, key())
         val payload = cipher.iv + cipher.doFinal(bytes)
@@ -42,7 +55,7 @@ object SecretVault {
     }
 
     @Synchronized fun load(context: Context, name: String): ByteArray? {
-        require(name == MONITOR_KEY || name == CONTROLLER_KEY)
+        require(validName(name))
         val encoded = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(name, null) ?: return null
         return try {
             val payload = Base64.decode(encoded, Base64.NO_WRAP)
@@ -53,6 +66,11 @@ object SecretVault {
         } catch (_: Exception) {
             null // Por exemplo, se a keystore foi invalidada. Exigir novo pareamento.
         }
+    }
+
+    @Synchronized fun delete(context: Context, name: String) {
+        require(validName(name))
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().remove(name).commit()
     }
 
     fun getOrCreateMonitorKey(context: Context): ByteArray =
