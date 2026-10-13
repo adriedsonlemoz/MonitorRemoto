@@ -1,6 +1,6 @@
 # Monitor Remoto
 
-**v0.1.0-alpha.7 / versionCode 7** · Android 8.0+ · Kotlin 2.2.21 · AGP 8.13.2 · Gradle 8.13
+**v0.1.0-alpha.8 / versionCode 8** · Android 8.0+ · Kotlin 2.2.21 · AGP 8.13.2 · Gradle 8.13
 
 Dois modos no mesmo APK: **Monitorado** (servidor) e **Controle** (cliente).
 
@@ -20,7 +20,7 @@ Dois modos no mesmo APK: **Monitorado** (servidor) e **Controle** (cliente).
 
 ## Como utilizar
 
-1. Execute GitHub Actions > **Gerar APK e Release** > Run workflow. Para baixar **APK sem ZIP**, use Releases > `v0.1.0-alpha.7` > Assets > **`MonitorRemoto-v0.1.0-alpha.7.apk`**. Em Actions > Artifacts, um APK de contingência (quando presente) continua vindo em ZIP por comportamento padrão do GitHub. Instale o mesmo APK nos dois aparelhos.
+1. Execute GitHub Actions > **Gerar APK e Release** > Run workflow. Para baixar **APK sem ZIP**, use Releases > `v0.1.0-alpha.8` > Assets > **`MonitorRemoto-v0.1.0-alpha.8.apk`**. Em Actions > Artifacts, um APK de contingência (quando presente) continua vindo em ZIP por comportamento padrão do GitHub. Instale o mesmo APK nos dois aparelhos.
 2. No telefone secundário: abra modo **Monitorado**; autorize a notificação de serviço; ative o monitoramento; autorize notificações em Configurações. Selecione explicitamente os aplicativos cujas notificações deseja compartilhar.
 3. Na tela Monitorado, toque em **Gerar QR Code para parear**; escolha o IP local acessível (normalmente interface Wi-Fi). O QR expira em 2 minutos e é válido para um único pareamento.
 4. No telefone principal: modo **Controle**; toque em **Ler QR Code do outro celular**, aponte a câmera e confirme. IP e chave de acesso são salvos automaticamente. A digitação manual de IP e chave continua disponível.
@@ -47,7 +47,7 @@ Requer Android SDK API 36, Java 17, Gradle 8.13. O repositório ainda não inclu
 gradle :app:testDebugUnitTest :app:assembleDebug
 ```
 
-APK local de teste: `app/build/outputs/apk/debug/app-debug.apk`. O workflow copia esse arquivo ou o Release assinado como **`MonitorRemoto-v0.1.0-alpha.7.apk`**. Baixe diretamente na aba GitHub **Releases**. **O APK não está incluído neste ZIP de código-fonte.** Veja `docs/PAIRING_QR.md` para segurança do QR.
+APK local de teste: `app/build/outputs/apk/debug/app-debug.apk`. O workflow copia esse arquivo ou o Release assinado como **`MonitorRemoto-v0.1.0-alpha.8.apk`**. Baixe diretamente na aba GitHub **Releases**. **O APK não está incluído neste ZIP de código-fonte.** Veja `docs/PAIRING_QR.md` para segurança do QR.
 
 Opcional: configure os quatro Secrets de assinatura para gerar APK Release assinado e AAB. Ver `docs/APK_DOWNLOAD.md`. Preservar a mesma keystore entre builds é essencial para atualizações sem reinstalação.
 
@@ -96,3 +96,11 @@ A execução GitHub Actions #4 falhou na compilação do leitor QR. A chamada ao
 - Scanner usa `QrScanActivity` interna não exportada, declarada explicitamente com tema ZXing; solicita permissão de câmera antes de iniciar, trata negação e mantém a orientação livre. A API usada é a `IntentIntegrator` existente na versão 4.3.0.
 - O fechamento do leitor informado em aparelho físico ainda **não possui stacktrace Android/logcat**; não se pode confirmar que a causa original foi eliminada sem nova instalação e teste. Caso persista, capturar `adb logcat -b crash -d` ou logcat com `FATAL EXCEPTION` e `MonitorRemotoQR`.
 - Secrets de assinatura não acompanham o projeto nem devem ser adicionados ao GitHub. Para atualizar sem reinstalar é necessário **usar sempre o mesmo certificado** e manter o `applicationId`. APK Debug antigo e nova chave Release possuem assinaturas diferentes: talvez seja necessária uma única reinstalação ao migrar, com perda de dados locais sem backup.
+
+## Correção alpha.8 (workflow #7)
+
+- O log do GitHub Actions da alpha.7 falhou em `:app:compileDebugKotlin` porque `MainActivity.kt` declarava **duas vezes** `onRequestPermissionsResult` (linhas 422 e 580), com a mesma assinatura; o Kotlin relatou `Conflicting overloads`.
+- Agora existe **um único callback** para os dois pedidos separados: `CAMERA` (abre o leitor QR quando concedida) e `POST_NOTIFICATIONS` (inicia o monitoramento quando concedida). Nenhuma das duas autorizações habilita a outra e a recusa continua tratada.
+- O Artifact APK de contingência só é solicitado após o passo de nomear APK concluir com sucesso. Falhas de compilação não geram tentativa inútil de upload de arquivo inexistente.
+- O build de GitHub Actions e o teste físico de QR da alpha.8 ainda precisam ser confirmados. A mensagem anterior sobre possível encerramento do QR não foi diagnosticada por logcat.
+- Mantenha os mesmos quatro Secrets de assinatura da alpha.7. **Não gere outra keystore**; isso comprometeria a capacidade de atualizar APKs já assinados.

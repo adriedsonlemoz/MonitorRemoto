@@ -78,3 +78,13 @@
 - [x] Keystore PKCS#12 privada gerada e validada via `keytool`; Secrets são arquivos SEPARADOS, não incluídos no fonte nem no Drive.
 - [ ] Compilação Android Gradle da alpha.7: pendente GitHub Actions (sem Android SDK/Gradle neste ambiente).
 - [ ] Teste em telefone Android do QR e checagem do certificado do APK assinado: pendentes.
+
+## alpha.8: workflow #7 (13/10/2026)
+
+- Log real: `:app:compileDebugKotlin FAILED` com dois erros `Conflicting overloads` em `MainActivity.kt` linhas 422 e 580. Não houve build de APK; não é uma falha do scanner em aparelho.
+- Removida duplicação; todos os retornos de permissão estão em um único override com branches independentes para câmera e notificações. O teste `tools/check_distribution.py` passou a exigir esta condição.
+- Artifact de contingência só é executado após empacotamento bem-sucedido, evitando aviso por arquivo inexistente quando a compilação falha.
+- [ ] Executar `gradle :app:testDebugUnitTest :app:assembleDebug` no GitHub Actions para alpha.8.
+- [ ] Executar `:app:assembleRelease :app:bundleRelease` com os quatro Secrets de assinatura **já configurados**.
+- [ ] Validar leitura QR, recusa/concessão de permissão, orientação, retorno ao Controle e pareamento em dois aparelhos Android.
+- [ ] Confirmar que alpha.8 assinada com a **mesma** keystore consegue atualizar a alpha.7 se esta foi instalada com a assinatura Release equivalente.

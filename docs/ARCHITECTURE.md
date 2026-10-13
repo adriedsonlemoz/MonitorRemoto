@@ -1,4 +1,4 @@
-# Arquitetura (0.1.0-alpha.7)
+# Arquitetura (0.1.0-alpha.8)
 
 ```text
 MONITORADO                                      CONTROLE
@@ -19,9 +19,9 @@ O FGS `connectedDevice` mantém o socket de escuta durante monitoramento ativo. 
 
 ## Distribuição e assinatura
 
-O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.7` e `versionCode=7`.
+O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.8` e `versionCode=8`.
 
-- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.7.apk`.
+- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.8.apk`.
 - `upload-artifact` sempre distribui um ZIP; GitHub Releases recebe o **arquivo APK direto**.
 - Com quatro Secrets, Gradle gera APK Release assinado e AAB. Sem Secrets, o arquivo é Debug de teste e não preserva necessariamente a assinatura entre execuções.
 - Releases são prévias, não substituem a futura revisão da Google Play e nem os ensaios reais.
@@ -34,3 +34,7 @@ O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é 
 ## Scanner QR alpha.7
 
 `MainActivity` verifica a permissão `CAMERA` antes de iniciar a `QrScanActivity`, Activity explícita não exportada com o tema de captura do ZXing. O scanner não é um serviço persistente, nem transfere imagem para rede; recebe somente o conteúdo textual do QR. A tela de controle salva o modo na recriação pela Activity.
+
+## Permissões independentes (alpha.8)
+
+`MainActivity` usa um único override de `onRequestPermissionsResult`. Os códigos `cameraPermissionRequest` e `notificationPermissionRequest` seguem separados no `when`. Concessão da câmera inicia somente a captura QR; concessão de `POST_NOTIFICATIONS` inicia apenas o serviço solicitado pelo usuário. Negação de qualquer autorização não ativa o outro caminho.

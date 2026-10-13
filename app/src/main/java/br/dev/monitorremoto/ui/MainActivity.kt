@@ -61,6 +61,7 @@ class MainActivity : Activity() {
     private val handler = Handler(Looper.getMainLooper())
     private var mode = 0 // 0: monitorado, 1: controle
     private val cameraPermissionRequest = 4317
+    private val notificationPermissionRequest = 101
     private var active = false
     private var fetching = false
     private var resultBox: LinearLayout? = null
@@ -161,7 +162,7 @@ class MainActivity : Activity() {
     private fun render() {
         content.removeAllViews()
         addText("MONITOR REMOTO", 22f, strong = true)
-        addText("v0.1.0-alpha.7  ·  Privado e criptografado", 12f, muted = true)
+        addText("v0.1.0-alpha.8  ·  Privado e criptografado", 12f, muted = true)
         gap(14)
         val tabs = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         fun addTab(title: String, which: Int) {
@@ -419,15 +420,21 @@ class MainActivity : Activity() {
         launchQrCapture()
     }
 
+    /** Resposta centralizada: cada permissão mantém o fluxo específico e independente. */
     override fun onRequestPermissionsResult(
         requestCode: Int, permissions: Array<out String>, grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode != cameraPermissionRequest) return
-        if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            launchQrCapture()
-        } else {
-            message("Câmera não autorizada. Permita o acesso para ler o QR ou use IP/chave manual.")
+        val granted = grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED
+        when (requestCode) {
+            cameraPermissionRequest -> {
+                if (granted) launchQrCapture()
+                else message("Câmera não autorizada. Permita o acesso para ler o QR ou use IP/chave manual.")
+            }
+            notificationPermissionRequest -> {
+                if (granted) startServiceExplicitly()
+                else message("Autorize notificações para exibir o monitoramento ativo.")
+            }
         }
     }
 
@@ -561,7 +568,7 @@ class MainActivity : Activity() {
     private fun requestStart() {
         if (Build.VERSION.SDK_INT >= 33 &&
             checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 101)
+            requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), notificationPermissionRequest)
         } else startServiceExplicitly()
     }
 
@@ -577,13 +584,6 @@ class MainActivity : Activity() {
         }
     }
 
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, results: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, results)
-        val granted = results.isNotEmpty() && results[0] == PackageManager.PERMISSION_GRANTED
-        when (requestCode) {
-            101 -> if (granted) startServiceExplicitly() else message("Autorize notificações para exibir o monitoramento ativo.")
-        }
-    }
 
     private fun hasListener(): Boolean = try {
         val setting = Settings.Secure.getString(contentResolver, "enabled_notification_listeners").orEmpty()

@@ -1,4 +1,4 @@
-# Pareamento por QR (v0.1.0-alpha.7)
+# Pareamento por QR (v0.1.0-alpha.8)
 
 ## Uso
 
@@ -27,3 +27,7 @@ A captura de notificações permanece declarada no manifesto da variante atual. 
 ## Estabilidade do scanner alpha.7
 
 O código usa uma `QrScanActivity` explícita no Manifest (não exportada), com permissão `CAMERA` solicitada antes de abrir a câmera, tratamento de negação e leitura só de QR. A biblioteca original já inclui um `CaptureActivity`, mas o aplicativo não depende mais das configurações de tarefa dessa Activity genérica. **Ainda faltam testes físicos.** Para identificar a causa exata de um encerramento, capturar logcat (`FATAL EXCEPTION`, `MonitorRemotoQR`, `Camera`) imediatamente após tocar em Ler QR. Sem esse registro não há comprovação de correção para todos os dispositivos.
+
+### Correção de build alpha.8
+
+Foi removida a duplicidade de `onRequestPermissionsResult` que impedia gerar o APK alpha.7. O scanner continua dependendo de permissão explícita e de teste em hardware; nenhum logcat foi disponibilizado para confirmar a causa do fechamento original.
