@@ -38,6 +38,7 @@ import br.dev.monitorremoto.transport.RemoteClient
 import br.dev.monitorremoto.transport.PairingCode
 import br.dev.monitorremoto.transport.PairingSession
 import br.dev.monitorremoto.transport.WireProtocol
+import com.google.zxing.client.android.Intents
 import com.google.zxing.BarcodeFormat
 import com.journeyapps.barcodescanner.BarcodeEncoder
 import com.google.zxing.integration.android.IntentIntegrator
@@ -59,6 +60,7 @@ class MainActivity : Activity() {
     private lateinit var content: LinearLayout
     private val handler = Handler(Looper.getMainLooper())
     private var mode = 0 // 0: monitorado, 1: controle
+    private val cameraPermissionRequest = 4317
     private var active = false
     private var fetching = false
     private var resultBox: LinearLayout? = null
@@ -75,6 +77,7 @@ class MainActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        mode = savedInstanceState?.getInt("active_mode", 0) ?: 0
         window.statusBarColor = bg
         window.navigationBarColor = bg
         window.decorView.systemUiVisibility = 0
@@ -86,6 +89,11 @@ class MainActivity : Activity() {
         scroll.addView(content)
         setContentView(scroll)
         render()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putInt("active_mode", mode)
+        super.onSaveInstanceState(outState)
     }
 
     override fun onResume() {
@@ -153,7 +161,7 @@ class MainActivity : Activity() {
     private fun render() {
         content.removeAllViews()
         addText("MONITOR REMOTO", 22f, strong = true)
-        addText("v0.1.0-alpha.6  ·  Privado e criptografado", 12f, muted = true)
+        addText("v0.1.0-alpha.7  ·  Privado e criptografado", 12f, muted = true)
         gap(14)
         val tabs = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         fun addTab(title: String, which: Int) {
@@ -399,17 +407,44 @@ class MainActivity : Activity() {
     }
 
     private fun startQrScanner() {
+        // O fluxo de autorização é visível antes de abrir a Activity de câmera.
+        if (!packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY)) {
+            message("Este aparelho não possui câmera disponível para leitura. Use o pareamento manual.")
+            return
+        }
+        if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(arrayOf(Manifest.permission.CAMERA), cameraPermissionRequest)
+            return
+        }
+        launchQrCapture()
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int, permissions: Array<out String>, grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode != cameraPermissionRequest) return
+        if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            launchQrCapture()
+        } else {
+            message("Câmera não autorizada. Permita o acesso para ler o QR ou use IP/chave manual.")
+        }
+    }
+
+    private fun launchQrCapture() {
         try {
-            // ZXing Android Embedded 4.3.0 oferece QR_CODE (String), não QR_CODE_TYPES.
-            // Chamada explícita sem encadeamento evita inferência incorreta de receptor.
+            // Activity explícita e não exportada; não herda clearTaskOnLaunch do Manifest da biblioteca.
             val scanner = IntentIntegrator(this)
+            scanner.setCaptureActivity(QrScanActivity::class.java)
             scanner.setDesiredBarcodeFormats(IntentIntegrator.QR_CODE)
             scanner.setPrompt("Aponte para o QR do celular monitorado")
+            scanner.setOrientationLocked(false)
             scanner.setBeepEnabled(false)
             scanner.setBarcodeImageEnabled(false)
             scanner.initiateScan()
-        } catch (e: Exception) {
-            message("Não foi possível abrir a câmera: ${e.message}")
+        } catch (e: RuntimeException) {
+            android.util.Log.e("MonitorRemotoQR", "Falha ao iniciar Activity de leitura", e)
+            message("Leitor QR indisponível: ${e.javaClass.simpleName}. Use IP/chave manual ou capture o logcat.")
         }
     }
 
@@ -417,7 +452,13 @@ class MainActivity : Activity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         val scan = IntentIntegrator.parseActivityResult(requestCode, resultCode, data) ?: return
-        val text = scan.contents ?: return // Scanner cancelado.
+        if (scan.contents == null) {
+            if (data?.getBooleanExtra(Intents.Scan.MISSING_CAMERA_PERMISSION, false) == true) {
+                message("Não foi possível acessar a câmera. Verifique a permissão nas Configurações.")
+            }
+            return // Scanner cancelado; a tela Controle permanece aberta.
+        }
+        val text = scan.contents
         try {
             val code = PairingCode.decode(text)
             AlertDialog.Builder(this)

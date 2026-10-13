@@ -1,4 +1,4 @@
-# Pareamento por QR (v0.1.0-alpha.6)
+# Pareamento por QR (v0.1.0-alpha.7)
 
 ## Uso
 
@@ -23,3 +23,7 @@ O QR guarda `monitorremoto://pair?v=1&host=IPv4_PRIVADO&port=37841&sid=ID&secret
 ## Estado do Play Protect
 
 A captura de notificações permanece declarada no manifesto da variante atual. Um QR Code **não resolve nem contorna** a classificação `App nocivo bloqueado`. A página do Google para desenvolvedores diferencia esse aviso de um mero alerta de aplicativo não verificado e orienta revisão de políticas/contestações. Não desative o Play Protect. Para desenvolver versão apenas de bateria sem acesso às notificações, será necessário uma variante manifest distinta e um novo teste de classificação.
+
+## Estabilidade do scanner alpha.7
+
+O código usa uma `QrScanActivity` explícita no Manifest (não exportada), com permissão `CAMERA` solicitada antes de abrir a câmera, tratamento de negação e leitura só de QR. A biblioteca original já inclui um `CaptureActivity`, mas o aplicativo não depende mais das configurações de tarefa dessa Activity genérica. **Ainda faltam testes físicos.** Para identificar a causa exata de um encerramento, capturar logcat (`FATAL EXCEPTION`, `MonitorRemotoQR`, `Camera`) imediatamente após tocar em Ler QR. Sem esse registro não há comprovação de correção para todos os dispositivos.

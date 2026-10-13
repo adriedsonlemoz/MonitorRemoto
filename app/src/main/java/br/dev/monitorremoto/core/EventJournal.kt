@@ -42,10 +42,14 @@ object EventJournal {
         records.removeAll { it.app !in allowedPackages }
     }
 
-    /** Revalida a lista positiva ao ENVIAR, inclusive contra notificações em trânsito. */
-    @Synchronized fun latestJson(allowedPackages: Set<String>): JSONArray = JSONArray().apply {
+    /** Revalida a lista positiva ao ENVIAR, inclusive contra notificações em trânsito.
+     * Separar o filtro da serialização permite testá-lo na JVM sem android.jar mockável.
+     */
+    @Synchronized fun latest(allowedPackages: Set<String>): List<RecordedEvent> =
         records.filter { it.app in allowedPackages }.takeLast(30)
-            .forEach { put(it.toJson()) }
+
+    fun latestJson(allowedPackages: Set<String>): JSONArray = JSONArray().apply {
+        latest(allowedPackages).forEach { put(it.toJson()) }
     }
 
     /** Defesa parcial. O filtro não substitui cuidados com dados sensíveis. */

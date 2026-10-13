@@ -12,7 +12,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.6" and code.group(1) == "6", "Versões incompatíveis"
+assert version == "0.1.0-alpha.7" and code.group(1) == "7", "Versões incompatíveis"
 assert version in ui, "Tela de versão desatualizada"
 assert f"versionCode={code.group(1)}" in (root / 'docs/ARCHITECTURE.md').read_text(), "Arquitetura com versionCode desatualizado"
 # GitHub Actions #4 (regressão alpha.5): QR_CODE_TYPES não existe em IntentIntegrator 4.3.0; QR_CODE existe.
@@ -48,3 +48,12 @@ assert 'EventJournal.retainAllowed(packages)' in settings
 assert 'EventJournal.latestJson(SettingsStore.notificationAllowlist(context))' in server
 assert 'ArrayBlockingQueue<Runnable>(12)' in server and 'ThreadPoolExecutor.AbortPolicy()' in server
 print('PASSOU: limpeza por revogação e limite de fila do servidor declarados')
+
+# Regressão alpha.7: leitura QR não pode depender de Activity externa nem de permissão presumida.
+assert 'scanner.setCaptureActivity(QrScanActivity::class.java)' in ui
+assert 'requestPermissions(arrayOf(Manifest.permission.CAMERA)' in ui
+assert 'android:name=".ui.QrScanActivity"' in manifest and 'android:exported="false"' in manifest
+assert 'fun latest(allowedPackages: Set<String>): List<RecordedEvent>' in journal
+unit_tests = (root / 'app/src/test/java/br/dev/monitorremoto/core/EventJournalTest.kt').read_text()
+assert 'latestJson(' not in unit_tests, 'Testes JVM não devem depender dos métodos mockados de android.jar/org.json'
+print('PASSOU: scanner interno com permissão explícita, testes do EventJournal sem org.json mockado')

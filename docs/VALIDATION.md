@@ -59,3 +59,22 @@
 - [ ] Investigar classificação Play Protect com diagnóstico da versão/build/assinatura.
 
 **Verificações locais concluídas nesta entrega:** 16 asserções Kotlin/JVM sobre classes reais do projeto (com implementação mínima de `org.json` somente no harness externo ao ZIP); compilação Kotlin isolada de `MonitorServer`, `SettingsStore`, `EventJournal` e transportes com stubs mínimos; `tools/check_distribution.py`; parse do `AndroidManifest.xml` e do YAML da CI; validação de ausência de keystore no ZIP. A compilação Android oficial via Gradle, os testes JUnit no plugin Android e os testes físicos **não foram executados** neste ambiente.
+
+## alpha.7: análise do workflow #6 e scanner (13/10/2026)
+
+- GitHub Actions #6: `:app:compileDebugKotlin` concluiu, 12 testes iniciados, 3 falhas do `EventJournalTest` nas linhas 12, 21 e 28 (chamadas aos métodos mockados `org.json` de testes Android na JVM). `:app:assembleDebug` não chegou a terminar porque Gradle interrompeu na tarefa de testes.
+- Testes de eventos passaram a validar `latest()` (registros Kotlin puros), sem depender do `org.json` no classpath de teste JVM. O código de produção continua serializando com `latestJson()`; não foi removida criptografia nem filtro de apps.
+- Registrada Activity de scanner própria, com tratamento de permissão; sem logcat de dispositivo não é possível atribuir causa definitiva ao fechamento relatado.
+- [ ] Workflow alpha.7 `:app:testDebugUnitTest`, `:app:assembleRelease`, `:app:bundleRelease` com Secrets.
+- [ ] Testar scanner após primeira concessão, recusa, retorno e rotação em dois dispositivos.
+- [ ] Confirmar impressão digital do APK assinado e que alpha.8 instala em cima do alpha.7 assinado.
+
+### Execução local alpha.7
+
+- [x] 12 testes Kotlin/JVM de `EventJournalTest`, `SensitiveContentTest`, `CryptoBoxTest`, `PairingCodeTest`: passaram em harness JUnit compatível, com JSON mínimo apenas externo ao ZIP.
+- [x] Parser PSI Kotlin: 20 arquivos `.kt` verificados, zero erros sintáticos.
+- [x] `python3 tools/check_distribution.py`: aprovado.
+- [x] XML do AndroidManifest e YAML do workflow válidos.
+- [x] Keystore PKCS#12 privada gerada e validada via `keytool`; Secrets são arquivos SEPARADOS, não incluídos no fonte nem no Drive.
+- [ ] Compilação Android Gradle da alpha.7: pendente GitHub Actions (sem Android SDK/Gradle neste ambiente).
+- [ ] Teste em telefone Android do QR e checagem do certificado do APK assinado: pendentes.

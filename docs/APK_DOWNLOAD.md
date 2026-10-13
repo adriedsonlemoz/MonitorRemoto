@@ -1,8 +1,8 @@
 # Como obter APK em vez de ZIP no GitHub
 
-GitHub Actions > Artifacts: **o GitHub baixa um ZIP por decisão da plataforma**, mesmo quando o arquivo armazenado é `MonitorRemoto-v0.1.0-alpha.6.apk`. Renomear a identificação do Artifact não muda isso.
+GitHub Actions > Artifacts: **o GitHub baixa um ZIP por decisão da plataforma**, mesmo quando o arquivo armazenado é `MonitorRemoto-v0.1.0-alpha.7.apk`. Renomear a identificação do Artifact não muda isso.
 
-Para obter o APK **diretamente**, no repositório abra a aba **Releases** > `v0.1.0-alpha.6` > **Assets** > `MonitorRemoto-v0.1.0-alpha.6.apk`.
+Para obter o APK **diretamente**, no repositório abra a aba **Releases** > `v0.1.0-alpha.7` > **Assets** > `MonitorRemoto-v0.1.0-alpha.7.apk`.
 
 O workflow `Gerar APK e Release` publica automaticamente a Release quando é acionado manualmente por **Run workflow** ou quando ocorre push ao ramo principal/padrão, depois de passar nos testes/build. Pull requests nunca publicam release. Caso a etapa tenha falha HTTP 403, verifique **Settings > Actions > General > Workflow permissions** e as restrições do repositório/organização. `GITHUB_TOKEN` necessita `contents: write`.
 
@@ -25,3 +25,9 @@ O workflow não cria APK dentro do arquivo ZIP do código-fonte: o GitHub Action
 
 
 **alpha.4**: com Release bem-sucedida o workflow não publica Artifact APK redundante. Artifacts APK são contingência para PR, branch não padrão ou falha de Release.
+
+## Importação de Secrets pelo GitHub Manager (alpha.7)
+
+O GitHub Manager aceita TXT UTF-8 com `KEYSTORE_BASE64=...`, `KEYSTORE_PASSWORD=...`, `KEY_ALIAS=...` e `KEY_PASSWORD=...` (ou JSON plano). Na tela do repositório, abra Secrets > Importar, revise a prévia e confirme a criação/substituição dos quatro nomes. O projeto não inclui nenhum Secret real.
+
+**Assinatura ao atualizar:** APKs com o mesmo `applicationId` só atualizam instalados se a assinatura for compatível e o `versionCode` aumentar. Um APK Debug antigo usa certificado distinto da nova chave Release; pode exigir UMA desinstalação/migração ao adotar a assinatura estável. Depois, conservar a MESMA keystore e os quatro Secrets em todas as versões. Sem Secrets, o workflow ainda pode publicar APK Debug, que não é adequado para atualizações permanentes.

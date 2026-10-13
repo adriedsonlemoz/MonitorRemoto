@@ -1,6 +1,6 @@
 # Requisitos para uma publicação futura no Google Play (verificado em 2026-10-13)
 
-**Isto não certifica o app para publicação.** A alpha.5 continua em testes e o fluxo de produção precisa de avaliação, política de privacidade hospedada e revisão de consentimento.
+**Isto não certifica o app para publicação.** A alpha.7 continua em testes e o fluxo de produção precisa de avaliação, política de privacidade hospedada e revisão de consentimento.
 
 ## Bloqueadores e mudanças implementadas
 
@@ -13,7 +13,7 @@
 
 1. Criar conta de desenvolvedor no Play Console: taxa única atual de US$25 e verificação de identidade; requisitos adicionais podem variar.
 2. Usar `targetSdk=36` (Android 16), conforme obrigatório para novos envios desde 31/08/2026; usar também Android SDK e ferramentas compatíveis.
-3. Produzir **Android App Bundle (AAB)** de release assinado com **chave de upload própria**, e ativar/usar Play App Signing. O workflow alpha.5 já gera AAB Release assinado **somente se** os quatro Secrets de assinatura estiverem configurados; não garante publicação ou compatibilidade Play. Nunca coloque keystore ou senhas no código/repositório.
+3. Produzir **Android App Bundle (AAB)** de release assinado com **chave de upload própria**, e ativar/usar Play App Signing. O workflow alpha.7 já gera AAB Release assinado **somente se** os quatro Secrets de assinatura estiverem configurados; não garante publicação ou compatibilidade Play. Nunca coloque keystore ou senhas no código/repositório.
 4. Criar página da loja com nome/ícone, imagens reais, capturas de tela, descrição, informações de suporte/contato, classificação etária e declarações de conteúdo.
 5. Disponibilizar **política de privacidade pública por URL HTTPS** e dentro do aplicativo; preencher **Segurança dos dados** com coleta, transferência local criptografada, retenção e controles; confirmar classificação correta caso a transferência entre dispositivos conte como coleta no contexto da política.
 6. Declarar o serviço foreground `connectedDevice` e justificar a necessidade contínua no Play Console, incluindo demonstração em vídeo se solicitado; comprovar recurso visível e botão de parada.
