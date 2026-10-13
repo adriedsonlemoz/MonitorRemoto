@@ -1,7 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-feature android:name="android.hardware.telephony" android:required="false" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Solicitada somente ao abrir o leitor QR; câmera não transmite imagens. -->
+    <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- Pré-requisito documentado para FGS connectedDevice (comunicação de rede). -->
     <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
@@ -23,6 +27,7 @@
         android:fullBackupContent="false"
         android:usesCleartextTraffic="false"
         android:label="Monitor Remoto"
+        android:hardwareAccelerated="true"
         android:theme="@android:style/Theme.Material.Light.NoActionBar"
         android:supportsRtl="true">
 

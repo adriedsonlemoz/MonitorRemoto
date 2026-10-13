@@ -13,6 +13,7 @@ import android.os.IBinder
 import br.dev.monitorremoto.core.SettingsStore
 import br.dev.monitorremoto.security.SecretVault
 import br.dev.monitorremoto.transport.MonitorServer
+import br.dev.monitorremoto.transport.PairingSession
 import br.dev.monitorremoto.ui.MainActivity
 
 class MonitorService : Service() {
@@ -80,6 +81,7 @@ class MonitorService : Service() {
     }
 
     override fun onDestroy() {
+        PairingSession.revoke()
         server?.stop()
         server = null
         isRunning = false

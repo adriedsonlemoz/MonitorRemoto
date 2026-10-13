@@ -90,13 +90,6 @@ jobs:
           install -m 0644 "$SOURCE_APK" "dist/MonitorRemoto-v${VERSION}.apk"
           cd dist
           sha256sum "MonitorRemoto-v${VERSION}.apk" > "MonitorRemoto-v${VERSION}.sha256"
-      - name: Artifact de emergência (GitHub sempre baixa como ZIP)
-        uses: actions/upload-artifact@v4
-        with:
-          name: MonitorRemoto-v${{ steps.version.outputs.name }}-APK
-          path: dist/*.apk
-          if-no-files-found: error
-          retention-days: 30
       - name: Artifact AAB para futura Play Store (somente com Secrets)
         if: steps.signing.outputs.enabled == 'true'
         uses: actions/upload-artifact@v4
@@ -105,6 +98,7 @@ jobs:
           path: app/build/outputs/bundle/release/*.aab
           if-no-files-found: error
       - name: Publicar APK direto em Releases (sem ZIP)
+        id: release
         if: github.event_name != 'pull_request' && (github.event_name == 'workflow_dispatch' || github.ref == format('refs/heads/{0}', github.event.repository.default_branch))
         shell: bash
         env:
@@ -128,3 +122,11 @@ jobs:
           if [[ "$STABLE_SIGNING" != 'true' ]]; then
             echo 'Atenção: este APK Debug usa assinatura temporária do runner; configura os Secrets para atualizações sem reinstalação.' >> "$GITHUB_STEP_SUMMARY"
           fi
+      - name: Artifact de contingência (somente se a Release falhar ou for ignorada)
+        if: ${{ always() && (steps.release.outcome == 'failure' || steps.release.outcome == 'skipped') && steps.version.outcome == 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: MonitorRemoto-v${{ steps.version.outputs.name }}-APK-FALLBACK
+          path: dist/*.apk
+          if-no-files-found: warn
+          retention-days: 30

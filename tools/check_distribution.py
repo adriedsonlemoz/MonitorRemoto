@@ -12,11 +12,16 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.3" and code.group(1) == "3", "Versões incompatíveis"
+assert version == "0.1.0-alpha.4" and code.group(1) == "4", "Versões incompatíveis"
 assert version in ui, "Tela de versão desatualizada"
 assert 'dist/MonitorRemoto-v${VERSION}.apk' in workflow, "Arquivo .apk final não é nomeado"
 assert 'gh release upload' in workflow and 'gh release create' in workflow, "Falta APK direto via Release"
 assert 'actions/upload-artifact' in workflow, "Artifact de reserva ausente"
+assert 'id: release' in workflow and "steps.release.outcome == 'failure'" in workflow, "Artifact duplicado em Release bem-sucedida"
+assert 'com.journeyapps:zxing-android-embedded:4.3.0' in gradle, "ZXing de QR ausente"
+qr = (root / 'app/src/main/java/br/dev/monitorremoto/transport/PairingCode.kt').read_text()
+assert 'isPrivateIpv4' in qr and 'secret=' in qr, "QR local ou protocolo ausente"
+assert 'PairingSession.consume' in (root / 'app/src/main/java/br/dev/monitorremoto/transport/MonitorServer.kt').read_text()
 assert 'app/build/outputs/apk/release/app-release.apk' in workflow
 assert 'app/build/outputs/apk/debug/app-debug.apk' in workflow
 assert 'app/build/outputs/bundle/release/*.aab' in workflow

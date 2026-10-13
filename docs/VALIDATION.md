@@ -27,3 +27,16 @@
 `upload-artifact` sempre gera ZIP ao fazer download; a Release disponibiliza APK direto.
 
 **Executado localmente na alpha.3:** `tools/check_distribution.py` passou; YAML lido pelo PyYAML sem erro; 14 etapas do workflow verificadas com `bash -n`; XML do Manifest parseado; 12 verificações Kotlin/JVM reais de criptografia e filtros passaram (`kotlinc` e `java -jar`). Ausência de Android SDK/Gradle impede afirmar compilação Android completa ou criar APK neste ambiente.
+
+
+## alpha.4
+
+**Testes locais concluídos:** verificação da distribuição e sincronização da versão; parser PSI Kotlin em 18 arquivos sem erros sintáticos; 28 asserções isoladas Kotlin/JVM para QR, faixas IPv4, uso único, invalidação e criptografia; XML/YAML/ZIP (a conferir antes da entrega). Nenhum build Android completo foi executado neste ambiente.
+
+
+- [ ] GitHub Actions: compilar e executar testes Kotlin/JUnit com a dependência ZXing.
+- [ ] Instalar alpha.4; testar QR com Wi-Fi comum e hotspot, permissão de câmera, tempo limite, expiração, uso único e revogação.
+- [ ] Confirmar compatibilidade de assinatura ao atualizar a alpha.3 (certificate Debug temporário pode impedir atualização).
+- [ ] Confirmar que a Release fornece APK direto e nenhum Artifact duplicado numa execução bem-sucedida.
+- [ ] Verificar classificação real no Play Protect (a alpha.3 foi bloqueada como potencialmente nociva); auditoria ou contestação necessária.
+- [ ] Ensaiar fluxo de notificações e permissões sem perda de segurança bancária.

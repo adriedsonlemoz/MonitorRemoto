@@ -12,6 +12,8 @@ import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.view.WindowManager
+import android.widget.ImageView
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -33,6 +35,12 @@ import br.dev.monitorremoto.security.CryptoBox
 import br.dev.monitorremoto.security.SecretVault
 import br.dev.monitorremoto.service.MonitorService
 import br.dev.monitorremoto.transport.RemoteClient
+import br.dev.monitorremoto.transport.PairingCode
+import br.dev.monitorremoto.transport.PairingSession
+import br.dev.monitorremoto.transport.WireProtocol
+import com.google.zxing.BarcodeFormat
+import com.journeyapps.barcodescanner.BarcodeEncoder
+import com.google.zxing.integration.android.IntentIntegrator
 import org.json.JSONObject
 import java.net.Inet4Address
 import java.net.NetworkInterface
@@ -55,6 +63,7 @@ class MainActivity : Activity() {
     private var fetching = false
     private var resultBox: LinearLayout? = null
     private var errorBox: TextView? = null
+    private var pairingInProgress = false
     private val poller = object : Runnable {
         override fun run() {
             if (active && mode == 1) {
@@ -144,7 +153,7 @@ class MainActivity : Activity() {
     private fun render() {
         content.removeAllViews()
         addText("MONITOR REMOTO", 22f, strong = true)
-        addText("v0.1.0-alpha.3  ·  Privado e criptografado", 12f, muted = true)
+        addText("v0.1.0-alpha.4  ·  Privado e criptografado", 12f, muted = true)
         gap(14)
         val tabs = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         fun addTab(title: String, which: Int) {
@@ -189,6 +198,8 @@ class MainActivity : Activity() {
                 content.addView(button("Reiniciar serviço") { startServiceExplicitly() })
             }
         }
+        content.addView(button("Gerar QR Code para parear", emphasis = true) { chooseQrAddress() })
+        addText("QR temporário: válido por 2 minutos, uma conexão, sem expor a chave permanente.", 12f, muted = true)
         content.addView(button("Mostrar/copiar chave de pareamento") {
             try {
                 val key = CryptoBox.encode(SecretVault.getOrCreateMonitorKey(this))
@@ -211,6 +222,7 @@ class MainActivity : Activity() {
                 .setNegativeButton("Cancelar", null)
                 .setPositiveButton("Trocar chave") { _, _ ->
                     SecretVault.save(this, SecretVault.MONITOR_KEY, CryptoBox.newPairingKey())
+                    PairingSession.revoke()
                     message("Nova chave criada. Abra 'Mostrar/copiar chave'.")
                 }.show()
         })
@@ -300,12 +312,145 @@ class MainActivity : Activity() {
                 refreshRemote(silent = false)
             } catch (error: Exception) { message("Não foi possível salvar: ${error.message}") }
         })
+        content.addView(button("Ler QR Code do outro celular", emphasis = true) { startQrScanner() })
+        addText("Aponte a câmera para o QR exibido no Monitorado. Permissão de câmera somente durante a leitura.", 12f, muted = true)
         content.addView(button("Atualizar agora") { refreshRemote(silent = false) })
         addText("Atualização automática a cada 15 segundos somente enquanto esta tela estiver aberta.", 12f, muted = true)
         gap(14)
         errorBox = label("Aguardando primeira consulta…", muted = true).also { content.addView(it) }
         resultBox = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         content.addView(resultBox)
+    }
+
+    private fun availableLocalIps(): List<Pair<String, String>> = try {
+        NetworkInterface.getNetworkInterfaces().toList()
+            .filter { it.isUp && !it.isLoopback }
+            .flatMap { iface -> iface.inetAddresses.toList().filterIsInstance<Inet4Address>()
+                .mapNotNull { ip ->
+                    val address = ip.hostAddress.orEmpty()
+                    if (PairingCode.isPrivateIpv4(address)) iface.name to address else null
+                }
+            }.distinctBy { it.second }
+    } catch (_: Exception) { emptyList() }
+
+    private fun chooseQrAddress() {
+        if (!MonitorService.isRunning) {
+            message("Ative o monitoramento antes de gerar o QR Code.")
+            return
+        }
+        val addresses = availableLocalIps()
+        if (addresses.isEmpty()) {
+            message("Não encontrei IP privado. Conecte ambos os celulares ao mesmo Wi-Fi ou ponto de acesso e tente novamente.")
+            return
+        }
+        if (addresses.size == 1) showPairingQr(addresses.first().second)
+        else AlertDialog.Builder(this)
+            .setTitle("Escolha a rede do outro celular")
+            .setItems(addresses.map { "${it.first}: ${it.second}" }.toTypedArray()) { _, index ->
+                showPairingQr(addresses[index].second)
+            }
+            .setNegativeButton("Cancelar", null)
+            .show()
+    }
+
+    private fun showPairingQr(ip: String) {
+        val offer = PairingSession.issue()
+        try {
+            val code = PairingCode.encode(offer.copy(host = ip))
+            val bitmap = BarcodeEncoder().encodeBitmap(code, BarcodeFormat.QR_CODE, 600, 600)
+            val panel = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(dp(16), dp(8), dp(16), dp(8))
+            }
+            panel.addView(TextView(this).apply {
+                text = "No aparelho CONTROLADOR, toque em 'Ler QR Code'.\nRede: $ip:${WireProtocol.PORT}"
+                textSize = 14f
+            })
+            val size = minOf(resources.displayMetrics.widthPixels - dp(96), dp(320))
+            panel.addView(ImageView(this).apply {
+                setImageBitmap(bitmap)
+                contentDescription = "QR Code de pareamento temporário. Não compartilhe."
+            }, LinearLayout.LayoutParams(size, size).apply { gravity = Gravity.CENTER_HORIZONTAL })
+            panel.addView(TextView(this).apply {
+                text = "Acesso temporário. Expira em 2 minutos ou após o primeiro pareamento. Não compartilhe imagens deste código."
+                textSize = 12f
+            })
+            val dialog = AlertDialog.Builder(this)
+                .setTitle("Parear pela rede local")
+                .setView(panel)
+                .setNegativeButton("Fechar", null)
+                .create()
+            dialog.setOnDismissListener { PairingSession.revoke(offer.session) }
+            dialog.show()
+            dialog.window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+            val monitorQr = object : Runnable {
+                override fun run() {
+                    if (!dialog.isShowing) return
+                    if (PairingSession.active()?.first != offer.session) dialog.dismiss()
+                    else handler.postDelayed(this, 1_000L)
+                }
+            }
+            handler.postDelayed(monitorQr, 1_000L)
+            handler.postDelayed({ if (dialog.isShowing) dialog.dismiss() }, PairingSession.EXPIRES_MS)
+        } catch (e: Exception) {
+            PairingSession.revoke(offer.session)
+            message("Não foi possível exibir o QR: ${e.message}")
+        }
+    }
+
+    private fun startQrScanner() {
+        try {
+            IntentIntegrator(this)
+                .setDesiredBarcodeFormats(IntentIntegrator.QR_CODE_TYPES)
+                .setPrompt("Aponte para o QR do celular monitorado")
+                .setBeepEnabled(false)
+                .setBarcodeImageEnabled(false)
+                .initiateScan()
+        } catch (e: Exception) {
+            message("Não foi possível abrir a câmera: ${e.message}")
+        }
+    }
+
+    @Deprecated("API Activity legada para compatibilidade com a Activity Android nativa")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        val scan = IntentIntegrator.parseActivityResult(requestCode, resultCode, data) ?: return
+        val text = scan.contents ?: return // Scanner cancelado.
+        try {
+            val code = PairingCode.decode(text)
+            AlertDialog.Builder(this)
+                .setTitle("Confirmar conexão local")
+                .setMessage("Parear com o aparelho no IP ${code.host}:${WireProtocol.PORT}?\n\nConfirme somente se o QR está na tela do seu outro celular.")
+                .setNegativeButton("Cancelar", null)
+                .setPositiveButton("Conectar") { _, _ -> pairByQr(code) }
+                .show()
+        } catch (e: Exception) {
+            message("QR inválido ou incompatível: ${e.message}")
+        }
+    }
+
+    private fun pairByQr(code: PairingCode.Offer) {
+        if (pairingInProgress) return
+        pairingInProgress = true
+        thread(name = "MonitorRemoto-qr-pair") {
+            val result = runCatching { RemoteClient.pair(code) }
+            runOnUiThread {
+                pairingInProgress = false
+                if (isFinishing || isDestroyed) return@runOnUiThread
+                result.onSuccess { key ->
+                    try {
+                        SecretVault.save(this, SecretVault.CONTROLLER_KEY, key)
+                        SettingsStore.setRemoteHost(this, code.host)
+                        mode = 1
+                        render()
+                        message("Pareamento concluído. IP e chave salvos com proteção do Android Keystore.")
+                        refreshRemote(silent = false)
+                    } catch (e: Exception) { message("Erro ao salvar pareamento: ${e.message}") }
+                }.onFailure { e ->
+                    message("Não foi possível parear: ${e.message}. Verifique o Wi-Fi, serviço ativo, tempo do QR e isolamento de clientes no roteador. Gere novo QR.")
+                }
+            }
+        }
     }
 
     private fun refreshRemote(silent: Boolean) {

@@ -1,6 +1,6 @@
 # Requisitos para uma publicação futura no Google Play (verificado em 2026-10-13)
 
-**Isto não certifica o app para publicação.** A alpha.3 continua em testes e o fluxo de produção precisa de avaliação, política de privacidade hospedada e revisão de consentimento.
+**Isto não certifica o app para publicação.** A alpha.4 continua em testes e o fluxo de produção precisa de avaliação, política de privacidade hospedada e revisão de consentimento.
 
 ## Bloqueadores e mudanças implementadas
 
@@ -13,7 +13,7 @@
 
 1. Criar conta de desenvolvedor no Play Console: taxa única atual de US$25 e verificação de identidade; requisitos adicionais podem variar.
 2. Usar `targetSdk=36` (Android 16), conforme obrigatório para novos envios desde 31/08/2026; usar também Android SDK e ferramentas compatíveis.
-3. Produzir **Android App Bundle (AAB)** de release assinado com **chave de upload própria**, e ativar/usar Play App Signing. O workflow alpha.3 já gera AAB Release assinado **somente se** os quatro Secrets de assinatura estiverem configurados; não garante publicação ou compatibilidade Play. Nunca coloque keystore ou senhas no código/repositório.
+3. Produzir **Android App Bundle (AAB)** de release assinado com **chave de upload própria**, e ativar/usar Play App Signing. O workflow alpha.4 já gera AAB Release assinado **somente se** os quatro Secrets de assinatura estiverem configurados; não garante publicação ou compatibilidade Play. Nunca coloque keystore ou senhas no código/repositório.
 4. Criar página da loja com nome/ícone, imagens reais, capturas de tela, descrição, informações de suporte/contato, classificação etária e declarações de conteúdo.
 5. Disponibilizar **política de privacidade pública por URL HTTPS** e dentro do aplicativo; preencher **Segurança dos dados** com coleta, transferência local criptografada, retenção e controles; confirmar classificação correta caso a transferência entre dispositivos conte como coleta no contexto da política.
 6. Declarar o serviço foreground `connectedDevice` e justificar a necessidade contínua no Play Console, incluindo demonstração em vídeo se solicitado; comprovar recurso visível e botão de parada.
@@ -28,3 +28,8 @@ Fontes oficiais:
 - https://support.google.com/googleplay/android-developer/answer/10144311?hl=pt-BR
 - https://support.google.com/googleplay/android-developer/answer/16559646?hl=pt-BR
 - https://support.google.com/googleplay/android-developer/answer/6112435?hl=pt-BR
+
+
+## Observação alpha.4: Google Play Protect
+
+A instalação da alpha.3 foi classificada como `App nocivo bloqueado` pelo Play Protect. Isso **não** equivale a simples aviso de aplicativo desconhecido; a origem exata não foi confirmada. Verificar permissões e comportamento da distribuição, consultar as orientações oficiais de contestação e nunca instruir usuário a desativar proteção. QR e remoção de ZIP não resolvem automaticamente essa classificação. A variante atual ainda contém `NotificationListenerService`.
