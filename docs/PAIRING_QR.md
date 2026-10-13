@@ -1,4 +1,4 @@
-# Pareamento por QR (v0.1.0-alpha.4)
+# Pareamento por QR (v0.1.0-alpha.5)
 
 ## Uso
 

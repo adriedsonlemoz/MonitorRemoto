@@ -12,8 +12,13 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.4" and code.group(1) == "4", "Versões incompatíveis"
+assert version == "0.1.0-alpha.5" and code.group(1) == "5", "Versões incompatíveis"
 assert version in ui, "Tela de versão desatualizada"
+assert f"versionCode={code.group(1)}" in (root / 'docs/ARCHITECTURE.md').read_text(), "Arquitetura com versionCode desatualizado"
+# GitHub Actions #4: QR_CODE_TYPES não existe em IntentIntegrator 4.3.0; QR_CODE existe.
+assert 'IntentIntegrator.QR_CODE_TYPES' not in ui, "QR_CODE_TYPES inválido no ZXing"
+assert 'scanner.setDesiredBarcodeFormats(IntentIntegrator.QR_CODE)' in ui, "Leitor QR sem formato suportado"
+assert 'scanner.setPrompt(' in ui and 'scanner.initiateScan()' in ui, "Fluxo do scanner incompleto"
 assert 'dist/MonitorRemoto-v${VERSION}.apk' in workflow, "Arquivo .apk final não é nomeado"
 assert 'gh release upload' in workflow and 'gh release create' in workflow, "Falta APK direto via Release"
 assert 'actions/upload-artifact' in workflow, "Artifact de reserva ausente"

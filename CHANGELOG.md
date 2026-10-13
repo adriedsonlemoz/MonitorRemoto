@@ -1,5 +1,13 @@
 # Histórico de versões
 
+## 0.1.0-alpha.5 (13/10/2026)
+
+- Corrigida a falha real do workflow GitHub Actions #4 (`:app:compileDebugKotlin`): `Unresolved reference QR_CODE_TYPES` e erro de encadeamento `setPrompt`.
+- Substituída a constante inexistente `IntentIntegrator.QR_CODE_TYPES` pela constante suportada `IntentIntegrator.QR_CODE` do ZXing Android Embedded 4.3.0, com configuração explícita do scanner.
+- Adicionadas verificações de regressão em `tools/check_distribution.py` para API do scanner e sincronização de `versionCode = 5`/`versionName = 0.1.0-alpha.5`.
+- Mantidos QR temporário, conexão manual, protocolos locais, segurança, permissões, geração do APK direto em Releases e AAB opcional.
+- Build Android completo e instalação física continuam pendentes após esta correção.
+
 ## 0.1.0-alpha.4 (versionCode 4)
 - Pareamento presencial por QR local com código válido por 120 segundos e uso único, senha temporária e resposta cifrada com credencial permanente.
 - Scanner de QR integrado, confirmação de IP e salvar chave via Android Keystore. Pareamento manual mantido.

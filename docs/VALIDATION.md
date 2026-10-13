@@ -40,3 +40,11 @@
 - [ ] Confirmar que a Release fornece APK direto e nenhum Artifact duplicado numa execução bem-sucedida.
 - [ ] Verificar classificação real no Play Protect (a alpha.3 foi bloqueada como potencialmente nociva); auditoria ou contestação necessária.
 - [ ] Ensaiar fluxo de notificações e permissões sem perda de segurança bancária.
+
+## Correção do workflow #4 (alpha.5)
+
+- Fonte: execução GitHub Actions `38457828570` em 13/10/2026, tarefa `:app:compileDebugKotlin`.
+- Erros reais: `MainActivity.kt:404:60 Unresolved reference 'QR_CODE_TYPES'` e `MainActivity.kt:405:18 Unresolved reference 'setPrompt'`.
+- Ajuste: `IntentIntegrator.QR_CODE` com configuração independente do scanner; API comprovada no código da dependência JourneyApps 4.3.0.
+- Verificações locais: sintaxe Kotlin, testes isolados de classes independentes de Android, testes de integridade e regras de distribuição.
+- Não foi realizada compilação Android completa neste ambiente.

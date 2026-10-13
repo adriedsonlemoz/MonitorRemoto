@@ -153,7 +153,7 @@ class MainActivity : Activity() {
     private fun render() {
         content.removeAllViews()
         addText("MONITOR REMOTO", 22f, strong = true)
-        addText("v0.1.0-alpha.4  ·  Privado e criptografado", 12f, muted = true)
+        addText("v0.1.0-alpha.5  ·  Privado e criptografado", 12f, muted = true)
         gap(14)
         val tabs = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         fun addTab(title: String, which: Int) {
@@ -400,12 +400,14 @@ class MainActivity : Activity() {
 
     private fun startQrScanner() {
         try {
-            IntentIntegrator(this)
-                .setDesiredBarcodeFormats(IntentIntegrator.QR_CODE_TYPES)
-                .setPrompt("Aponte para o QR do celular monitorado")
-                .setBeepEnabled(false)
-                .setBarcodeImageEnabled(false)
-                .initiateScan()
+            // ZXing Android Embedded 4.3.0 oferece QR_CODE (String), não QR_CODE_TYPES.
+            // Chamada explícita sem encadeamento evita inferência incorreta de receptor.
+            val scanner = IntentIntegrator(this)
+            scanner.setDesiredBarcodeFormats(IntentIntegrator.QR_CODE)
+            scanner.setPrompt("Aponte para o QR do celular monitorado")
+            scanner.setBeepEnabled(false)
+            scanner.setBarcodeImageEnabled(false)
+            scanner.initiateScan()
         } catch (e: Exception) {
             message("Não foi possível abrir a câmera: ${e.message}")
         }
