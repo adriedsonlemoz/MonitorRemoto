@@ -9,8 +9,10 @@ object SettingsStore {
     fun isMonitorEnabled(context: Context) = prefs(context).getBoolean("monitor_enabled", false)
     fun setMonitorEnabled(context: Context, enabled: Boolean) = prefs(context).edit().putBoolean("monitor_enabled", enabled).apply()
 
-    fun isSmsEnabled(context: Context) = prefs(context).getBoolean("sms_enabled", false)
-    fun setSmsEnabled(context: Context, enabled: Boolean) = prefs(context).edit().putBoolean("sms_enabled", enabled).apply()
+    fun notificationAllowlist(context: Context): Set<String> =
+        prefs(context).getStringSet("notification_allowlist", emptySet())?.toSet() ?: emptySet()
+    fun setNotificationAllowlist(context: Context, packages: Set<String>) =
+        prefs(context).edit().putStringSet("notification_allowlist", packages).apply()
 
     fun autoStartEnabled(context: Context) = prefs(context).getBoolean("autostart", false)
     fun setAutoStart(context: Context, enabled: Boolean) = prefs(context).edit().putBoolean("autostart", enabled).apply()

@@ -1,6 +1,6 @@
 # Monitor Remoto
 
-**v0.1.0-alpha.1 / versionCode 1** · Android 8.0+ · Kotlin 2.2.21 · AGP 8.13.2 · Gradle 8.13
+**v0.1.0-alpha.2 / versionCode 2** · Android 8.0+ · Kotlin 2.2.21 · AGP 8.13.2 · Gradle 8.13
 
 Dois modos no mesmo APK: **Monitorado** (servidor) e **Controle** (cliente).
 
@@ -8,8 +8,8 @@ Dois modos no mesmo APK: **Monitorado** (servidor) e **Controle** (cliente).
 
 - Snapshot de nível da bateria, carregamento, temperatura, tensão, corrente instantânea e média (quando o hardware/Android fornecem as propriedades).
 - Captura de notificações **novas** autorizadas pelo usuário por `NotificationListenerService`. Não lê automaticamente o histórico de WhatsApp.
-- Captura opcional de SMS **novos**, com solicitação explícita de `RECEIVE_SMS`. Não lê caixa de entrada, MMS ou mensagens antigas.
-- Filtro conservador para ocultar possíveis códigos de verificação (não é infalível).
+- Captura opcional de notificações de aplicativos selecionados. Não possui permissão de SMS direto.
+- Filtro por conteúdo e bloqueio preventivo de nomes/pacotes financeiros conhecidos (não são infalíveis; o Android ainda concede acesso geral ao serviço).
 - Histórico volátil limitado a 100 eventos no aparelho monitorado; mostra os últimos 30. Nada salvo em banco ou nuvem.
 - Servidor TCP autenticado com chave de 256 bits e payload protegido por AES-256-GCM, timeout, nonce aleatório, janela temporal de 5 min e cache de rejeição de repetição por nonce.
 - Segredos armazenados protegidos por Android Keystore no aparelho.
@@ -20,8 +20,8 @@ Dois modos no mesmo APK: **Monitorado** (servidor) e **Controle** (cliente).
 
 ## Como utilizar
 
-1. Gere o APK no GitHub Actions (workflow `Gerar APK`, Artifact `Monitor-Remoto-alpha1-debug`). Instale o **mesmo APK** nos dois aparelhos.
-2. No telefone secundário: abra modo **Monitorado**; autorize a notificação de serviço; ative o monitoramento; autorize notificações em Configurações. Se desejar SMS, aceite o aviso e solicite a permissão separadamente.
+1. Gere o APK no GitHub Actions (workflow `Gerar APK`, Artifact `Monitor-Remoto-alpha2-debug`). Instale o **mesmo APK** nos dois aparelhos.
+2. No telefone secundário: abra modo **Monitorado**; autorize a notificação de serviço; ative o monitoramento; autorize notificações em Configurações. Selecione explicitamente os aplicativos cujas notificações deseja compartilhar.
 3. Na tela Monitorado, veja os IPs disponíveis e toque em **Mostrar/copiar chave de pareamento**. Guarde essa chave em local seguro.
 4. No telefone principal: modo **Controle**; preencha o IPv4 da mesma rede, cole a chave e toque **Salvar acesso**.
 5. Na internet: configure **Tailscale/WireGuard** em ambos, conecte-os à mesma rede privada VPN e, no Controle, substitua o IP Wi-Fi pelo IP/nome acessível na VPN. Não abra a porta no roteador à internet pública.
@@ -31,7 +31,7 @@ Dois modos no mesmo APK: **Monitorado** (servidor) e **Controle** (cliente).
 
 ## Considerações importantes
 
-- **Google Play**: permissões SMS têm política extremamente restrita. Esta variante é voltada para instalação privada/sideload, **sem alegação de aprovação para publicação na Play Store**. Uma edição publicada precisaria retirar `RECEIVE_SMS` ou comprovar enquadramento em papel/exceção aceitos.
+- **Google Play**: permissões SMS têm política extremamente restrita. A permissão `RECEIVE_SMS` foi removida. SMS novos só podem ser exibidos **quando aparecem em notificações do app de mensagens autorizado**. Não há leitura de caixa de entrada SMS, recuperação de mensagens ocultas nem garantia de aprovação na Play Store.
 - **WhatsApp**: apenas texto das notificações que o Android oferece ao listener. Mensagens ocultas, silenciosas, apagadas, protegidas ou históricas não são recuperadas. É possível que o sistema oculte dados sensíveis.
 - **Dados sensíveis**: mensagens e OTP podem ser exibidos caso o filtro não os identifique. A chave permite acesso a todos os últimos eventos; proteja e revogue a chave quando necessário.
 - **Privacidade**: código não inclui nuvem nem telemetria. A VPN (se utilizada) é um serviço externo e tem políticas próprias.
@@ -56,3 +56,12 @@ Descoberta de dispositivos na LAN, pareamento por QR, permissões por categoria/
 ## Estado de validação
 
 Vide `docs/VALIDATION.md`. A presença do código não equivale a funcionalidade comprovada em hardware: executar build CI e ensaios com aparelhos reais antes de depender deste app.
+
+
+## Alterações alpha.2
+- Corrigido GitHub Actions: `setup-android@v4` não solicita o pacote descontinuado `tools`.
+- Corrigido erro no campo de texto da interface (`setTextColor(ink)`).
+- Removido recebimento direto de SMS e o receiver para preparar um possível envio à Play.
+- Notificações somente de aplicativos escolhidos pelo usuário, com aviso de consentimento e bloqueio conservador de apps financeiros/conteúdo sensível.
+- Seleção de apps com `<queries>` de launcher, sem permissão `QUERY_ALL_PACKAGES`.
+- `versionCode` 2; nome do artifact sincronizado; documentação de Google Play em `docs/PLAY_STORE.md`.

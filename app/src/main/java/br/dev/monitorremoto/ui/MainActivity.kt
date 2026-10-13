@@ -28,6 +28,7 @@ import android.widget.TextView
 import br.dev.monitorremoto.capture.NotificationCaptureService
 import br.dev.monitorremoto.core.BatteryReader
 import br.dev.monitorremoto.core.SettingsStore
+import br.dev.monitorremoto.core.SensitiveContent
 import br.dev.monitorremoto.security.CryptoBox
 import br.dev.monitorremoto.security.SecretVault
 import br.dev.monitorremoto.service.MonitorService
@@ -129,7 +130,7 @@ class MainActivity : Activity() {
         hint = hintText
         setText(initial)
         textSize = 15f
-        setTextColor(text)
+        setTextColor(ink)
         setHintTextColor(dim)
         background = shape(surface)
         setSingleLine(true)
@@ -143,7 +144,7 @@ class MainActivity : Activity() {
     private fun render() {
         content.removeAllViews()
         addText("MONITOR REMOTO", 22f, strong = true)
-        addText("v0.1.0-alpha.1  ·  Privado e criptografado", 12f, muted = true)
+        addText("v0.1.0-alpha.2  ·  Privado e criptografado", 12f, muted = true)
         gap(14)
         val tabs = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         fun addTab(title: String, which: Int) {
@@ -217,30 +218,59 @@ class MainActivity : Activity() {
         addText("Permissões independentes", 17f, strong = true)
         addText("Notificações: ${if (hasListener()) "autorizadas" else "sem acesso"}", 14f)
         content.addView(button("Configurar acesso às notificações") {
-            startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+            AlertDialog.Builder(this)
+                .setTitle("Acesso a notificações (opcional)")
+                .setMessage(
+                    "O Android permite que este serviço leia notificações de outros aplicativos, inclusive dados sensíveis. " +
+                    "O Monitor Remoto só registra e transmite notificações dos aplicativos que você selecionar, " +
+                    "com filtros adicionais para informações financeiras e de autenticação. " +
+                    "Esses filtros não são infalíveis. As notificações selecionadas podem ser transmitidas " +
+                    "para seu outro celular pela rede local em uma conexão criptografada, mesmo com esta tela bloqueada. " +
+                    "Você pode revogar essa permissão nas Configurações do Android a qualquer momento. " +
+                    "Não habilite em um aparelho com banco se o banco não aceitar essa permissão."
+                )
+                .setNegativeButton("Cancelar", null)
+                .setPositiveButton("Entendi, configurar") { _, _ ->
+                    startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+                }
+                .show()
         })
-        addText("SMS novos: ${if (SettingsStore.isSmsEnabled(this)) "habilitados" else "desabilitados"}", 14f)
-        content.addView(button(if (SettingsStore.isSmsEnabled(this)) "Desativar captura de SMS" else "Autorizar captura de SMS") {
-            if (SettingsStore.isSmsEnabled(this)) {
-                SettingsStore.setSmsEnabled(this, false); render()
-            } else {
-                AlertDialog.Builder(this)
-                    .setTitle("Permissão sensível: SMS")
-                    .setMessage("Serão capturados apenas SMS novos e seus conteúdos. Use em aparelho próprio, para instalação privada. Mensagens podem conter códigos e dados pessoais. O filtro de códigos não é infalível.")
-                    .setNegativeButton("Cancelar", null)
-                    .setPositiveButton("Continuar") { _, _ ->
-                        if (checkSelfPermission(Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED) {
-                            SettingsStore.setSmsEnabled(this, true); render()
-                        } else requestPermissions(arrayOf(Manifest.permission.RECEIVE_SMS), 102)
-                    }.show()
-            }
-        })
+        addText("Notificações permitidas: ${SettingsStore.notificationAllowlist(this).size}", 14f)
+        content.addView(button("Selecionar aplicativos autorizados") { selectNotificationApps() })
+        addText("Sem apps selecionados, nenhuma notificação é registrada. SMS direto não é coletado: novas mensagens podem aparecer apenas na notificação do app de SMS, se você o autorizar.", 12f, muted = true)
         gap(10)
         content.addView(button(if (SettingsStore.autoStartEnabled(this))
             "Desativar tentativa de iniciar após reiniciar" else "Tentar iniciar após reiniciar o celular") {
             SettingsStore.setAutoStart(this, !SettingsStore.autoStartEnabled(this)); render()
         })
         addText("A reinicialização automática depende das restrições do Android e do fabricante. O serviço não é invisível.", 12f, muted = true)
+    }
+
+    private fun selectNotificationApps() {
+        val apps = packageManager.getInstalledApplications(0)
+            .filter {
+                it.packageName != packageName &&
+                    packageManager.getLaunchIntentForPackage(it.packageName) != null &&
+                    !SensitiveContent.isBlockedFinancialApp(
+                        it.packageName, packageManager.getApplicationLabel(it).toString()
+                    )
+            }
+            .sortedBy { packageManager.getApplicationLabel(it).toString().lowercase(Locale.getDefault()) }
+        val names = apps.map { "${packageManager.getApplicationLabel(it)} (${it.packageName})" }.toTypedArray()
+        val selected = SettingsStore.notificationAllowlist(this).toMutableSet()
+        val checked = apps.map { it.packageName in selected }.toBooleanArray()
+        AlertDialog.Builder(this).setTitle("Autorizar apps não financeiros")
+            .setMessage("Somente os apps marcados podem ter notificações transmitidas. " +
+                "Aplicativos bancários conhecidos são ocultados. O filtro não cobre todos os bancos. " +
+                "SMS, quando disponível, pode aparecer pela notificação do aplicativo de mensagens, não pela caixa SMS.")
+            .setMultiChoiceItems(names, checked) { _, index, enabled ->
+                if (enabled) selected.add(apps[index].packageName) else selected.remove(apps[index].packageName)
+            }
+            .setNegativeButton("Cancelar", null)
+            .setPositiveButton("Salvar") { _, _ ->
+                SettingsStore.setNotificationAllowlist(this, selected)
+                render()
+            }.show()
     }
 
     private fun renderController() {
@@ -311,7 +341,7 @@ class MainActivity : Activity() {
         val events = root.optJSONArray("events")
         panel.addView(label("Últimos eventos (${events?.length() ?: 0})", 17f, true))
         if (events == null || events.length() == 0) {
-            panel.addView(label("Nenhum SMS ou notificação foi capturado desde o início do processo.", 13f, muted = true))
+            panel.addView(label("Nenhuma notificação foi capturada desde o início do processo.", 13f, muted = true))
         } else {
             for (index in events.length() - 1 downTo 0) {
                 val event = events.optJSONObject(index) ?: continue
@@ -364,7 +394,6 @@ class MainActivity : Activity() {
         val granted = results.isNotEmpty() && results[0] == PackageManager.PERMISSION_GRANTED
         when (requestCode) {
             101 -> if (granted) startServiceExplicitly() else message("Autorize notificações para exibir o monitoramento ativo.")
-            102 -> { SettingsStore.setSmsEnabled(this, granted); render() }
         }
     }
 
