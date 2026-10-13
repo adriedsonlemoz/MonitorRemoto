@@ -11,6 +11,19 @@
 - [ ] Medição da corrente contra USB power meter e outro app.
 - [ ] Auditoria de vazamento, ataques por replay, excesso de conexões e políticas de privacidade.
 
-**Validações locais (alpha.2):** verificação estrutural de permissões, workflow e versões; parser PSI Kotlin de todos os arquivos `.kt` sem erros sintáticos; 12 verificações isoladas de criptografia, chaves e filtragem com Kotlin/JVM; XML parseado e integridade/CRC do ZIP. Não representam compilação Android completa nem teste instrumentado. Nenhum APK foi produzido nem testado em dispositivo nesta sessão.
+**Validações locais (alpha.3):** verificação estrutural de permissões, workflow e versões; parser PSI Kotlin de todos os arquivos `.kt` sem erros sintáticos; 12 verificações isoladas de criptografia, chaves e filtragem com Kotlin/JVM; XML parseado e integridade/CRC do ZIP. Não representam compilação Android completa nem teste instrumentado. Nenhum APK foi produzido nem testado em dispositivo nesta sessão.
 
-**Pendências alpha.2:** indicador real de porta em escuta; callback de erro de bind; descoberta NSD/mDNS ou QR; limites de tráfego por origem; revisão do filtro de mensagens sensíveis; migração para histórico criptografado opcional.
+**Pendências alpha.3:** indicador real de porta em escuta; callback de erro de bind; descoberta NSD/mDNS ou QR; limites de tráfego por origem; revisão do filtro de mensagens sensíveis; migração para histórico criptografado opcional.
+
+### Distribuição alpha.3
+
+- [x] `tools/check_distribution.py`: versões, nome do APK, Release, assinatura opcional, AAB e manifesto; **aprovado localmente**.
+- [ ] `gradle :app:testDebugUnitTest :app:assembleDebug` no GitHub Actions.
+- [ ] Com Secrets: `gradle :app:assembleRelease :app:bundleRelease` e compatibilidade de assinatura.
+- [ ] Validar upload direto do `.apk` na Release e instalações/atualizações entre versões no aparelho.
+- [ ] Testar fluxo de erro de GitHub 403/500 com permissões do repositório.
+- [ ] Verificar update da versão alpha.2 no mesmo aparelho: assinatura Debug dos runners diferentes pode impedir.
+
+`upload-artifact` sempre gera ZIP ao fazer download; a Release disponibiliza APK direto.
+
+**Executado localmente na alpha.3:** `tools/check_distribution.py` passou; YAML lido pelo PyYAML sem erro; 14 etapas do workflow verificadas com `bash -n`; XML do Manifest parseado; 12 verificações Kotlin/JVM reais de criptografia e filtros passaram (`kotlinc` e `java -jar`). Ausência de Android SDK/Gradle impede afirmar compilação Android completa ou criar APK neste ambiente.

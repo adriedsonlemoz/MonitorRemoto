@@ -1,5 +1,13 @@
 # Histórico de versões
 
+## 0.1.0-alpha.3 (versionCode 3) — 2026-10-13
+
+- Gerar arquivo real `MonitorRemoto-v0.1.0-alpha.3.apk`, publicado em GitHub Releases sem ZIP.
+- Manter `upload-artifact` como alternativa (download do GitHub sempre vem ZIP).
+- Preparar build Release assinado com quatro Secrets opcionais e AAB assinado, com fallback Debug.
+- Adicionar validação automática da distribuição, hash SHA-256, documentação e diretrizes `AGENTS.md`.
+- Sem alterações nas permissões sensíveis, mensagens e protocolo local da alpha.2.
+
 ## 0.1.0-alpha.2 (versionCode 2) — 2026-10-13
 
 - Workflow corrigido: `android-actions/setup-android@v4` elimina falha no pacote obsoleto `tools`.

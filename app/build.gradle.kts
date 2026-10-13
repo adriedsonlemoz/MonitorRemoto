@@ -3,6 +3,13 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+// Nunca incluir credenciais ou keystore no repositório. A CI injeta esses campos via ambiente.
+val releaseSigningNames = listOf(
+    "MONITOR_SIGNING_STORE_FILE", "MONITOR_SIGNING_STORE_PASSWORD",
+    "MONITOR_SIGNING_KEY_ALIAS", "MONITOR_SIGNING_KEY_PASSWORD"
+)
+val hasReleaseSigning = releaseSigningNames.all { !System.getenv(it).isNullOrBlank() }
+
 android {
     namespace = "br.dev.monitorremoto"
     compileSdk = 36
@@ -11,17 +18,30 @@ android {
         applicationId = "br.dev.monitorremoto"
         minSdk = 26
         targetSdk = 36
-        versionCode = 2
-        versionName = "0.1.0-alpha.2"
+        versionCode = 3
+        versionName = "0.1.0-alpha.3"
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions { jvmTarget = "17" }
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("privateRelease") {
+                storeFile = file(System.getenv("MONITOR_SIGNING_STORE_FILE"))
+                storePassword = System.getenv("MONITOR_SIGNING_STORE_PASSWORD")
+                keyAlias = System.getenv("MONITOR_SIGNING_KEY_ALIAS")
+                keyPassword = System.getenv("MONITOR_SIGNING_KEY_PASSWORD")
+            }
+        }
+    }
     buildTypes {
-        release {
+        getByName("release") {
             isMinifyEnabled = false
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("privateRelease")
+            }
         }
     }
 }

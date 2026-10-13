@@ -1,9 +1,9 @@
-# Arquitetura (alpha.1)
+# Arquitetura (0.1.0-alpha.3)
 
 ```text
 MONITORADO                                      CONTROLE
 NotificationListenerService --> EventJournal --\
-SmsReceiver -----------------> EventJournal ----> MonitorServer :37841
+Apps autorizados/allowlist -> EventJournal ----> MonitorServer :37841
 BatteryReader ---------------------------------/       |
                     SecretVault (Android Keystore)     | AES-256-GCM bidirecional
                                                       |
@@ -16,3 +16,12 @@ LAN: 192.168.x.x / VPN Tailscale: 100.x.x.x     RemoteClient -> MainActivity
 O FGS `connectedDevice` mantém o socket de escuta durante monitoramento ativo. A permissão `CHANGE_NETWORK_STATE` é declarada para o pré-requisito do tipo FGS; o app não altera configurações de rede. O serviço não depende de localização, Accessibility, root, APIs ocultas ou desbloqueio da tela para consultar as APIs permitidas.
 
 **Limites:** TCP não faz NAT traversal; internet depende da VPN, rede de dispositivos ou infraestrutura futura. O monitor não envia push para o controlador; este consulta quando aberto. OS/fabricantes podem encerrar/restringir o serviço. Testes reais em Android 13–17 são pendentes. Esquemas de sincronização e políticas granulares ainda não estão implementados.
+
+## Distribuição e assinatura
+
+O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.3` e `versionCode=3`.
+
+- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.3.apk`.
+- `upload-artifact` sempre distribui um ZIP; GitHub Releases recebe o **arquivo APK direto**.
+- Com quatro Secrets, Gradle gera APK Release assinado e AAB. Sem Secrets, o arquivo é Debug de teste e não preserva necessariamente a assinatura entre execuções.
+- Releases são prévias, não substituem a futura revisão da Google Play e nem os ensaios reais.

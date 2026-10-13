@@ -1,6 +1,6 @@
 # Monitor Remoto
 
-**v0.1.0-alpha.2 / versionCode 2** · Android 8.0+ · Kotlin 2.2.21 · AGP 8.13.2 · Gradle 8.13
+**v0.1.0-alpha.3 / versionCode 3** · Android 8.0+ · Kotlin 2.2.21 · AGP 8.13.2 · Gradle 8.13
 
 Dois modos no mesmo APK: **Monitorado** (servidor) e **Controle** (cliente).
 
@@ -20,7 +20,7 @@ Dois modos no mesmo APK: **Monitorado** (servidor) e **Controle** (cliente).
 
 ## Como utilizar
 
-1. Gere o APK no GitHub Actions (workflow `Gerar APK`, Artifact `Monitor-Remoto-alpha2-debug`). Instale o **mesmo APK** nos dois aparelhos.
+1. Execute GitHub Actions > **Gerar APK e Release** > Run workflow. Para baixar **APK sem ZIP**, use Releases > `v0.1.0-alpha.3` > Assets > **`MonitorRemoto-v0.1.0-alpha.3.apk`**. Em Actions > Artifacts, o download continua em ZIP por comportamento padrão do GitHub. Instale o mesmo APK nos dois aparelhos.
 2. No telefone secundário: abra modo **Monitorado**; autorize a notificação de serviço; ative o monitoramento; autorize notificações em Configurações. Selecione explicitamente os aplicativos cujas notificações deseja compartilhar.
 3. Na tela Monitorado, veja os IPs disponíveis e toque em **Mostrar/copiar chave de pareamento**. Guarde essa chave em local seguro.
 4. No telefone principal: modo **Controle**; preencha o IPv4 da mesma rede, cole a chave e toque **Salvar acesso**.
@@ -47,7 +47,9 @@ Requer Android SDK API 36, Java 17, Gradle 8.13. O repositório ainda não inclu
 gradle :app:testDebugUnitTest :app:assembleDebug
 ```
 
-APK esperado: `app/build/outputs/apk/debug/app-debug.apk`. **O APK não está incluído neste ZIP.**
+APK local de teste: `app/build/outputs/apk/debug/app-debug.apk`. O workflow copia esse arquivo ou o Release assinado como **`MonitorRemoto-v0.1.0-alpha.3.apk`**. Baixe diretamente na aba GitHub **Releases**. **O APK não está incluído neste ZIP de código-fonte.**
+
+Opcional: configure os quatro Secrets de assinatura para gerar APK Release assinado e AAB. Ver `docs/APK_DOWNLOAD.md`. Preservar a mesma keystore entre builds é essencial para atualizações sem reinstalação.
 
 ## Próximas evoluções
 
@@ -65,3 +67,9 @@ Vide `docs/VALIDATION.md`. A presença do código não equivale a funcionalidade
 - Notificações somente de aplicativos escolhidos pelo usuário, com aviso de consentimento e bloqueio conservador de apps financeiros/conteúdo sensível.
 - Seleção de apps com `<queries>` de launcher, sem permissão `QUERY_ALL_PACKAGES`.
 - `versionCode` 2; nome do artifact sincronizado; documentação de Google Play em `docs/PLAY_STORE.md`.
+
+## Alterações alpha.3 (versionCode 3)
+- Arquivo APK publicado diretamente em GitHub Releases com nome `MonitorRemoto-v0.1.0-alpha.3.apk`; Artifacts continuam gerando ZIP como backup.
+- Assinatura Release opcional com quatro Secrets e geração do AAB para Google Play.
+- Verificação de sincronização da versão e empacotamento, SHA-256 do binário, docs e instruções permanentes em `AGENTS.md`.
+- Mantidas funcionalidades e filtros de segurança da alpha.2. Build completo depende do GitHub Actions.

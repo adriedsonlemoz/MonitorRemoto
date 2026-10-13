@@ -1,13 +1,18 @@
-name: Gerar APK
+name: Gerar APK e Release
 on:
   push:
-  workflow_dispatch:
   pull_request:
+  workflow_dispatch:
+
 permissions:
   contents: read
+
 jobs:
   android:
+    name: Compilar e distribuir APK
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Necessário somente para criar/enviar arquivo para GitHub Releases
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -18,17 +23,108 @@ jobs:
           java-version: '17'
       - name: Android SDK
         uses: android-actions/setup-android@v4
-      - name: Instalar Android 36
+      - name: Instalar plataforma Android 36
         run: sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
       - name: Configurar Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.13'
+      - name: Conferir versão e distribuição
+        run: python3 tools/check_distribution.py
+      - name: Extrair versão declarada no Gradle
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(sed -nE 's/^[[:space:]]*versionName[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' app/build.gradle.kts | head -1)"
+          test -n "$VERSION"
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-z]+\.[0-9]+)?$ ]] || exit 1
+          echo "name=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+      - name: Preparar assinatura privada opcional
+        id: signing
+        shell: bash
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$KEYSTORE_BASE64" && -z "$KEYSTORE_PASSWORD" && -z "$KEY_ALIAS" && -z "$KEY_PASSWORD" ]]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "Sem Secrets de assinatura: gerando APK Debug de testes."
+          elif [[ -n "$KEYSTORE_BASE64" && -n "$KEYSTORE_PASSWORD" && -n "$KEY_ALIAS" && -n "$KEY_PASSWORD" ]]; then
+            printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/monitor-release.keystore"
+            test -s "$RUNNER_TEMP/monitor-release.keystore"
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+            echo "Secrets completos: APK Release assinado e AAB serão gerados."
+          else
+            echo 'ERRO: assinatura parcialmente configurada. Cadastre os quatro Secrets ou nenhum.' >&2
+            exit 1
+          fi
       - name: Testes e APK Debug
         run: gradle :app:testDebugUnitTest :app:assembleDebug --stacktrace
-      - name: Publicar APK dos Artifacts
+      - name: APK Release e AAB, somente com assinatura estável
+        if: steps.signing.outputs.enabled == 'true'
+        env:
+          MONITOR_SIGNING_STORE_FILE: ${{ runner.temp }}/monitor-release.keystore
+          MONITOR_SIGNING_STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          MONITOR_SIGNING_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          MONITOR_SIGNING_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: gradle :app:assembleRelease :app:bundleRelease --stacktrace
+      - name: Nomear o APK instalável
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.name }}
+          STABLE_SIGNING: ${{ steps.signing.outputs.enabled }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          if [[ "$STABLE_SIGNING" == 'true' ]]; then
+            SOURCE_APK='app/build/outputs/apk/release/app-release.apk'
+          else
+            SOURCE_APK='app/build/outputs/apk/debug/app-debug.apk'
+          fi
+          test -s "$SOURCE_APK"
+          install -m 0644 "$SOURCE_APK" "dist/MonitorRemoto-v${VERSION}.apk"
+          cd dist
+          sha256sum "MonitorRemoto-v${VERSION}.apk" > "MonitorRemoto-v${VERSION}.sha256"
+      - name: Artifact de emergência (GitHub sempre baixa como ZIP)
         uses: actions/upload-artifact@v4
         with:
-          name: Monitor-Remoto-alpha2-debug
-          path: app/build/outputs/apk/debug/*.apk
+          name: MonitorRemoto-v${{ steps.version.outputs.name }}-APK
+          path: dist/*.apk
           if-no-files-found: error
+          retention-days: 30
+      - name: Artifact AAB para futura Play Store (somente com Secrets)
+        if: steps.signing.outputs.enabled == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: MonitorRemoto-v${{ steps.version.outputs.name }}-AAB
+          path: app/build/outputs/bundle/release/*.aab
+          if-no-files-found: error
+      - name: Publicar APK direto em Releases (sem ZIP)
+        if: github.event_name != 'pull_request' && (github.event_name == 'workflow_dispatch' || github.ref == format('refs/heads/{0}', github.event.repository.default_branch))
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.name }}
+          TAG: ${{ steps.version.outputs.tag }}
+          STABLE_SIGNING: ${{ steps.signing.outputs.enabled }}
+        run: |
+          set -euo pipefail
+          if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" --title "Monitor Remoto $VERSION (prévia)" \
+              --prerelease --notes-file docs/RELEASE_NOTES.md
+          fi
+          gh release upload "$TAG" \
+            "dist/MonitorRemoto-v${VERSION}.apk" \
+            "dist/MonitorRemoto-v${VERSION}.sha256" \
+            --repo "$GITHUB_REPOSITORY" --clobber
+          echo "### APK direto" >> "$GITHUB_STEP_SUMMARY"
+          echo "[Baixar MonitorRemoto-v${VERSION}.apk](https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/MonitorRemoto-v${VERSION}.apk)" >> "$GITHUB_STEP_SUMMARY"
+          if [[ "$STABLE_SIGNING" != 'true' ]]; then
+            echo 'Atenção: este APK Debug usa assinatura temporária do runner; configura os Secrets para atualizações sem reinstalação.' >> "$GITHUB_STEP_SUMMARY"
+          fi
