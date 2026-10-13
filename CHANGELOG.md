@@ -1,5 +1,13 @@
 # Histórico de versões
 
+## 0.1.0-alpha.12 (13/10/2026)
+
+- Tela Monitorado reduzida a status real, IP de rede, QR e ativar/interromper conforme o estado do serviço.
+- Configurações reorganizadas em Aparência, Permissões e notificações, Segurança e pareamento, Serviço e inicialização, Diagnóstico.
+- Permissões de notificações continuam opcionais e independentes da leitura de bateria.
+- Preservados chave de assinatura, pareamento, histórico de aparelhos e comunicação local existente.
+- Compilação Android e testes físicos pendentes.
+
 ## 0.1.0-alpha.11 (13/10/2026)
 
 - Tela inicial reorganizada: o aplicativo abre diretamente no **Painel Controle** e as abas fixas **Monitorado/Controle** foram removidas da tela principal.

@@ -136,3 +136,10 @@
 - **PASSOU:** 16 testes Kotlin/JVM locais (core/crypto/pairing), executados por runner compatível com JUnit construído localmente, cobrindo `EventJournal`, `Ipv4Suggestion`, `SensitiveContent`, `CryptoBox` e `PairingCode/PairingSession`.
 - **PASSOU:** integridade estrutural do ZIP final.
 - **NÃO EXECUTADO:** compilação Android completa com SDK/Gradle, `QrFrameDecoderTest` dependente de ZXing no ambiente local, testes visuais da nova interface, leitura Camera2 em hardware e atualização do APK assinado em aparelho.
+
+## alpha.12: Monitorado compacto
+
+- [x] Modo Monitorado limitado a status, IP, QR e ativar/interromper contextuais.
+- [x] Configurações categorizadas; operações de permissão, segredo, revogação e inicialização preservadas.
+- [ ] Build Android completo pelo GitHub Actions.
+- [ ] Verificar visual e funcionamento em dois celulares reais.

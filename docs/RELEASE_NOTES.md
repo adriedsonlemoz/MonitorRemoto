@@ -1,6 +1,8 @@
-# Monitor Remoto v0.1.0-alpha.11
+# Monitor Remoto v0.1.0-alpha.12
 
 ## Novidades
+
+- Modo Monitorado simplificado e dinâmico: status, IP, QR e ligar/desligar. Ajustes avançados agrupados na engrenagem.
 
 - Tela inicial abre direto no Painel Controle, sem abas fixas na tela principal.
 - Cabeçalho reorganizado com **Conectar**, **☰** e **⚙**; chips de versão e do estado do monitorado; atualização manual pelo ícone **↻** e automática a cada 15 s com tela aberta.

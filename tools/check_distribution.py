@@ -12,7 +12,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.11" and code.group(1) == "11", "Versões incompatíveis"
+assert version == "0.1.0-alpha.12" and code.group(1) == "12", "Versões incompatíveis"
 assert version in ui, "Tela de versão desatualizada"
 assert f"versionCode={code.group(1)}" in (root / 'docs/ARCHITECTURE.md').read_text(), "Arquitetura com versionCode desatualizado"
 # alpha.9 remove a Activity antiga do ZXing Embedded; Camera2 + ZXing Core offline.

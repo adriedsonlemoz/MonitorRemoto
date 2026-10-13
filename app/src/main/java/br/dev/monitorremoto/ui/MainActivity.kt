@@ -244,7 +244,7 @@ class MainActivity : Activity() {
         content.addView(header)
 
         val metaRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        metaRow.addView(infoChip("v0.1.0-alpha.11"))
+        metaRow.addView(infoChip("v0.1.0-alpha.12"))
         metaRow.addView(View(this), LinearLayout.LayoutParams(dp(8), 1))
         val monitorActive = SettingsStore.isMonitorEnabled(this) && MonitorService.isRunning
         metaRow.addView(infoChip(if (monitorActive) "Monitorado ativo" else "Monitorado inativo", accent = monitorActive))
@@ -320,101 +320,139 @@ class MainActivity : Activity() {
     }
 
     private fun showSettingsDialog() {
+        val options = arrayOf("Aparência", "Permissões e notificações", "Segurança e pareamento", "Serviço e inicialização", "Diagnóstico")
+        AlertDialog.Builder(this).setTitle("Configurações")
+            .setItems(options) { _, selected ->
+                when (selected) {
+                    0 -> showAppearanceDialog()
+                    1 -> showPermissionSettings()
+                    2 -> showSecuritySettings()
+                    3 -> showServiceSettings()
+                    4 -> showDiagnostics()
+                }
+            }.setNegativeButton("Fechar", null).show()
+    }
+
+    private fun showAppearanceDialog() {
         val choices = arrayOf("Claro (padrão)", "Escuro", "Acompanhar o sistema")
         val options = arrayOf("light", "dark", "system")
         val selected = options.indexOf(SettingsStore.theme(this)).coerceAtLeast(0)
-        AlertDialog.Builder(this)
-            .setTitle("⚙ Configurações · Aparência")
+        AlertDialog.Builder(this).setTitle("Aparência")
             .setSingleChoiceItems(choices, selected) { dialog, which ->
                 if (options[which] != SettingsStore.theme(this)) {
-                    SettingsStore.setTheme(this, options[which])
-                    dialog.dismiss()
-                    recreate()
+                    SettingsStore.setTheme(this, options[which]); dialog.dismiss(); recreate()
                 } else dialog.dismiss()
-            }
-            .setNegativeButton("Fechar", null).show()
+            }.setNegativeButton("Fechar", null).show()
+    }
+
+    private fun showPermissionSettings() {
+        val state = if (hasListener()) "autorizado" else "não autorizado"
+        AlertDialog.Builder(this).setTitle("Permissões e notificações")
+            .setItems(arrayOf("Acesso às notificações: $state", "Aplicativos permitidos: ${SettingsStore.notificationAllowlist(this).size}")) { _, index ->
+                if (index == 0) {
+                    AlertDialog.Builder(this).setTitle("Acesso a notificações (opcional)")
+                        .setMessage("O Android concede acesso geral às notificações, que podem conter informações sensíveis. Apenas aplicativos escolhidos são transmitidos, com filtros não infalíveis. Você pode revogar o acesso nas Configurações Android. O monitoramento da bateria não exige essa permissão.")
+                        .setNegativeButton("Cancelar", null)
+                        .setPositiveButton("Configurar no Android") { _, _ ->
+                            startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+                        }.show()
+                } else selectNotificationApps()
+            }.setNegativeButton("Fechar", null).show()
+    }
+
+    private fun showSecuritySettings() {
+        AlertDialog.Builder(this).setTitle("Segurança e pareamento")
+            .setItems(arrayOf("Mostrar/copiar chave de pareamento", "Trocar chave e revogar acessos")) { _, option ->
+                if (option == 0) showMonitorKey() else confirmRotateMonitorKey()
+            }.setNegativeButton("Fechar", null).show()
+    }
+
+    private fun showMonitorKey() {
+        try {
+            val key = CryptoBox.encode(SecretVault.getOrCreateMonitorKey(this))
+            val dialog = AlertDialog.Builder(this)
+                .setTitle("Chave secreta de pareamento")
+                .setMessage("Esta chave dá acesso aos dados remotos. Não compartilhe com terceiros.\n\n$key")
+                .setPositiveButton("Copiar") { _, _ ->
+                    val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                    clipboard.setPrimaryClip(ClipData.newPlainText("Chave Monitor Remoto", key))
+                    message("Chave copiada. Limpe a área de transferência depois do pareamento.")
+                }.setNegativeButton("Fechar", null).create()
+            dialog.show()
+            dialog.window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        } catch (error: Exception) { message("Keystore indisponível: ${error.message}") }
+    }
+
+    private fun confirmRotateMonitorKey() {
+        AlertDialog.Builder(this).setTitle("Revogar acessos?")
+            .setMessage("Todos os controladores precisarão parear novamente. A chave anterior deixará de funcionar.")
+            .setNegativeButton("Cancelar", null)
+            .setPositiveButton("Trocar chave") { _, _ ->
+                SecretVault.save(this, SecretVault.MONITOR_KEY, CryptoBox.newPairingKey())
+                PairingSession.revoke()
+                message("Chave substituída. Os acessos anteriores foram revogados.")
+            }.show()
+    }
+
+    private fun showServiceSettings() {
+        val autostart = SettingsStore.autoStartEnabled(this)
+        AlertDialog.Builder(this).setTitle("Serviço e inicialização")
+            .setItems(arrayOf("Reiniciar serviço", if (autostart) "Desativar início após reiniciar" else "Ativar início após reiniciar")) { _, option ->
+                if (option == 0) {
+                    if (SettingsStore.isMonitorEnabled(this)) startServiceExplicitly()
+                    else message("Ative o monitoramento antes de iniciar o serviço.")
+                } else {
+                    SettingsStore.setAutoStart(this, !autostart)
+                    message("Preferência salva. A inicialização depende das restrições do Android e do fabricante.")
+                }
+            }.setNegativeButton("Fechar", null).show()
+    }
+
+    private fun showDiagnostics() {
+        val running = MonitorService.isRunning
+        AlertDialog.Builder(this).setTitle("Diagnóstico")
+            .setMessage("Serviço: ${if (running) "ativo" else "parado"}\n" +
+                "Monitoramento autorizado: ${if (SettingsStore.isMonitorEnabled(this)) "sim" else "não"}\n" +
+                "Porta TCP: ${WireProtocol.PORT}\n" +
+                "IP local: ${localIps().ifBlank { "indisponível" }}\n" +
+                "Notificações: ${if (hasListener()) "autorizadas" else "sem acesso"}\n" +
+                "Apps permitidos: ${SettingsStore.notificationAllowlist(this).size}")
+            .setPositiveButton("Fechar", null).show()
     }
 
     private fun renderMonitor() {
-        addText("Modo monitorado deste celular", 17f, strong = true)
-        addText("Ative para disponibilizar dados ao outro aparelho. Depois da configuração inicial, a tela pode ficar bloqueada.", 13f, muted = true)
-        gap()
-        val battery = BatteryReader.snapshot(this)
-        addText(batterySummary(battery), 15f)
-        gap()
-        addText("Servidor: ${if (MonitorService.isRunning) "ativo" else "parado"} · porta 37841", 15f, strong = true)
-        addText("Endereços disponíveis: ${localIps().ifBlank { "verifique Wi-Fi/VPN" }}", 12f, muted = true)
-        gap()
-        if (!SettingsStore.isMonitorEnabled(this)) {
-            content.addView(button("Ativar monitoramento", emphasis = true) { requestStart() })
-        } else {
+        val enabled = SettingsStore.isMonitorEnabled(this)
+        val running = MonitorService.isRunning
+        val card = panel(18)
+        card.addView(label("Este aparelho", 17f, strong = true))
+        val state = when {
+            !enabled -> "● Monitoramento inativo"
+            running -> "● Monitoramento ativo"
+            else -> "● Serviço sem execução"
+        }
+        card.addView(label(state, 15f, strong = true).apply {
+            setTextColor(if (enabled && running) highlight else if (enabled) Color.rgb(190, 88, 61) else dim)
+        })
+        val ips = availableLocalIps()
+        val preferred = ips.firstOrNull { it.first.startsWith("wlan") } ?: ips.firstOrNull()
+        card.addView(label("IP: ${preferred?.second ?: "rede local indisponível"}", 14f))
+        card.addView(label("Dados disponíveis somente para aparelhos autorizados.", 12f, muted = true))
+        content.addView(card)
+        gap(14)
+        if (enabled && running) {
+            content.addView(button("Gerar QR Code", emphasis = true) { chooseQrAddress() })
             content.addView(button("Interromper monitoramento") {
                 SettingsStore.setMonitorEnabled(this, false)
                 stopService(Intent(this, MonitorService::class.java))
                 render()
             })
-            if (!MonitorService.isRunning) {
-                content.addView(button("Reiniciar serviço") { startServiceExplicitly() })
-            }
+        } else {
+            content.addView(button(if (enabled) "Reiniciar monitoramento" else "Ativar monitoramento", emphasis = true) {
+                if (enabled) startServiceExplicitly() else requestStart()
+            })
         }
-        content.addView(button("Gerar QR Code para parear", emphasis = true) { chooseQrAddress() })
-        addText("QR temporário: válido por 2 minutos, uma conexão, sem expor a chave permanente.", 12f, muted = true)
-        content.addView(button("Mostrar/copiar chave de pareamento") {
-            try {
-                val key = CryptoBox.encode(SecretVault.getOrCreateMonitorKey(this))
-                AlertDialog.Builder(this)
-                    .setTitle("Chave secreta de pareamento")
-                    .setMessage("Esta chave dá acesso aos dados remotos. Não a envie a terceiros.\n\n$key")
-                    .setPositiveButton("Copiar") { _, _ ->
-                        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                        clipboard.setPrimaryClip(ClipData.newPlainText("Chave Monitor Remoto", key))
-                        message("Chave copiada. Apague-a da área de transferência após parear.")
-                    }
-                    .setNegativeButton("Fechar", null)
-                    .show()
-            } catch (error: Exception) { message("Keystore indisponível: ${error.message}") }
-        })
-        content.addView(button("Trocar chave e revogar acesso anterior") {
-            AlertDialog.Builder(this)
-                .setTitle("Revogar acessos?")
-                .setMessage("A chave anterior deixará de funcionar. Será necessário parear novamente todos os controladores.")
-                .setNegativeButton("Cancelar", null)
-                .setPositiveButton("Trocar chave") { _, _ ->
-                    SecretVault.save(this, SecretVault.MONITOR_KEY, CryptoBox.newPairingKey())
-                    PairingSession.revoke()
-                    message("Nova chave criada. Abra 'Mostrar/copiar chave'.")
-                }.show()
-        })
-        gap(12)
-        addText("Permissões independentes", 17f, strong = true)
-        addText("Notificações: ${if (hasListener()) "autorizadas" else "sem acesso"}", 14f)
-        content.addView(button("Configurar acesso às notificações") {
-            AlertDialog.Builder(this)
-                .setTitle("Acesso a notificações (opcional)")
-                .setMessage(
-                    "O Android permite que este serviço leia notificações de outros aplicativos, inclusive dados sensíveis. " +
-                    "O Monitor Remoto só registra e transmite notificações dos aplicativos que você selecionar, " +
-                    "com filtros adicionais para informações financeiras e de autenticação. " +
-                    "Esses filtros não são infalíveis. As notificações selecionadas podem ser transmitidas " +
-                    "para seu outro celular pela rede local em uma conexão criptografada, mesmo com esta tela bloqueada. " +
-                    "Você pode revogar essa permissão nas Configurações do Android a qualquer momento. " +
-                    "Não habilite em um aparelho com banco se o banco não aceitar essa permissão."
-                )
-                .setNegativeButton("Cancelar", null)
-                .setPositiveButton("Entendi, configurar") { _, _ ->
-                    startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
-                }
-                .show()
-        })
-        addText("Notificações permitidas: ${SettingsStore.notificationAllowlist(this).size}", 14f)
-        content.addView(button("Selecionar aplicativos autorizados") { selectNotificationApps() })
-        addText("Sem apps selecionados, nenhuma notificação é registrada. SMS direto não é coletado: novas mensagens podem aparecer apenas na notificação do app de SMS, se você o autorizar.", 12f, muted = true)
-        gap(10)
-        content.addView(button(if (SettingsStore.autoStartEnabled(this))
-            "Desativar tentativa de iniciar após reiniciar" else "Tentar iniciar após reiniciar o celular") {
-            SettingsStore.setAutoStart(this, !SettingsStore.autoStartEnabled(this)); render()
-        })
-        addText("A reinicialização automática depende das restrições do Android e do fabricante. O serviço não é invisível.", 12f, muted = true)
+        gap(6)
+        addText("Permissões, chaves e detalhes técnicos: ⚙ Configurações.", 12f, muted = true)
     }
 
     private fun selectNotificationApps() {
