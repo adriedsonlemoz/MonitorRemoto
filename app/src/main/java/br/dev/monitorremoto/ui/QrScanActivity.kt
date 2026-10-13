@@ -5,6 +5,7 @@ import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.graphics.ImageFormat
 import android.graphics.SurfaceTexture
 import android.hardware.camera2.CameraCaptureSession
@@ -26,6 +27,7 @@ import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.view.WindowManager
 
 /** Leitor nativo/offline com Camera2 + ZXing Core, sem Activity de captura de terceiros. */
 class QrScanActivity : Activity(), TextureView.SurfaceTextureListener {
@@ -48,31 +50,53 @@ class QrScanActivity : Activity(), TextureView.SurfaceTextureListener {
     @Volatile private var completed = false
     private var lastDecodeMs = 0L
 
+    private fun dp(value: Int) = (resources.displayMetrics.density * value).toInt()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         window.statusBarColor = Color.BLACK
-        window.navigationBarColor = Color.BLACK
-        val root = FrameLayout(this).apply { setBackgroundColor(Color.BLACK) }
-        texture = TextureView(this).apply { surfaceTextureListener = this@QrScanActivity }
-        root.addView(texture, FrameLayout.LayoutParams(-1, -1))
-        val overlay = LinearLayout(this).apply {
+        val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(24, 24, 24, 24)
-            setBackgroundColor(0x99000000.toInt())
+            setPadding(dp(16), dp(14), dp(16), dp(14))
+            background = GradientDrawable().apply {
+                setColor(Color.WHITE)
+                cornerRadius = dp(18).toFloat()
+            }
         }
+        root.addView(TextView(this).apply {
+            text = "Aponte para o QR Code"
+            textSize = 19f
+            setTextColor(Color.rgb(23, 34, 48))
+            setPadding(0, 0, 0, dp(12))
+        })
+        val cameraFrame = FrameLayout(this).apply {
+            setBackgroundColor(Color.BLACK)
+            clipToOutline = true
+        }
+        texture = TextureView(this).apply { surfaceTextureListener = this@QrScanActivity }
+        cameraFrame.addView(texture, FrameLayout.LayoutParams(-1, -1))
+        root.addView(cameraFrame, LinearLayout.LayoutParams(-1, dp(265)))
         status = TextView(this).apply {
             text = "Aguardando câmera…"
-            setTextColor(Color.WHITE)
-            textSize = 17f
+            setTextColor(Color.rgb(92, 109, 128))
+            textSize = 12f
+            setPadding(0, dp(11), 0, dp(10))
         }
-        overlay.addView(status, LinearLayout.LayoutParams(-1, -2))
-        overlay.addView(Button(this).apply {
-            text = "Cancelar leitura"
+        root.addView(status, LinearLayout.LayoutParams(-1, -2))
+        root.addView(Button(this).apply {
+            text = "Cancelar"
             isAllCaps = false
             setOnClickListener { finish() }
-        }, LinearLayout.LayoutParams(-1, -2))
-        root.addView(overlay, FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM))
+        }, LinearLayout.LayoutParams(-1, dp(44)))
         setContentView(root)
+    }
+
+    override fun onStart() {
+        super.onStart()
+        val availableWidth = resources.displayMetrics.widthPixels - dp(40)
+        window.setLayout(minOf(availableWidth, dp(460)), WindowManager.LayoutParams.WRAP_CONTENT)
+        window.setGravity(Gravity.CENTER)
     }
 
     override fun onResume() {

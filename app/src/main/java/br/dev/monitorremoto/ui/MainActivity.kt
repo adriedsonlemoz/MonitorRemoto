@@ -68,6 +68,7 @@ class MainActivity : Activity() {
     private val highlight get() = if (darkTheme()) Color.rgb(90, 214, 188) else Color.rgb(24, 166, 146)
     private val highlightText get() = if (darkTheme()) Color.rgb(14, 22, 35) else Color.WHITE
     private val lineColor get() = if (darkTheme()) Color.rgb(47, 64, 83) else Color.rgb(224, 231, 239)
+    private val secondaryAccent get() = if (darkTheme()) Color.rgb(54, 116, 171) else Color.rgb(38, 113, 174)
     private val fieldColor get() = if (darkTheme()) Color.rgb(22, 34, 50) else Color.rgb(242, 246, 250)
     private lateinit var content: LinearLayout
     private val handler = Handler(Looper.getMainLooper())
@@ -292,7 +293,7 @@ class MainActivity : Activity() {
         content.addView(header)
 
         val metaRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        metaRow.addView(infoChip("v0.1.0-alpha.14"))
+        metaRow.addView(infoChip("v0.1.0-alpha.15"))
         metaRow.addView(View(this), LinearLayout.LayoutParams(dp(8), 1))
         val monitorActive = SettingsStore.isMonitorEnabled(this) && MonitorService.isRunning
         metaRow.addView(infoChip(if (monitorActive) "Monitorado ativo" else "Monitorado inativo", accent = monitorActive))
@@ -323,7 +324,7 @@ class MainActivity : Activity() {
         val (wrapper, layout) = dialogWrapper()
         dialogIntro(layout, "Resumo rápido do foco atual do projeto.")
         val card = panel(14)
-        card.addView(dialogMetricRow("Versão", "0.1.0-alpha.14"))
+        card.addView(dialogMetricRow("Versão", "0.1.0-alpha.15"))
         card.addView(dialogMetricRow("Tela inicial", "Painel Controle"))
         card.addView(dialogMetricRow("Modo monitorado", "No mesmo APK"))
         card.addView(dialogMetricRow("Segurança", "Pareamento local e Android Keystore"))
@@ -336,37 +337,7 @@ class MainActivity : Activity() {
             .show()
     }
 
-    private fun showRecentDevicesDialog() {
-        val items = RecentDevices.list(this)
-        if (items.isEmpty()) {
-            message("Nenhum aparelho recente salvo ainda.")
-            return
-        }
-        val (wrapper, layout) = dialogWrapper()
-        dialogIntro(layout, "Toque em um aparelho para selecionar rapidamente ou abra o fluxo Conectar para informar IP, chave e QR Code.")
-        var popup: AlertDialog? = null
-        items.forEachIndexed { index, item ->
-            val seen = if (item.lastSuccessMs == 0L) "Pareado, sem consulta recente" else "Última consulta ${formatDate(item.lastSuccessMs)}"
-            val title = if (item.name == item.host) item.host else item.name
-            val subtitle = if (item.name == item.host) seen else "${item.host} · $seen"
-            layout.addView(dialogCardRow(title, subtitle) {
-                SettingsStore.setRemoteHost(this, item.host)
-                mode = 1
-                lastResult = null; lastResultHost = ""; lastSuccessfulMs = 0L
-                connectionState = "idle"; connectionMessage = null
-                popup?.dismiss(); render(); refreshRemote(silent = false)
-            })
-            if (index != items.lastIndex) sectionGap(layout, 8)
-        }
-        val dialog = AlertDialog.Builder(this)
-            .setTitle("Aparelhos recentes")
-            .setView(wrapper)
-            .setNegativeButton("Fechar", null)
-            .setPositiveButton("Abrir Conectar") { _, _ -> showConnectionDialog() }
-            .create()
-        popup = dialog
-        dialog.show()
-    }
+    private fun showRecentDevicesDialog() = showConnectionChooser()
 
     private fun showSettingsDialog() {
         showOptionDialog(
@@ -596,26 +567,33 @@ class MainActivity : Activity() {
         val lastDeviceName = lastResult?.optJSONObject("battery")?.optString("device")
             ?.takeIf { lastResultHost == host && it.isNotBlank() }
 
+        val heading = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.TOP }
         currentDeviceTitle = label(
             if (savedDevice?.customName == true) savedDevice.name else lastDeviceName ?: savedDevice?.name ?: "Nenhum aparelho selecionado",
-            19f,
+            18f,
             strong = true
-        )
-        card.addView(currentDeviceTitle)
+        ).apply { maxLines = 2; ellipsize = android.text.TextUtils.TruncateAt.END }
+        heading.addView(currentDeviceTitle, LinearLayout.LayoutParams(0, -2, 1f))
+        heading.addView(View(this), LinearLayout.LayoutParams(dp(8), 1))
+        currentConnectButton = actionButton("Conectar", emphasis = true) {
+            val actualState = effectiveConnectionState()
+            if (actualState == "connected" || actualState == "loading") disconnectCurrent()
+            else showConnectionChooser()
+        }.apply { textSize = 12f; minWidth = 0; setPadding(dp(5), 0, dp(5), 0) }
+        heading.addView(currentConnectButton, LinearLayout.LayoutParams(dp(100), dp(44)))
+        card.addView(heading)
         currentStatus = label("", 13f, strong = true)
         card.addView(currentStatus)
         currentUpdated = label("", 12f, muted = true).apply { setPadding(0, dp(2), 0, dp(6)) }
         card.addView(currentUpdated)
 
-        val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        currentConnectButton = actionButton("Conectar", emphasis = true) {
-            val actualState = effectiveConnectionState()
-            if (actualState == "connected" || actualState == "loading") disconnectCurrent() else showConnectionDialog()
-        }
-        actions.addView(currentConnectButton, LinearLayout.LayoutParams(0, dp(46), 1f))
-        actions.addView(View(this), LinearLayout.LayoutParams(dp(8), 1))
-        actions.addView(actionButton("↻") { refreshRemote(silent = false) }, LinearLayout.LayoutParams(dp(52), dp(46)))
-        card.addView(actions)
+        val refreshRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.END }
+        refreshRow.addView(actionButton("↻ Atualizar") { refreshRemote(silent = false) }.apply {
+            background = shape(secondaryAccent, 12)
+            setTextColor(Color.WHITE)
+            textSize = 12f
+        }, LinearLayout.LayoutParams(dp(108), dp(43)))
+        card.addView(refreshRow)
         sectionGap(card, 12)
 
         resultBox = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
@@ -624,7 +602,7 @@ class MainActivity : Activity() {
         updateConnectionLabels()
         val cached = lastResult
         if (cached != null && lastResultHost == host) displayResult(cached, fromCache = true)
-        else resultBox?.addView(label("Use Conectar para informar IP, ler o QR Code ou usar um aparelho recente com chave salva.", 13f, muted = true))
+        else resultBox?.addView(label("Toque em Conectar para escolher QR Code, conexão manual ou aparelho salvo.", 13f, muted = true))
         gap(12)
         addText("Atualização automática a cada 15 segundos enquanto esta tela estiver aberta.", 11f, muted = true)
     }
@@ -666,7 +644,7 @@ class MainActivity : Activity() {
             else -> "Conectar"
         }
         currentUpdated?.text = when {
-            !hasKey -> "Use Conectar para informar IP, ler o QR Code ou usar um aparelho recente"
+            !hasKey -> "Selecione uma forma de conexão no botão Conectar"
             lastSuccessfulMs > 0 && lastResultHost == host ->
                 "Última atualização: ${formatDate(lastSuccessfulMs)}" +
                     if (actualState == "offline") " · dados anteriores" else ""
@@ -689,14 +667,102 @@ class MainActivity : Activity() {
         } catch (_: Exception) { null }
     }
 
-    private fun showConnectionDialog() {
+    /** Etapa inicial compacta; somente a opção Manual abre os campos de IP e chave. */
+    private fun showConnectionChooser() {
         RecentDevices.migrateLegacy(this)
-        val wrapper = ScrollView(this)
-        val layout = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(18), dp(10), dp(18), dp(10))
+        val (wrapper, layout) = dialogWrapper()
+        dialogIntro(layout, "Escolha como conectar ao outro celular.")
+        var chooser: AlertDialog? = null
+        layout.addView(dialogCardRow("▣  QR Code", "Aponte a câmera para o código temporário do aparelho", "›", accent = true) {
+            chooser?.dismiss()
+            startQrScanner()
+        })
+        sectionGap(layout, 9)
+        layout.addView(dialogCardRow("⌨  Manualmente", "Informar endereço IP e chave de pareamento", "›") {
+            chooser?.dismiss()
+            showManualConnectionDialog()
+        })
+        sectionGap(layout, 9)
+        layout.addView(dialogCardRow("Inserir código QR", "Alternativa sem câmera: colar o conteúdo do QR", "›") {
+            chooser?.dismiss()
+            askQrText()
+        })
+        sectionGap(layout, 16)
+        layout.addView(label("Aparelhos anteriores", 16f, strong = true))
+        layout.addView(label("Use os botões de cada aparelho para conectar, renomear ou esquecer.", 12f, muted = true))
+        sectionGap(layout, 7)
+        val devices = RecentDevices.list(this)
+        if (devices.isEmpty()) {
+            layout.addView(label("Nenhum aparelho salvo. Use QR Code ou Manualmente.", 12f, muted = true))
         }
-        wrapper.addView(layout)
+        devices.forEach { item ->
+            val card = panel(12)
+            card.addView(label(item.name, 14f, strong = true).apply { maxLines = 2 })
+            val seen = if (item.lastSuccessMs == 0L) "Sem consulta confirmada" else "Última consulta: ${formatDate(item.lastSuccessMs)}"
+            card.addView(label("${item.host} · $seen", 11f, muted = true))
+            sectionGap(card, 6)
+            card.addView(actionButton("Conectar", true) {
+                chooser?.dismiss()
+                connectSavedDevice(item)
+            }, LinearLayout.LayoutParams(-1, dp(40)))
+            sectionGap(card, 6)
+            card.addView(actionButton("Renomear") {
+                chooser?.dismiss()
+                renameSavedDevice(item)
+            }, LinearLayout.LayoutParams(-1, dp(40)))
+            sectionGap(card, 6)
+            card.addView(actionButton("Esquecer") {
+                chooser?.dismiss()
+                forgetSavedDevice(item)
+            }.apply { setTextColor(Color.rgb(186, 78, 65)) }, LinearLayout.LayoutParams(-1, dp(40)))
+            layout.addView(card)
+            sectionGap(layout, 10)
+        }
+        chooser = AlertDialog.Builder(this).setTitle("Conectar aparelho")
+            .setView(wrapper).setNegativeButton("Fechar", null).create()
+        chooser.show()
+    }
+
+    private fun connectSavedDevice(item: RecentDevices.Device) {
+        if (RecentDevices.key(this, item.host) == null) {
+            message("A chave desse aparelho não está disponível. Faça um novo pareamento.")
+            showConnectionChooser()
+            return
+        }
+        SettingsStore.setRemoteHost(this, item.host)
+        mode = 1
+        lastResult = null; lastResultHost = ""; lastSuccessfulMs = 0L
+        connectionState = "loading"; connectionMessage = null
+        render(); refreshRemote(silent = false)
+    }
+
+    private fun renameSavedDevice(item: RecentDevices.Device) {
+        val input = field("Nome do aparelho", item.name)
+        AlertDialog.Builder(this).setTitle("Renomear aparelho").setView(input)
+            .setNegativeButton("Cancelar") { _, _ -> showConnectionChooser() }
+            .setPositiveButton("Salvar") { _, _ ->
+                RecentDevices.rename(this, item.host, input.text.toString())
+                render(); showConnectionChooser()
+            }.show()
+    }
+
+    private fun forgetSavedDevice(item: RecentDevices.Device) {
+        AlertDialog.Builder(this).setTitle("Esquecer aparelho?")
+            .setMessage("Remover ${item.name} e apagar a chave de pareamento salva? Para conectar novamente será necessário parear.")
+            .setNegativeButton("Cancelar") { _, _ -> showConnectionChooser() }
+            .setPositiveButton("Esquecer") { _, _ ->
+                val wasSelected = SettingsStore.getRemoteHost(this).equals(item.host, ignoreCase = true)
+                RecentDevices.forget(this, item.host)
+                if (wasSelected) {
+                    lastResult = null; lastResultHost = ""; lastSuccessfulMs = 0L
+                    connectionState = "idle"; connectionMessage = null
+                }
+                render(); showConnectionChooser()
+            }.show()
+    }
+
+    private fun showManualConnectionDialog() {
+        val (wrapper, layout) = dialogWrapper()
         val existing = SettingsStore.getRemoteHost(this)
         val initialHost = existing.ifBlank { localWifiPrefix().orEmpty() }
         val host = field("Ex.: 192.168.100.210", initialHost).apply {
@@ -711,13 +777,13 @@ class MainActivity : Activity() {
         networkPanel.addView(label("1. Endereço do aparelho", 15f, strong = true))
         networkPanel.addView(label("Digite o IP local completo ou o nome da VPN privada.", 12f, muted = true))
         networkPanel.addView(host)
-        networkPanel.addView(label("Sugestão automática baseada na rede Wi-Fi atual. Você pode editar livremente.", 11.5f, muted = true))
+        networkPanel.addView(label("Sugestão da rede Wi-Fi atual, editável.", 11.5f, muted = true))
         layout.addView(networkPanel)
         sectionGap(layout, 12)
 
         val keyPanel = panel(14)
         keyPanel.addView(label("2. Chave de pareamento", 15f, strong = true))
-        keyPanel.addView(label("Cole a chave manualmente ou deixe vazio para usar a chave já salva deste aparelho.", 12f, muted = true))
+        keyPanel.addView(label("Cole a chave ou deixe vazio para usar a chave salva deste IP.", 12f, muted = true))
         keyPanel.addView(key)
         val keyActions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         keyActions.addView(actionButton("Colar", emphasis = true) {
@@ -729,58 +795,9 @@ class MainActivity : Activity() {
         keyActions.addView(actionButton("Limpar") { key.text.clear() }, LinearLayout.LayoutParams(0, dp(46), 1f))
         keyPanel.addView(keyActions)
         layout.addView(keyPanel)
-        sectionGap(layout, 12)
-
-        var popup: AlertDialog? = null
-        val qrPanel = panel(14)
-        qrPanel.addView(label("3. Parear pelo QR Code", 15f, strong = true))
-        qrPanel.addView(label("Você pode ler o QR exibido no outro celular ou colar o texto do QR manualmente.", 12f, muted = true))
-        val methods = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        methods.addView(actionButton("▣ Ler QR", true) {
-            popup?.dismiss(); startQrScanner()
-        }, LinearLayout.LayoutParams(0, dp(48), 1f))
-        methods.addView(View(this), LinearLayout.LayoutParams(dp(8), 1))
-        methods.addView(actionButton("Inserir QR") {
-            popup?.dismiss(); askQrText()
-        }, LinearLayout.LayoutParams(0, dp(48), 1f))
-        qrPanel.addView(methods)
-        layout.addView(qrPanel)
-        sectionGap(layout, 12)
-
-        val recentPanel = panel(14)
-        recentPanel.addView(label("Aparelhos recentes", 15f, strong = true))
-        recentPanel.addView(label("Toque em um aparelho salvo para preencher e conectar mais rápido.", 12f, muted = true))
-        val items = RecentDevices.list(this)
-        if (items.isEmpty()) recentPanel.addView(label("Nenhum aparelho salvo ainda.", 12f, muted = true))
-        items.forEach { item ->
-            val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-            val title = if (item.name == item.host) item.host else item.name
-            val subtitle = if (item.lastSuccessMs == 0L) item.host else "${item.host} · ${formatDate(item.lastSuccessMs)}"
-            val card = panel(12).apply {
-                addView(label(title, 13f, strong = true))
-                addView(label(subtitle, 11.5f, muted = true))
-                setOnClickListener {
-                    SettingsStore.setRemoteHost(this@MainActivity, item.host)
-                    host.setText(item.host)
-                    key.text.clear()
-                }
-                isClickable = true
-                isFocusable = true
-            }
-            row.addView(card, LinearLayout.LayoutParams(0, -2, 1f))
-            row.addView(View(this), LinearLayout.LayoutParams(dp(6), 1))
-            row.addView(actionButton("⋮") { showDeviceActions(item, popup) }, LinearLayout.LayoutParams(dp(46), dp(46)))
-            recentPanel.addView(row)
-            sectionGap(recentPanel, 6)
-        }
-        layout.addView(recentPanel)
-
-        val dialog = AlertDialog.Builder(this).setTitle("Conectar aparelho")
-            .setView(wrapper)
-            .setNegativeButton("Cancelar", null)
-            .setPositiveButton("Conectar", null)
-            .create()
-        popup = dialog
+        val dialog = AlertDialog.Builder(this).setTitle("Conexão manual")
+            .setView(wrapper).setNegativeButton("Voltar") { _, _ -> showConnectionChooser() }
+            .setPositiveButton("Conectar", null).create()
         dialog.setOnShowListener {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 try {
@@ -791,7 +808,7 @@ class MainActivity : Activity() {
                     val typedKey = key.text.toString().trim()
                     val parsedKey = if (typedKey.isNotEmpty()) CryptoBox.decodeKey(typedKey)
                         else RecentDevices.key(this, address)
-                    require(parsedKey != null) { "Informe a chave desse aparelho ou selecione um aparelho recente com chave salva." }
+                    require(parsedKey != null) { "Informe a chave desse aparelho ou faça um novo pareamento." }
                     RecentDevices.save(this, address, parsedKey)
                     lastResult = null; lastResultHost = ""; lastSuccessfulMs = 0L
                     connectionState = "loading"; connectionMessage = null
@@ -800,36 +817,6 @@ class MainActivity : Activity() {
             }
         }
         dialog.show()
-    }
-
-    private fun showDeviceActions(item: RecentDevices.Device, popup: AlertDialog?) {
-        val (wrapper, layout) = dialogWrapper()
-        dialogIntro(layout, "Gerencie o nome exibido e remova o pareamento salvo deste aparelho.")
-        layout.addView(dialogCardRow("Renomear", "Alterar o nome exibido na lista e no painel", "›") {
-            val input = field("Nome do aparelho", item.name)
-            AlertDialog.Builder(this).setTitle("Renomear aparelho").setView(input)
-                .setNegativeButton("Cancelar", null)
-                .setPositiveButton("Salvar") { _, _ ->
-                    RecentDevices.rename(this, item.host, input.text.toString())
-                    popup?.dismiss(); render()
-                }.show()
-        })
-        sectionGap(layout, 8)
-        layout.addView(dialogCardRow("Esquecer aparelho", "Apaga a credencial salva e exige novo pareamento", "›") {
-            AlertDialog.Builder(this).setTitle("Esquecer aparelho?")
-                .setMessage("A credencial de ${item.name} será apagada deste celular. Um novo pareamento será necessário para acessá-lo novamente.")
-                .setNegativeButton("Cancelar", null)
-                .setPositiveButton("Esquecer") { _, _ ->
-                    RecentDevices.forget(this, item.host)
-                    popup?.dismiss(); lastResult = null; lastResultHost = ""
-                    lastSuccessfulMs = 0L; connectionState = "idle"; render()
-                }.show()
-        })
-        AlertDialog.Builder(this)
-            .setTitle(item.name)
-            .setView(wrapper)
-            .setNegativeButton("Fechar", null)
-            .show()
     }
 
     private fun availableLocalIps(): List<Pair<String, String>> = try {
@@ -979,10 +966,10 @@ class MainActivity : Activity() {
         try {
             val code = PairingCode.decode(text)
             AlertDialog.Builder(this)
-                .setTitle("Confirmar conexão local")
-                .setMessage("Parear com o aparelho no IP ${code.host}:${WireProtocol.PORT}?\n\nConfirme somente se o QR está na tela do seu outro celular.")
+                .setTitle("Confirmar aparelho")
+                .setMessage("Aparelho: ${RecentDevices.list(this).firstOrNull { it.host == code.host }?.name ?: "Não identificado (novo)"}\nEndereço: ${code.host}:${WireProtocol.PORT}\n\nConfira se é o celular monitorado. O nome só poderá ser verificado após autenticação.")
                 .setNegativeButton("Cancelar", null)
-                .setPositiveButton("Conectar") { _, _ -> pairByQr(code) }
+                .setPositiveButton("Confirmar") { _, _ -> pairByQr(code) }
                 .show()
         } catch (e: Exception) {
             message("QR inválido ou incompatível: ${e.message}")

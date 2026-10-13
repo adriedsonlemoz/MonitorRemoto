@@ -12,7 +12,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.14" and code.group(1) == "14", "Versões incompatíveis"
+assert version == "0.1.0-alpha.15" and code.group(1) == "15", "Versões incompatíveis"
 assert version in ui, "Tela de versão desatualizada"
 assert f"versionCode={code.group(1)}" in (root / 'docs/ARCHITECTURE.md').read_text(), "Arquitetura com versionCode desatualizado"
 # alpha.9 remove a Activity antiga do ZXing Embedded; Camera2 + ZXing Core offline.
@@ -90,7 +90,7 @@ print('PASSOU: Camera2, YUV, ZXing Core, cancelamento, fallback manual e testes 
 profiles = (root / 'app/src/main/java/br/dev/monitorremoto/core/RecentDevices.kt').read_text()
 secret = (root / 'app/src/main/java/br/dev/monitorremoto/security/SecretVault.kt').read_text()
 ip_suggestion = (root / 'app/src/main/java/br/dev/monitorremoto/core/Ipv4Suggestion.kt').read_text()
-assert 'private fun showConnectionDialog()' in ui and 'private fun showSettingsDialog()' in ui
+assert 'private fun showConnectionChooser()' in ui and 'private fun showManualConnectionDialog()' in ui and 'private fun showSettingsDialog()' in ui
 assert 'private fun renderController()' in ui and 'private fun updateConnectionLabels()' in ui
 assert 'private fun localWifiPrefix()' in ui and 'TRANSPORT_WIFI' in ui
 assert 'Ipv4Suggestion.prefix(' in ui and 'prefixLength' in ui
@@ -102,4 +102,13 @@ assert 'const val LIMIT = 5' in profiles and 'fun forget(' in profiles and 'fun 
 assert 'profileKeyName(' in secret and 'MessageDigest.getInstance("SHA-256")' in secret
 assert 'fun prefix(' in ip_suggestion
 assert (root / 'app/src/test/java/br/dev/monitorremoto/core/Ipv4SuggestionTest.kt').is_file()
-print('PASSOU: UI alpha.14, migração única, Keystore por host, tema e sugestão de IP')
+print('PASSOU: UI alpha.15, migração única, Keystore por host, tema e sugestão de IP')
+
+# alpha.15: entrada simples, ações explícitas e câmera em janela flutuante.
+assert 'private fun connectSavedDevice(' in ui and 'private fun renameSavedDevice(' in ui
+assert 'private fun forgetSavedDevice(' in ui and 'private fun showConnectionChooser()' in ui
+assert 'showManualConnectionDialog()' in ui and 'setTitle("Confirmar aparelho")' in ui
+assert 'actionButton("↻ Atualizar")' in ui and 'LinearLayout.LayoutParams(dp(100), dp(44))' in ui
+assert '@android:style/Theme.Material.Light.Dialog.NoActionBar' in manifest
+assert 'window.setLayout(' in scan and 'Aponte para o QR Code' in scan
+print('PASSOU: fluxo alpha.15, confirmação QR, botões de ação, scanner pop-up')

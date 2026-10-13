@@ -1,6 +1,14 @@
-# Monitor Remoto v0.1.0-alpha.14
+# Monitor Remoto v0.1.0-alpha.15
 
-## Novidades
+## Novidades da alpha.15
+
+- Nova tela compacta de escolha: QR Code, Manualmente, Inserir código QR e aparelhos salvos.
+- Aparelhos anteriores com Conectar, Renomear e Esquecer empilhados.
+- Leitor QR Camera2 em pop-up central; confirmação do IP/nome local antes de tentar parear.
+- Conectar/Reconectar compacto ao lado do nome do dispositivo; **↻ Atualizar** azul à direita.
+- Mantidos Keystore, QR temporário, protocolo cifrado e atualização de 15 segundos.
+
+## Histórico de funcionalidades
 
 - Modo Monitorado simplificado e dinâmico: status, IP, QR e ligar/desligar. Ajustes avançados agrupados na engrenagem.
 

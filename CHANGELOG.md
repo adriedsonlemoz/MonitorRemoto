@@ -1,6 +1,16 @@
 # Histórico de versões
 
-## 0.1.0-alpha.14 (13/10/2026)
+## 0.1.0-alpha.15 (13/10/2026)
+
+- Conectar/Reconectar passa a abrir uma escolha rápida: QR Code, Manualmente, colagem de URI QR e até 5 aparelhos anteriores.
+- Cards de aparelhos salvos com botões empilhados Conectar, Renomear e Esquecer; exclusão confirmada e chave removida do Keystore.
+- Campos de IP/chave migrados para diálogo exclusivo de conexão manual, com colagem e limpeza de chave.
+- Leitor Camera2 agora é exibido em janela flutuante compacta, com orientação «Aponte para o QR Code», em vez de ocupar a tela toda. Leitura requer confirmação explícita antes de iniciar o pareamento.
+- Painel Controle: Conectar/Reconectar/Desconectar compacto ao lado do nome; Atualizar azul, com texto e alinhado à direita.
+- Protocolo, permissões, prazo e uso único do QR, histórico e atualização periódica de 15 segundos preservados.
+- Testes físicos e compilação Gradle/Android continuam pendentes de CI.
+
+## 0.1.0-alpha.15 (13/10/2026)
 
 - Revisão visual do Painel Controle: cartão principal reorganizado para destacar nome do aparelho, estado, atualização e ação principal **Conectar/Desconectar**.
 - Revisão visual dos diálogos **Menu**, **Configurações**, **Aparência**, **Aparelhos recentes**, **Permissões e notificações**, **Segurança e pareamento**, **Serviço e inicialização** e **Diagnóstico**, agora com cartões, subtítulos e melhor hierarquia.

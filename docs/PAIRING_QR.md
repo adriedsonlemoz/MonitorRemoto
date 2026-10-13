@@ -1,10 +1,10 @@
-# Pareamento por QR (v0.1.0-alpha.14)
+# Pareamento por QR (v0.1.0-alpha.15)
 
 ## Uso
 
 1. Instale o mesmo APK nos dois celulares e conecte ambos ao **mesmo Wi-Fi** ou ao hotspot de um dos aparelhos. A internet não é necessária. Roteadores com **isolamento de clientes** podem bloquear a comunicação local.
 2. No **MONITORADO**, toque em `Ativar monitoramento` e depois em **Gerar QR Code para parear**. Se houver mais de uma interface com IP privado, escolha a que está acessível pelo CONTROLADOR (normalmente `wlan0` em Wi-Fi).
-3. No **CONTROLE**, toque em **Ler QR Code do outro celular**, autorize a câmera quando solicitada, aponte para a tela do monitorado e confirme o IP exibido.
+3. No **CONTROLE**, toque em **Conectar > QR Code**, autorize a câmera quando solicitada, aponte para a tela do monitorado e confirme o IP exibido.
 4. O controlador se comunica diretamente com a porta TCP **37841** por uma credencial temporária cifrada, obtém a chave de longa duração dentro da resposta AES-256-GCM e armazena-a via Android Keystore. IP e chave são salvos; consultas posteriores não exigem novo scan enquanto a chave não for revogada.
 5. Se a rede mudar e o IP do monitorado mudar, refaça o pareamento ou ajuste manualmente o IP na tela Controle. **Sem descoberta automática de rede ainda.**
 
@@ -26,7 +26,7 @@ A captura de notificações permanece declarada no manifesto da variante atual. 
 
 ## Fluxo QR alpha.9
 
-A tela `QrScanActivity` agora controla a câmera **nativamente com Camera2**, não usa mais a Activity `CaptureActivity` do ZXing Embedded. Permissão CAMERA é solicitada na tela de controle, e o leitor apresenta erros na própria tela, com botão Cancelar. O conteúdo do QR não é registrado em logs nem em arquivos. O decoder ZXing Core trabalha sobre frames YUV em memória.
+A janela flutuante `QrScanActivity` agora controla a câmera **nativamente com Camera2**, não usa mais a Activity `CaptureActivity` do ZXing Embedded. Permissão CAMERA é solicitada na tela de controle, e o leitor apresenta erros na própria tela, com botão Cancelar. O conteúdo do QR não é registrado em logs nem em arquivos. O decoder ZXing Core trabalha sobre frames YUV em memória.
 
 Se a câmera continuar indisponível, é possível usar **Inserir código QR manualmente** no Controle, com o URI temporário completo obtido por um leitor de QR externo. Copiar o URI para a área de transferência expõe temporariamente o segredo a outros apps que tenham acesso ao clipboard; use apenas aparelhos confiáveis e não compartilhe o código. **Faltam testes físicos.** Para identificar a causa original exata do encerramento anterior, capturar logcat (`FATAL EXCEPTION`, `MonitorRemotoQR`, `Camera`) imediatamente após tocar em Ler QR.
 
@@ -37,3 +37,7 @@ Foi removida a duplicidade de `onRequestPermissionsResult` que impedia gerar o A
 ### Mudança de implementação alpha.9
 
 A alpha.8 ainda usava a Activity do ZXing Embedded e o encerramento foi relatado novamente. A alpha.9 removeu o componente de captura antigo e oferece Camera2 nativo, decoder ZXing Core e fallback manual. Isso é uma alteração preventiva de arquitetura, **não comprova** qual foi a exceção original nem que todos os aparelhos estarão livres de falhas.
+
+## Interface de confirmação alpha.15
+
+A captura usa janela flutuante centralizada, não tela cheia. O leitor mostra **Aponte para o QR Code** e oferece **Cancelar**. Depois de decodificar, a confirmação informa IP e porta, além de um nome apenas quando já salvo localmente; QR temporário não contém nome autenticado. Sem confirmação, nenhuma tentativa de pareamento é feita.

@@ -175,3 +175,14 @@
 - **PASSOU:** 16 testes Kotlin/JVM locais (runner compatível construído localmente) para `EventJournal`, `Ipv4Suggestion`, `SensitiveContent`, `CryptoBox` e `PairingCode/PairingSession`.
 - **PASSOU:** integridade do ZIP final.
 - **NÃO EXECUTADO:** compilação Android completa com Gradle/SDK, geração real de APK/AAB nesta sessão, testes físicos de interface e testes Camera2 em hardware.
+
+## alpha.15: seleção de método, cartões e QR compacto (13/10/2026)
+
+- [x] Código de UI: seleção QR/Manual/Salvos, ações Conectar/Renomear/Esquecer, formulário manual separado.
+- [x] Scanner Camera2 em janela flutuante com câmera local e confirmação explícita antes do pareamento.
+- [x] Painel com ação Conectar/Reconectar ao lado do título e botão textual colorido Atualizar à direita.
+- [ ] Compilação completa e testes instrumentados Android com Gradle/SDK.
+- [ ] Testar scanner no Redmi Note 11 Pro+ e em segundo aparelho, incluindo permissões, rotação, cancelamento, captura e confirmação.
+- [ ] Verificar layout dos cartões em telas estreitas e fontes ampliadas.
+
+**Validação executada localmente:** `python3 tools/check_distribution.py` passou; 20 fontes Kotlin sem erros sintáticos no parser PSI (arquivos main/test); Manifest XML válido; workflow YAML válido. **Não** equivale a `assembleDebug` nem teste em hardware.
