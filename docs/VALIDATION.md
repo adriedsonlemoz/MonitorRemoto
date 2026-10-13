@@ -119,3 +119,20 @@
 - **PASSOU:** parsing de Manifest XML e workflow YAML; CRC/ZIP da distribuição.
 - **NÃO EXECUTADO:** compilação `:app:compileDebugKotlin`, `:app:assembleDebug` e testes JUnit pelo Gradle devido à ausência de Android SDK/Gradle completo no ambiente local.
 - **NÃO EXECUTADO:** migração de credenciais em Android físico, comportamento dos temas/popup em telas reduzidas, QR Camera2 em aparelho real e atualização do APK assinado.
+
+## alpha.11: tela inicial em Controle, menu e pop-up Conectar refinado
+
+- [x] Abrir o app diretamente no Painel Controle; remover as abas fixas da tela principal.
+- [x] Mover o modo Monitorado para menu dedicado, mantendo o mesmo APK e os fluxos existentes.
+- [x] Reorganizar o diálogo Conectar em seções com campos mais visíveis e melhor separação visual.
+- [x] Manter leitura QR Camera2, aparelhos recentes e chaves por host.
+- [ ] Compilar `:app:assembleDebug` / `:app:testDebugUnitTest` no GitHub Actions após a mudança visual.
+- [ ] Testar visualmente em aparelho físico o cabeçalho, o menu e o pop-up em telas pequenas.
+- [ ] Confirmar atualização sobre a alpha.10 com a mesma assinatura Release.
+
+### Resultado local da alpha.11 (13/10/2026)
+
+- **PASSOU:** `python3 tools/check_distribution.py` após sincronização de versão e regras de distribuição.
+- **PASSOU:** 16 testes Kotlin/JVM locais (core/crypto/pairing), executados por runner compatível com JUnit construído localmente, cobrindo `EventJournal`, `Ipv4Suggestion`, `SensitiveContent`, `CryptoBox` e `PairingCode/PairingSession`.
+- **PASSOU:** integridade estrutural do ZIP final.
+- **NÃO EXECUTADO:** compilação Android completa com SDK/Gradle, `QrFrameDecoderTest` dependente de ZXing no ambiente local, testes visuais da nova interface, leitura Camera2 em hardware e atualização do APK assinado em aparelho.

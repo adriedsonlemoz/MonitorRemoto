@@ -1,5 +1,16 @@
 # Histórico de versões
 
+## 0.1.0-alpha.11 (13/10/2026)
+
+- Tela inicial reorganizada: o aplicativo abre diretamente no **Painel Controle** e as abas fixas **Monitorado/Controle** foram removidas da tela principal.
+- Novo menu **☰** no cabeçalho com acesso ao Painel Controle, Modo Monitorado, Aparelhos recentes e Sobre.
+- Botões de topo reorganizados: **Conectar**, **☰** e **⚙**; chips de versão e estado do monitorado adicionados.
+- Pop-up **Conectar aparelho** redesenhado em seções separadas, com campos mais visíveis, fundo destacado, maior área de toque e ações **Colar** e **Limpar** para a chave.
+- Lista de aparelhos recentes mantida no diálogo, agora em cartões separados e mais legíveis.
+- Painel de dados remotos reorganizado com cartões de bateria/temperatura e métricas em blocos distintos, preservando atualização manual por **↻** e automática a cada 15 s.
+- Mantidas Camera2 para QR, chaves por aparelho no Android Keystore, assinatura estável via Secrets existentes e demais regras de segurança.
+- Build Android completo e testes físicos permanecem pendentes; validações locais sem Gradle/SDK continuam documentadas em `docs/VALIDATION.md`.
+
 ## 0.1.0-alpha.10 (13/10/2026)
 
 - Controle redesenhado com cabeçalho **Conectar** e **⚙**, cartão compacto de monitoramento, atualização discreta e estados de consulta ligados a sucesso/erro autenticado.

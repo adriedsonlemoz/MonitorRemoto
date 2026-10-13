@@ -1,11 +1,11 @@
-# Monitor Remoto v0.1.0-alpha.10
+# Monitor Remoto v0.1.0-alpha.11
 
 ## Novidades
 
-- Interface Controle compacta: nome/status do aparelho, bateria, temperatura, tensão e correntes em cartão prioritário.
-- Botões **Conectar** e **⚙** no cabeçalho; atualização manual pelo ícone discreto **↻** e automática a cada 15 s com tela aberta.
-- Conexão por pop-up: sugestão de prefixo IPv4 da rede Wi-Fi ativa (respeitando CIDR), edição manual IP/VPN, botão Colar, leitor QR e alternativa inserir texto do QR.
-- Aparelhos recentes (máximo 5), reconexão por toque, renomear e esquecer; credenciais separadas por aparelho e migradas do formato alpha.9 quando possível.
+- Tela inicial abre direto no Painel Controle, sem abas fixas na tela principal.
+- Cabeçalho reorganizado com **Conectar**, **☰** e **⚙**; chips de versão e do estado do monitorado; atualização manual pelo ícone **↻** e automática a cada 15 s com tela aberta.
+- Pop-up **Conectar aparelho** redesenhado em blocos separados: endereço, chave, QR Code e aparelhos recentes, com campos mais visíveis e ações **Colar/Limpar**.
+- Aparelhos recentes (máximo 5) seguem com reconexão por toque, renomear e esquecer; credenciais separadas por aparelho e migradas do formato alpha.9 quando possível.
 - Temas **claro (padrão)**, escuro e automático; escolha persistida localmente.
 - Status "Conectado" vinculado a resposta autenticada recente. Falha marcada "Sem resposta", preservando data do último sucesso.
 - Configuração antiga do GitHub Actions, assinatura Release opcional e geração AAB mantidas. **Reutilizar os Secrets/keystore da alpha.7**, não criar outra chave.
