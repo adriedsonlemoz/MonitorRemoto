@@ -1,6 +1,6 @@
 # Monitor Remoto
 
-**v0.1.0-alpha.12 / versionCode 11** · Android 8.0+ · Kotlin 2.2.21 · AGP 8.13.2 · Gradle 8.13
+**v0.1.0-alpha.13 / versionCode 13** · Android 8.0+ · Kotlin 2.2.21 · AGP 8.13.2 · Gradle 8.13
 
 Dois modos no mesmo APK: **Monitorado** (servidor) e **Controle** (cliente).
 
@@ -20,7 +20,7 @@ Dois modos no mesmo APK: **Monitorado** (servidor) e **Controle** (cliente).
 
 ## Como utilizar
 
-1. Execute GitHub Actions > **Gerar APK e Release** > Run workflow. Para baixar **APK sem ZIP**, use Releases > `v0.1.0-alpha.12` > Assets > **`MonitorRemoto-v0.1.0-alpha.12.apk`**. Em Actions > Artifacts, um APK de contingência (quando presente) continua vindo em ZIP por comportamento padrão do GitHub. Instale o mesmo APK nos dois aparelhos.
+1. Execute GitHub Actions > **Gerar APK e Release** > Run workflow. Para baixar **APK sem ZIP**, use Releases > `v0.1.0-alpha.13` > Assets > **`MonitorRemoto-v0.1.0-alpha.13.apk`**. Em Actions > Artifacts, um APK de contingência (quando presente) continua vindo em ZIP por comportamento padrão do GitHub. Instale o mesmo APK nos dois aparelhos.
 2. No telefone secundário: abra modo **Monitorado**; autorize a notificação de serviço; ative o monitoramento; autorize notificações em Configurações. Selecione explicitamente os aplicativos cujas notificações deseja compartilhar.
 3. Na tela Monitorado, toque em **Gerar QR Code para parear**; escolha o IP local acessível (normalmente interface Wi-Fi). O QR expira em 2 minutos e é válido para um único pareamento.
 4. No telefone principal: modo **Controle**; toque em **Conectar > Ler QR**, aponte a câmera e confirme. IP e chave de acesso são salvos automaticamente. A digitação manual de IP e chave continua disponível.
@@ -47,7 +47,7 @@ Requer Android SDK API 36, Java 17, Gradle 8.13. O repositório ainda não inclu
 gradle :app:testDebugUnitTest :app:assembleDebug
 ```
 
-APK local de teste: `app/build/outputs/apk/debug/app-debug.apk`. O workflow copia esse arquivo ou o Release assinado como **`MonitorRemoto-v0.1.0-alpha.12.apk`**. Baixe diretamente na aba GitHub **Releases**. **O APK não está incluído neste ZIP de código-fonte.** Veja `docs/PAIRING_QR.md` para segurança do QR.
+APK local de teste: `app/build/outputs/apk/debug/app-debug.apk`. O workflow copia esse arquivo ou o Release assinado como **`MonitorRemoto-v0.1.0-alpha.13.apk`**. Baixe diretamente na aba GitHub **Releases**. **O APK não está incluído neste ZIP de código-fonte.** Veja `docs/PAIRING_QR.md` para segurança do QR.
 
 Opcional: configure os quatro Secrets de assinatura para gerar APK Release assinado e AAB. Ver `docs/APK_DOWNLOAD.md`. Preservar a mesma keystore entre builds é essencial para atualizações sem reinstalação.
 
@@ -124,6 +124,6 @@ A execução GitHub Actions #4 falhou na compilação do leitor QR. A chamada ao
 - Nenhuma foto ou quadro é salvo/transmitido. O limite de leitura é de ~2,5 tentativas por segundo, economizando CPU em relação à decodificação de todos os frames.
 - Necessário confirmar build Android `:app:testDebugUnitTest :app:assembleDebug`, leitura física entre dois aparelhos, orientação/câmera de fabricantes diferentes e upgrade APK assinado. Não afirmar correção comprovada sem esses testes.
 
-## Monitorado compacto (alpha.12)
+## Polimento do controle e ações contextuais (alpha.13)
 
 A tela Monitorado apresenta o estado real do serviço e IP local. Ativar, gerar QR e interromper são ações contextuais; notificações, segurança, inicialização e diagnóstico agora ficam em ⚙ Configurações.

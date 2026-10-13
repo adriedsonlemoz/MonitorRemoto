@@ -88,6 +88,9 @@ class MainActivity : Activity() {
     private var currentStatus: TextView? = null
     private var currentDeviceTitle: TextView? = null
     private var currentUpdated: TextView? = null
+    private var currentConnectButton: Button? = null
+    private data class OptionItem(val title: String, val subtitle: String = "", val action: () -> Unit)
+
     private val poller = object : Runnable {
         override fun run() {
             if (active && mode == 1) {
@@ -233,18 +236,13 @@ class MainActivity : Activity() {
             ellipsize = android.text.TextUtils.TruncateAt.END
         })
         header.addView(title, LinearLayout.LayoutParams(0, -2, 1f))
-        if (mode == 1) {
-            header.addView(actionButton("Conectar", emphasis = true) { showConnectionDialog() },
-                LinearLayout.LayoutParams(-2, dp(43)))
-            header.addView(View(this), LinearLayout.LayoutParams(dp(7), 1))
-        }
         header.addView(actionButton("☰") { showMainMenu() }, LinearLayout.LayoutParams(dp(45), dp(43)))
         header.addView(View(this), LinearLayout.LayoutParams(dp(7), 1))
         header.addView(actionButton("⚙") { showSettingsDialog() }, LinearLayout.LayoutParams(dp(45), dp(43)))
         content.addView(header)
 
         val metaRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        metaRow.addView(infoChip("v0.1.0-alpha.12"))
+        metaRow.addView(infoChip("v0.1.0-alpha.13"))
         metaRow.addView(View(this), LinearLayout.LayoutParams(dp(8), 1))
         val monitorActive = SettingsStore.isMonitorEnabled(this) && MonitorService.isRunning
         metaRow.addView(infoChip(if (monitorActive) "Monitorado ativo" else "Monitorado inativo", accent = monitorActive))
@@ -260,30 +258,22 @@ class MainActivity : Activity() {
     }
 
     private fun showMainMenu() {
-        val monitor = "Modo monitorado"
-        val items = arrayOf("Painel controle", monitor, "Aparelhos recentes", "Sobre o aplicativo")
-        AlertDialog.Builder(this)
-            .setTitle("Menu")
-            .setItems(items) { _, which ->
-                when (which) {
-                    0 -> { mode = 1; render() }
-                    1 -> {
-                        mode = 0
-                        render()
-                    }
-                    2 -> showRecentDevicesDialog()
-                    3 -> showAboutDialog()
-                }
-            }
-            .setNegativeButton("Fechar", null)
-            .show()
+        showOptionDialog(
+            "Menu",
+            listOf(
+                OptionItem("Painel controle", "Consultar e atualizar outro aparelho") { mode = 1; render() },
+                OptionItem("Modo monitorado", "Disponibilizar dados deste celular") { mode = 0; render() },
+                OptionItem("Aparelhos recentes", "Escolher um dispositivo salvo") { showRecentDevicesDialog() },
+                OptionItem("Sobre o aplicativo", "Versão, foco do projeto e segurança") { showAboutDialog() },
+            )
+        )
     }
 
     private fun showAboutDialog() {
         AlertDialog.Builder(this)
             .setTitle("Sobre o Monitor Remoto")
             .setMessage(
-                "Versão 0.1.0-alpha.11\n\n" +
+                "Versão 0.1.0-alpha.13\n\n" +
                     "Tela inicial: Painel Controle.\n" +
                     "Modo Monitorado continua no mesmo APK e pode ser acessado pelo menu.\n" +
                     "Conexões locais usam pareamento com chave protegida pelo Android Keystore."
@@ -320,17 +310,51 @@ class MainActivity : Activity() {
     }
 
     private fun showSettingsDialog() {
-        val options = arrayOf("Aparência", "Permissões e notificações", "Segurança e pareamento", "Serviço e inicialização", "Diagnóstico")
-        AlertDialog.Builder(this).setTitle("Configurações")
-            .setItems(options) { _, selected ->
-                when (selected) {
-                    0 -> showAppearanceDialog()
-                    1 -> showPermissionSettings()
-                    2 -> showSecuritySettings()
-                    3 -> showServiceSettings()
-                    4 -> showDiagnostics()
-                }
-            }.setNegativeButton("Fechar", null).show()
+        showOptionDialog(
+            "Configurações",
+            listOf(
+                OptionItem("Aparência", "Tema claro, escuro ou automático") { showAppearanceDialog() },
+                OptionItem("Permissões e notificações", "Acesso às notificações e apps autorizados") { showPermissionSettings() },
+                OptionItem("Segurança e pareamento", "Mostrar chave ou revogar acessos") { showSecuritySettings() },
+                OptionItem("Serviço e inicialização", "Reiniciar serviço e início automático") { showServiceSettings() },
+                OptionItem("Diagnóstico", "IP, porta, estado do serviço e permissões") { showDiagnostics() },
+            )
+        )
+    }
+
+    private fun showOptionDialog(title: String, items: List<OptionItem>) {
+        val wrapper = ScrollView(this)
+        val layout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(18), dp(8), dp(18), dp(8))
+        }
+        wrapper.addView(layout)
+        var popup: AlertDialog? = null
+        items.forEachIndexed { index, item ->
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                background = shape(fieldColor, 16, true)
+                setPadding(dp(14), dp(12), dp(14), dp(12))
+                isClickable = true
+                isFocusable = true
+                setOnClickListener { popup?.dismiss(); item.action() }
+            }
+            val texts = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+            texts.addView(label(item.title, 15f, strong = true).apply { setPadding(0, 0, 0, dp(2)) })
+            if (item.subtitle.isNotBlank()) texts.addView(label(item.subtitle, 11.5f, muted = true).apply { setPadding(0, 0, 0, 0) })
+            row.addView(texts, LinearLayout.LayoutParams(0, -2, 1f))
+            row.addView(label("›", 24f, muted = true))
+            layout.addView(row)
+            if (index != items.lastIndex) sectionGap(layout, 8)
+        }
+        val dialog = AlertDialog.Builder(this)
+            .setTitle(title)
+            .setView(wrapper)
+            .setNegativeButton("Fechar", null)
+            .create()
+        popup = dialog
+        dialog.show()
     }
 
     private fun showAppearanceDialog() {
@@ -485,20 +509,33 @@ class MainActivity : Activity() {
     private fun renderController() {
         val host = SettingsStore.getRemoteHost(this)
         val card = panel(18)
-        val top = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        val descriptor = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         val savedDevice = RecentDevices.list(this).firstOrNull { it.host == host }
         val lastDeviceName = lastResult?.optJSONObject("battery")?.optString("device")
             ?.takeIf { lastResultHost == host && it.isNotBlank() }
-        currentDeviceTitle = label(if (savedDevice?.customName == true) savedDevice.name
-            else lastDeviceName ?: savedDevice?.name ?: "Nenhum aparelho selecionado", 18f, strong = true)
+
+        val top = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+        val descriptor = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        currentDeviceTitle = label(
+            if (savedDevice?.customName == true) savedDevice.name else lastDeviceName ?: savedDevice?.name ?: "Nenhum aparelho selecionado",
+            18f,
+            strong = true
+        )
         descriptor.addView(currentDeviceTitle)
         currentStatus = label("", 13f, strong = true)
         descriptor.addView(currentStatus)
         top.addView(descriptor, LinearLayout.LayoutParams(0, -2, 1f))
-        top.addView(actionButton("↻") { refreshRemote(silent = false) },
-            LinearLayout.LayoutParams(dp(46), dp(46)))
+
+        val actions = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.END }
+        currentConnectButton = actionButton("Conectar", emphasis = true) {
+            val actualState = effectiveConnectionState()
+            if (actualState == "connected" || actualState == "loading") disconnectCurrent() else showConnectionDialog()
+        }.apply { minWidth = dp(118) }
+        actions.addView(currentConnectButton, LinearLayout.LayoutParams(-2, dp(42)))
+        actions.addView(View(this), LinearLayout.LayoutParams(1, dp(8)))
+        actions.addView(actionButton("↻") { refreshRemote(silent = false) }, LinearLayout.LayoutParams(dp(48), dp(42)).apply { gravity = Gravity.END })
+        top.addView(actions)
         card.addView(top)
+
         currentUpdated = label("", 12f, muted = true)
         card.addView(currentUpdated)
         sectionGap(card, 10)
@@ -508,15 +545,33 @@ class MainActivity : Activity() {
         updateConnectionLabels()
         val cached = lastResult
         if (cached != null && lastResultHost == host) displayResult(cached, fromCache = true)
-        else resultBox?.addView(label("Use Conectar para selecionar um aparelho, ler o QR Code ou colar a chave de pareamento.", 13f, muted = true))
+        else resultBox?.addView(label("Toque em Conectar para escolher o aparelho, ler o QR Code ou colar a chave de pareamento.", 13f, muted = true))
         gap(12)
         addText("Atualização automática a cada 15 segundos enquanto esta tela estiver aberta.", 11f, muted = true)
+    }
+
+    private fun effectiveConnectionState(): String {
+        val host = SettingsStore.getRemoteHost(this)
+        val hasKey = host.isNotBlank() && RecentDevices.key(this, host) != null
+        return if (!hasKey) "idle" else connectionState
+    }
+
+    private fun disconnectCurrent() {
+        SettingsStore.setRemoteHost(this, "")
+        fetching = false
+        fetchingHost = ""
+        lastResult = null
+        lastResultHost = ""
+        lastSuccessfulMs = 0L
+        connectionState = "idle"
+        connectionMessage = "Seleção removida."
+        render()
     }
 
     private fun updateConnectionLabels() {
         val host = SettingsStore.getRemoteHost(this)
         val hasKey = host.isNotBlank() && RecentDevices.key(this, host) != null
-        val actualState = if (!hasKey) "idle" else connectionState
+        val actualState = effectiveConnectionState()
         val text = when (actualState) {
             "connected" -> "● Conectado"
             "offline" -> "● Sem resposta"
@@ -526,8 +581,13 @@ class MainActivity : Activity() {
         currentStatus?.text = text
         currentStatus?.setTextColor(if (actualState == "connected") highlight else
             if (actualState == "offline") Color.rgb(190, 88, 61) else dim)
+        currentConnectButton?.text = when (actualState) {
+            "connected", "loading" -> "Desconectar"
+            "offline" -> "Reconectar"
+            else -> "Conectar"
+        }
         currentUpdated?.text = when {
-            !hasKey -> "Toque em Conectar para informar IP, chave ou ler o QR"
+            !hasKey -> "Escolha um aparelho ou toque em Conectar para informar IP, chave ou ler o QR"
             lastSuccessfulMs > 0 && lastResultHost == host ->
                 "Última atualização: ${formatDate(lastSuccessfulMs)}" +
                     if (actualState == "offline") " · dados anteriores" else ""

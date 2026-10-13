@@ -143,3 +143,19 @@
 - [x] Configurações categorizadas; operações de permissão, segredo, revogação e inicialização preservadas.
 - [ ] Build Android completo pelo GitHub Actions.
 - [ ] Verificar visual e funcionamento em dois celulares reais.
+
+## alpha.13: polimento do Painel Controle e ações contextuais
+
+- [x] Remover botão Conectar do cabeçalho do Controle e reposicioná-lo no cartão do aparelho.
+- [x] Alternar o rótulo da ação principal entre Conectar, Reconectar e Desconectar conforme o estado.
+- [x] Melhorar Menu e Configurações com cartões e subtítulos.
+- [x] Preservar pareamento QR, aparelhos recentes e segurança no Keystore.
+- [ ] Compilar `:app:assembleDebug`/`:app:testDebugUnitTest` no GitHub Actions após o polimento.
+- [ ] Testar visualmente em aparelho físico o novo posicionamento do botão e os diálogos.
+
+### Resultado local da alpha.13 (13/10/2026)
+
+- **PASSOU:** `python3 tools/check_distribution.py` após sincronização de versão/documentação.
+- **PASSOU:** 16 testes Kotlin/JVM locais (runner compatível construído localmente) para `EventJournal`, `Ipv4Suggestion`, `SensitiveContent`, `CryptoBox` e `PairingCode/PairingSession`.
+- **PASSOU:** integridade do ZIP final.
+- **NÃO EXECUTADO:** compilação Android completa com Gradle/SDK, testes físicos da interface, geração do APK/AAB nesta sessão e testes Camera2 em hardware.

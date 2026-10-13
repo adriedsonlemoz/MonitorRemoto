@@ -1,4 +1,4 @@
-# Arquitetura (0.1.0-alpha.12)
+# Arquitetura (0.1.0-alpha.13)
 
 ```text
 MONITORADO                                      CONTROLE
@@ -19,9 +19,9 @@ O FGS `connectedDevice` mantém o socket de escuta durante monitoramento ativo. 
 
 ## Distribuição e assinatura
 
-O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.12` e `versionCode=12`.
+O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.13` e `versionCode=13`.
 
-- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.12.apk`.
+- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.13.apk`.
 - `upload-artifact` sempre distribui um ZIP; GitHub Releases recebe o **arquivo APK direto**.
 - Com quatro Secrets, Gradle gera APK Release assinado e AAB. Sem Secrets, o arquivo é Debug de teste e não preserva necessariamente a assinatura entre execuções.
 - Releases são prévias, não substituem a futura revisão da Google Play e nem os ensaios reais.
@@ -51,3 +51,6 @@ O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é 
 
 
 Na alpha.11, `MainActivity` passa a abrir diretamente no Painel Controle e move o modo Monitorado para um menu (`☰`), reduzindo o tamanho da tela principal sem remover a funcionalidade. O diálogo Conectar foi repartido em blocos visuais com campos mais destacados e ações explícitas para IP, chave e QR.
+
+
+Na alpha.13, o Painel Controle deixa o botão Conectar no próprio cartão do dispositivo e transforma a ação em contextual (Conectar/Desconectar). Os diálogos de Menu e Configurações também passam a usar linhas em cartão com subtítulo para dar mais polimento e organização.

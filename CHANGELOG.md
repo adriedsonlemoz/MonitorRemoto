@@ -1,5 +1,13 @@
 # Histórico de versões
 
+## 0.1.0-alpha.13 (13/10/2026)
+
+- Polimento visual do Painel Controle: o botão **Conectar** saiu do cabeçalho e foi movido para o cartão do aparelho remoto, ao lado do nome/status.
+- A ação principal agora é contextual: **Conectar** quando não há sessão ativa e **Desconectar** quando já existe consulta conectada/atualizando; desconectar remove apenas a seleção atual, preservando o histórico de aparelhos.
+- Diálogos **Menu** e **Configurações** redesenhados em cartões com título + subtítulo, melhorando hierarquia visual e separação das opções.
+- Mantidos modo Monitorado simplificado, histórico de aparelhos, pareamento por QR, segurança no Keystore e polling de 15 s.
+- Compilação Android completa e testes físicos continuam pendentes.
+
 ## 0.1.0-alpha.12 (13/10/2026)
 
 - Tela Monitorado reduzida a status real, IP de rede, QR e ativar/interromper conforme o estado do serviço.
