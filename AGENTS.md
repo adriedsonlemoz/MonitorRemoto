@@ -1,4 +1,4 @@
-# Monitor Remoto 0.1.0-alpha.31
+# Monitor Remoto 0.1.0-alpha.32
 # Convenções permanentes do projeto Monitor Remoto
 
 - Toda alteração de código incrementa sequencialmente `versionCode` e `versionName` (ex.: `0.1.0-alpha.8` -> `0.1.0-alpha.9`). Sincronizar tela, README, CHANGELOG, RELEASE_NOTES e documentação.
@@ -21,7 +21,7 @@
 - Alpha.10: manter tema **claro padrão**, as opções da engrenagem, janela Conectar, botão de atualização compacto, lista de até 5 aparelhos recentes e os dados do Controle no topo. Não reintroduzir formulário longo na tela principal.
 - Credenciais por dispositivo usam `RecentDevices` + `SecretVault.profileKeyName`, com migração única da alpha.9. Não reaproveitar `CONTROLLER_KEY` antigo para IPs novos nem gravar segredo em preferências sem criptografia. Esquecer apaga o segredo correspondente.
 - Respostas HTTP/TCP não são conexão persistente. Exibir "Conectado" apenas após consulta autenticada bem-sucedida e "Sem resposta" após erro. Não inventar tempos de atualização.
-- Próxima versão sequencial: `0.1.0-alpha.32`, `versionCode 32`.
+- Próxima versão sequencial: `0.1.0-alpha.33`, `versionCode 33`.
 
 - Alpha.15: preservar a seleção Conectar → QR/Manual/Salvos, confirmação do QR antes de parear, cartões salvos com três ações e o scanner em Activity com tema Dialog.
 
@@ -62,3 +62,5 @@
 - Alpha.30: compartilhar SMS, permitir SMS enviados e responder notificações são três opções independentes inicialmente desligadas. A consulta SMS é sob demanda (`includeSms=true` só quando Mensagens é aberta), sem RECEIVE_SMS e sem persistência; a leitura depende de READ_SMS, que pode ser restrita por instalador. O comando de resposta SMS usa SEND_SMS e número já visto na inbox, confirma no controlador, limita taxa/corpo e não garante entrega. RemoteInput somente em ação ativa e permitida, token único com expiração, e confirmação do controlador. Comandos cifrados no mesmo protocolo e chave, com proteção de replay e versão exata. Bloquear códigos, apps financeiros e parar ao revogar; nenhum acesso furtivo ou bypass das proteções Android.
 
 - Alpha.31: novas permissões SMS (`RECEIVE_SMS`, `READ_PHONE_STATE`) e opção ampla de notificações são consentidas separadamente no monitorado e ficam desativadas por padrão. Nunca tentar contornar hard restricted READ_SMS. Mensagens SMS ao vivo são temporárias e consultadas quando Mensagens abre/atualiza, não transmitidas em push oculto. Limite de snapshots, filtros financeiros/OTP, escolha validada de SIM ativo, botão Copiar explícito. Não usar `FLAG_SECURE` em Mensagens, mas **sempre** proteger credenciais e QR; envio exige revisão e confirmação no controlador, sem comandos em lote. MMS inclui apenas metadados quando provider concede. Resultados de entrega SMS podem ser incertos quando operador não confirma. Conservar chave autenticada e versão exata entre aparelhos.
+
+- Alpha.32: Configurações ocupam um módulo de navegação (`mode=3`) com categorias; não devolver um `AlertDialog` único longo. Toda seção retorna às categorias antes de sair do módulo, preservando tela anterior e preferências. O serviço foreground monitora o listener TCP efetivo e recria apenas o servidor em caso de falha, com backoff e diagnóstico. `START_STICKY` cobre recriação oportunista após morte de processo, mas nunca prometer reinício após force-stop pelo usuário ou políticas do fabricante. Parada explícita permanece parada; não criar alarmes agressivos nem novos acessos silenciosos. Conservar o protocolo criptografado e versão exata.

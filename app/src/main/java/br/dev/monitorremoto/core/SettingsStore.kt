@@ -67,6 +67,23 @@ object SettingsStore {
     fun setSharePhoneNumber(context: Context, enabled: Boolean) =
         prefs(context).edit().putBoolean("share_phone_number", enabled).apply()
 
+    /** Supervisor state, metadata only; no IP, pairing secret, or messages. */
+    fun recordServerHealth(context: Context, state: String, failures: Int) {
+        require(state in setOf("ativo", "aguardando", "recuperando", "parado"))
+        val previous = prefs(context)
+        if (previous.getString("server_health_state", "") == state &&
+            previous.getInt("server_failure_count", 0) == failures &&
+            System.currentTimeMillis() - previous.getLong("server_last_check_ms", 0L) < 60_000L) return
+        previous.edit()
+            .putString("server_health_state", state)
+            .putInt("server_failure_count", failures)
+            .putLong("server_last_check_ms", System.currentTimeMillis())
+            .apply()
+    }
+    fun serverHealthState(context: Context) = prefs(context).getString("server_health_state", "não verificado").orEmpty()
+    fun serverFailureCount(context: Context) = prefs(context).getInt("server_failure_count", 0)
+    fun serverLastCheck(context: Context) = prefs(context).getLong("server_last_check_ms", 0L)
+
     fun autoStartEnabled(context: Context) = prefs(context).getBoolean("autostart", false)
     fun setAutoStart(context: Context, enabled: Boolean) = prefs(context).edit().putBoolean("autostart", enabled).apply()
 

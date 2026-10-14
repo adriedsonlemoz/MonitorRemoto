@@ -1,5 +1,13 @@
 # Histórico de versões
 
+## 0.1.0-alpha.32 (14/10/2026)
+
+- Nova página de **Configurações** no fluxo de navegação, sem abrir uma janela gigante: categorias Notificações, SMS, Serviço, Diagnóstico, Segurança, Aparência e Sobre. Cada categoria é uma tela independente, com Voltar.
+- Supervisor do servidor TCP no serviço foreground: estado baseado na thread de accept e no listener real, tentativa de reinício interno a cada 15 s, esperas progressivas quando o bind falha e callback de retorno de rede. Não desabilita a autorização do usuário em erros transitórios.
+- Diagnóstico local de última verificação, quantidade de falhas e estado de escuta; habilitação de início após reboot e acesso às configurações de bateria.
+- Preserva START_STICKY e o botão de parada explícito; não contorna "Forçar parada" do Android. Testes em aparelho ainda pendentes.
+- versionCode 32 / versionName 0.1.0-alpha.32. Compilação Android completa pendente.
+
 ## 0.1.0-alpha.31 (14/10/2026)
 
 - SMS em tempo real mediante autorização `RECEIVE_SMS`, buffer volátil e consulta sob demanda; histórico recente de recebidos e enviados.

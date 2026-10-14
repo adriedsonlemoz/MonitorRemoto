@@ -1,4 +1,4 @@
-# Arquitetura (0.1.0-alpha.31)
+# Arquitetura (0.1.0-alpha.32)
 
 ```text
 MONITORADO                                      CONTROLE
@@ -19,9 +19,9 @@ O FGS `connectedDevice` mantém o socket de escuta durante monitoramento ativo. 
 
 ## Distribuição e assinatura
 
-O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.31` e `versionCode=31`.
+O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.32` e `versionCode=32`.
 
-- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.31.apk`.
+- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.32.apk`.
 - `upload-artifact` sempre distribui um ZIP; GitHub Releases recebe o **arquivo APK direto**.
 - Com quatro Secrets, Gradle gera APK Release assinado e AAB. Sem Secrets, o arquivo é Debug de teste e não preserva necessariamente a assinatura entre execuções.
 - Releases são prévias, não substituem a futura revisão da Google Play e nem os ensaios reais.
@@ -161,3 +161,9 @@ O botão de recuperar dados não implementa transferência, acesso a arquivos ou
 - `SmsReplySender` exige destinatário conhecido, SEND_SMS, consentimento, limite de tamanho e intervalo. `SmsSubscriptions` valida SIM se o usuário autorizar READ_PHONE_STATE. `SmsStatusReceiver` e `SmsDeliveryJournal` acompanham callbacks de envio/entrega em RAM, sem preservar texto.
 - `MmsMetadataReader` consulta somente assunto/data quando o provider permitir, sem downloads de anexos e sem papel de SMS padrão.
 - Snapshots cifrados trazem `smsInbox`, `smsLive`, `smsStatus`, `mmsMetadata`, `smsSubscriptions` **somente** quando `includeSms` foi solicitado; eventos de notificações seguem a seleção local. `FLAG_SECURE` removido dos diálogos de mensagens, preservado em QR/credenciais.
+
+## Recuperação do monitorado e Configurações alpha.32
+
+`MonitorService` mantém o FGS autorizado e supervisiona `MonitorServer.isHealthy()` a cada 15 s, sem abrir socket cliente ou gastar tráfego. `isHealthy` exige `ServerSocket` aberto e thread de aceitação ativa. Em falha, o listener antigo é fechado, um novo é criado, e erros de bind provocam atrasos progressivos com máximo de cinco minutos. Retorno de rede aciona uma verificação adicional. Diagnóstico persistente registra **apenas metadados** (estado, falhas e horário) com limitação de escritas em intervalo normal. Não registra credenciais, IP de controlador nem conteúdo das mensagens. O `START_STICKY` permite recriação pelo Android após finalização involuntária; **não** garante retomada se usuário força parada nem diante de restrições de fabricantes.
+
+`MainActivity` mantém `mode=3` para Configurações e `settingsSection` (home, notifications, sms, service, diagnostics, security, appearance, about). `SettingsScreenUi.kt` monta telas completas e mantém diálogos curtos somente para solicitações e confirmações sensíveis. Voltar retorna à categoria anterior, depois ao modo de onde Configurações foi aberto. Sem novos componentes exportados ou permissões.

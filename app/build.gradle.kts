@@ -18,8 +18,8 @@ android {
         applicationId = "br.dev.monitorremoto"
         minSdk = 26
         targetSdk = 36
-        versionCode = 31
-        versionName = "0.1.0-alpha.31"
+        versionCode = 32
+        versionName = "0.1.0-alpha.32"
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

@@ -346,3 +346,11 @@
 - [ ] Teste em aparelho de retorno PendingIntent para enviado/entregue e falhas de operadora.
 - [ ] Teste MMS em provedores variados (metadados apenas, sem anexos).
 - [ ] Teste WhatsApp e outro aplicativo com RemoteInput ativo, expiração e revogação do listener.
+
+## alpha.32 (14/10/2026)
+
+- [x] Verificação estática dos pontos de supervisão TCP e navegação de Configurações em página, incluindo permissão e parada explícita.
+- [ ] Build Android `:app:testDebugUnitTest :app:assembleDebug :app:lintDebug` no GitHub Actions.
+- [ ] Teste real: alternar Wi-Fi e dados, derrubar listener, conferir backoff e retomada com a mesma chave; verificar que a UI não marca servidor morto como ativo após 15 s.
+- [ ] Teste real: remover tarefa, reiniciar aparelho com opção de início automático, e forçar parada nas configurações Android (não deve reiniciar até novo início explícito).
+- [ ] Teste de interface: Configurações → Notificações / SMS / Serviço / Diagnóstico / Segurança / Aparência / Sobre, botão voltar, rotação, permissão negada, screenshots SMS e QR.

@@ -31,12 +31,16 @@ import kotlin.math.abs
 class MonitorServer(private val context: Context) {
     private var server: ServerSocket? = null
     @Volatile private var running = false
+    @Volatile private var acceptThread: Thread? = null
     // Fila limitada evita retenção ilimitada de sockets em caso de tráfego abusivo na LAN.
     private val workers = ThreadPoolExecutor(
         3, 3, 0L, TimeUnit.MILLISECONDS, ArrayBlockingQueue<Runnable>(12),
         ThreadPoolExecutor.AbortPolicy()
     )
-    private val seenNonces = LinkedHashSet<String>()
+    // Compartilhado entre instâncias: reiniciar o listener não reabre a janela de replay.
+    private companion object {
+        val seenNonces = LinkedHashSet<String>()
+    }
 
     @Synchronized fun start() {
         check(!running)
@@ -44,7 +48,7 @@ class MonitorServer(private val context: Context) {
         val listener = ServerSocket(WireProtocol.PORT)
         server = listener
         running = true
-        Thread({
+        val thread = Thread({
             try {
                 listener.use {
                     while (running) {
@@ -61,9 +65,16 @@ class MonitorServer(private val context: Context) {
             } finally {
                 running = false
                 server = null
+                acceptThread = null
             }
-        }, "MonitorRemoto-server").apply { isDaemon = true; start() }
+        }, "MonitorRemoto-server").apply { isDaemon = true }
+        acceptThread = thread
+        thread.start()
     }
+
+    /** Verifica a thread real e a porta vinculada sem criar tráfego de rede. */
+    fun isHealthy(): Boolean = running && server?.isBound == true &&
+        server?.isClosed == false && acceptThread?.isAlive == true && !workers.isShutdown
 
     @Synchronized fun stop() {
         running = false

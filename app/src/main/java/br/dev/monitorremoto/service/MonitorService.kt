@@ -22,6 +22,11 @@ import br.dev.monitorremoto.ui.MainActivity
 import br.dev.monitorremoto.ui.IncomingAccessActivity
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkRequest
+import android.util.Log
 
 class MonitorService : Service() {
     companion object {
@@ -40,6 +45,25 @@ class MonitorService : Service() {
     }
 
     private var server: MonitorServer? = null
+    @Volatile private var serviceActive = false
+    private var consecutiveFailures = 0
+    private var nextRecoveryMs = 0L
+    private var networkCallbackRegistered = false
+    private val networkManager by lazy { getSystemService(ConnectivityManager::class.java) }
+    private val networkCallback = object : ConnectivityManager.NetworkCallback() {
+        override fun onAvailable(network: Network) {
+            mainHandler.post {
+                if (serviceActive && SettingsStore.isMonitorEnabled(this@MonitorService)) ensureServerReady()
+            }
+        }
+    }
+    private val serverWatchdog = object : Runnable {
+        override fun run() {
+            if (!serviceActive || !SettingsStore.isMonitorEnabled(this@MonitorService)) return
+            ensureServerReady()
+            mainHandler.postDelayed(this, 15_000L)
+        }
+    }
     private val accessAlerts = mutableSetOf<String>()
     private val mainHandler = Handler(Looper.getMainLooper())
     private val accessListener: () -> Unit = {
@@ -66,6 +90,7 @@ class MonitorService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP || !SettingsStore.isMonitorEnabled(this)) {
+            serviceActive = false
             SettingsStore.setMonitorEnabled(this, false)
             stopSelf()
             return START_NOT_STICKY
@@ -89,22 +114,68 @@ class MonitorService : Service() {
         if (Build.VERSION.SDK_INT >= 34) {
             startForeground(42, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
         } else startForeground(42, notification)
-        if (server == null) {
-            try {
-                SecretVault.getOrCreateMonitorKey(this)
-                server = MonitorServer(applicationContext).also { it.start() }
-            } catch (_: Exception) {
-                SettingsStore.setMonitorEnabled(this, false)
-                stopSelf()
-                return START_NOT_STICKY
-            }
-        }
-        isRunning = true
+        serviceActive = true
+        registerConnectivityWatch()
+        // Serviço ativo não significa porta disponível; o supervisor valida ambos.
+        ensureServerReady()
+        mainHandler.removeCallbacks(serverWatchdog)
+        mainHandler.postDelayed(serverWatchdog, 15_000L)
         AuthenticatedAccess.unsubscribe(accessListener)
         AuthenticatedAccess.subscribe(accessListener)
         mainHandler.removeCallbacks(alertCleanup)
         mainHandler.postDelayed(alertCleanup, 10_000L)
         return START_STICKY
+    }
+
+    /** Reinicia somente o listener TCP; não tenta abrir Activities nem revogar consentimento. */
+    private fun ensureServerReady() {
+        if (!serviceActive || !SettingsStore.isMonitorEnabled(this)) return
+        if (server?.isHealthy() == true) {
+            isRunning = true
+            consecutiveFailures = 0
+            nextRecoveryMs = 0L
+            SettingsStore.recordServerHealth(this, "ativo", 0)
+            return
+        }
+        isRunning = false
+        val now = SystemClock.elapsedRealtime()
+        if (!RecoveryPolicy.canRetry(now, nextRecoveryMs)) return
+        server?.stop()
+        server = null
+        try {
+            // Acesso local ao Keystore: falha não deve apagar a autorização do usuário.
+            SecretVault.getOrCreateMonitorKey(this)
+            val candidate = MonitorServer(applicationContext)
+            candidate.start()
+            server = candidate
+            // isHealthy() será confirmado no próximo ciclo se a thread ainda estiver iniciando.
+            isRunning = true
+            consecutiveFailures = 0
+            nextRecoveryMs = 0L
+            SettingsStore.recordServerHealth(this, "recuperando", 0)
+        } catch (error: Exception) {
+            consecutiveFailures = (consecutiveFailures + 1).coerceAtMost(20)
+            val delayMs = RecoveryPolicy.nextDelayMs(consecutiveFailures)
+            nextRecoveryMs = now + delayMs
+            SettingsStore.recordServerHealth(this, "aguardando", consecutiveFailures)
+            Log.w("MonitorRemotoService", "Servidor indisponível; nova tentativa em ${delayMs}ms", error)
+        }
+    }
+
+    private fun registerConnectivityWatch() {
+        if (networkCallbackRegistered) return
+        try {
+            networkManager.registerNetworkCallback(NetworkRequest.Builder().build(), networkCallback)
+            networkCallbackRegistered = true
+        } catch (error: Exception) {
+            Log.w("MonitorRemotoService", "Sem callback de rede; supervisor periódico continua", error)
+        }
+    }
+
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        // Remover a tarefa visual não equivale ao usuário tocar em Parar.
+        // START_STICKY mantém a possibilidade de recriação pelo sistema.
+        super.onTaskRemoved(rootIntent)
     }
 
     private fun refreshAccessAlert() {
@@ -134,6 +205,12 @@ class MonitorService : Service() {
     }
 
     override fun onDestroy() {
+        serviceActive = false
+        mainHandler.removeCallbacks(serverWatchdog)
+        if (networkCallbackRegistered) {
+            runCatching { networkManager.unregisterNetworkCallback(networkCallback) }
+            networkCallbackRegistered = false
+        }
         mainHandler.removeCallbacks(alertCleanup)
         AuthenticatedAccess.unsubscribe(accessListener)
         getSystemService(NotificationManager::class.java)?.cancel(ACCESS_NOTIFICATION_ID)
@@ -145,6 +222,7 @@ class MonitorService : Service() {
         server?.stop()
         server = null
         isRunning = false
+        SettingsStore.recordServerHealth(this, "parado", 0)
         super.onDestroy()
     }
 }

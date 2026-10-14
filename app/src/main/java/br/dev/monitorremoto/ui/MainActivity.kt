@@ -57,7 +57,9 @@ class MainActivity : Activity() {
     internal val remoteConnection by lazy { RemoteConnectionManager(applicationContext) }
     internal val pairingController = PairingController()
     internal val lastMessageViewedMs = mutableMapOf<String, Long>() // Apenas carimbo temporal em RAM
-    internal var mode = 2 // 2: início, 0: monitorado, 1: controle
+    internal var mode = 2 // 2: início, 0: monitorado, 1: controle, 3: configurações
+    internal var settingsSection = "home"
+    private var settingsReturnMode = 2
     internal val cameraPermissionRequest = 4317
     internal val qrScanRequest = 4318
     private val notificationPermissionRequest = 101
@@ -120,7 +122,9 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         RecentDevices.migrateLegacy(this)
         mode = if (intent.getBooleanExtra(EXTRA_OPEN_MONITOR, false)) 0
-            else savedInstanceState?.getInt("active_mode", 2)?.takeIf { it in 0..2 } ?: 2
+            else savedInstanceState?.getInt("active_mode", 2)?.takeIf { it in 0..3 } ?: 2
+        settingsSection = savedInstanceState?.getString("settings_section", "home") ?: "home"
+        settingsReturnMode = savedInstanceState?.getInt("settings_return_mode", 2)?.takeIf { it in 0..2 } ?: 2
         window.statusBarColor = bg
         window.navigationBarColor = bg
         window.decorView.systemUiVisibility = if (darkTheme()) 0 else
@@ -134,7 +138,8 @@ class MainActivity : Activity() {
         setContentView(scroll)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val callback = android.window.OnBackInvokedCallback {
-                if (mode == 2) finish() else navigateHome()
+                if (mode == 3) navigateBackFromSettings()
+                else if (mode == 2) finish() else navigateHome()
             }
             systemBackCallback = callback
             onBackInvokedDispatcher.registerOnBackInvokedCallback(
@@ -156,6 +161,8 @@ class MainActivity : Activity() {
 
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putInt("active_mode", mode)
+        outState.putString("settings_section", settingsSection)
+        outState.putInt("settings_return_mode", settingsReturnMode)
         super.onSaveInstanceState(outState)
     }
 
@@ -205,24 +212,30 @@ class MainActivity : Activity() {
         if (active && mode == 0) handler.postDelayed(monitorStatusPoll, 5_000L)
         val header = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
         val title = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        title.addView(label("MONITOR REMOTO", 18f, strong = true).apply {
+        title.addView(label(if (mode == 3) "CONFIGURAÇÕES" else "MONITOR REMOTO", 18f, strong = true).apply {
             maxLines = 1
             ellipsize = android.text.TextUtils.TruncateAt.END
         })
         title.addView(label(when (mode) {
             1 -> "Painel de controle · privado e criptografado"
             0 -> "Modo monitorado · privado e criptografado"
+            3 -> "Configurações · módulos independentes"
             else -> "Início · conexão e aparelhos anteriores"
         }, 10.5f, muted = true).apply {
             maxLines = 1
             ellipsize = android.text.TextUtils.TruncateAt.END
         })
         header.addView(title, LinearLayout.LayoutParams(0, -2, 1f))
-        header.addView(headerIconButton(R.drawable.ic_phone, "Home: voltar à tela inicial") { navigateHome() },
-            LinearLayout.LayoutParams(dp(45), dp(45)))
-        header.addView(View(this), LinearLayout.LayoutParams(dp(8), 1))
-        header.addView(headerIconButton(R.drawable.ic_settings, "Configurações") { showSettingsDialog() },
-            LinearLayout.LayoutParams(dp(45), dp(45)))
+        if (mode == 3) {
+            header.addView(headerIconButton(R.drawable.ic_back, "Voltar") { navigateBackFromSettings() },
+                LinearLayout.LayoutParams(dp(45), dp(45)))
+        } else {
+            header.addView(headerIconButton(R.drawable.ic_phone, "Home: voltar à tela inicial") { navigateHome() },
+                LinearLayout.LayoutParams(dp(45), dp(45)))
+            header.addView(View(this), LinearLayout.LayoutParams(dp(8), 1))
+            header.addView(headerIconButton(R.drawable.ic_settings, "Configurações") { showSettingsDialog() },
+                LinearLayout.LayoutParams(dp(45), dp(45)))
+        }
         content.addView(header)
 
         val metaRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
@@ -235,6 +248,7 @@ class MainActivity : Activity() {
         gap(16)
         when (mode) {
             0 -> renderMonitor()
+            3 -> renderSettingsModule()
             1 -> {
                 renderController()
                 content.post { if (active && mode == 1) refreshRemote(silent = true) }
@@ -247,12 +261,32 @@ class MainActivity : Activity() {
 
     /** Home retorna à escolha inicial, preservando serviço e chaves de pareamento. */
     private fun navigateHome() {
-        if (mode != 2) { mode = 2; render() }
+        if (mode != 2) { mode = 2; settingsSection = "home"; render() }
+    }
+
+    internal fun openSettingsModule() {
+        if (mode != 3) settingsReturnMode = mode
+        mode = 3
+        settingsSection = "home"
+        render()
+        (content.parent as? ScrollView)?.scrollTo(0, 0)
+    }
+
+    internal fun openSettingsSection(section: String) {
+        settingsSection = section
+        render()
+        (content.parent as? ScrollView)?.scrollTo(0, 0)
+    }
+
+    private fun navigateBackFromSettings() {
+        if (settingsSection != "home") openSettingsSection("home")
+        else { mode = settingsReturnMode; render() }
     }
 
     @Deprecated("Android Activity back callback")
     override fun onBackPressed() {
-        if (mode != 2) navigateHome() else super.onBackPressed()
+        if (mode == 3) navigateBackFromSettings()
+        else if (mode != 2) navigateHome() else super.onBackPressed()
     }
 
     /** Resposta centralizada: cada permissão mantém o fluxo específico e independente. */
@@ -341,6 +375,7 @@ class MainActivity : Activity() {
     internal fun formatDate(timestamp: Long): String = SimpleDateFormat("dd/MM HH:mm:ss", Locale.getDefault()).format(Date(timestamp))
 
     internal fun message(message: String) {
+        if (mode == 3) render()
         showAppNotice("Monitor Remoto", message)
     }
 }

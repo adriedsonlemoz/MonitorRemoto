@@ -7,7 +7,7 @@ import br.dev.monitorremoto.core.SettingsStore
 
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action != Intent.ACTION_BOOT_COMPLETED) return
+        if (intent.action !in setOf(Intent.ACTION_BOOT_COMPLETED, Intent.ACTION_MY_PACKAGE_REPLACED)) return
         if (!SettingsStore.autoStartEnabled(context) || !SettingsStore.isMonitorEnabled(context)) return
         try {
             MonitorService.start(context)

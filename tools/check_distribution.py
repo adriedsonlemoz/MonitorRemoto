@@ -16,7 +16,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.31" and code.group(1) == "31", "Versões incompatíveis"
+assert version == "0.1.0-alpha.32" and code.group(1) == "32", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -129,7 +129,7 @@ assert 'WindowManager.LayoutParams.FLAG_SECURE' in ui
 assert 'ClipDescription.EXTRA_IS_SENSITIVE' in ui and 'Intent.ACTION_SEND' in ui
 assert 'showAppConfirm("Compartilhar credencial?"' in ui and 'setNegativeButton("Cancelar", null)' in ui
 assert 'showConnectionChooser()' in ui and 'showHomeSavedDeviceOptions(' in ui
-assert 'if (mode != 2) { mode = 2; render() }' in ui
+assert 'if (mode != 2) { mode = 2; settingsSection = "home"; render() }' in ui
 print('PASSOU: alpha.17, Home independente, informações manuais protegidas e recentes')
 
 # alpha.17: não reapresentar Monitorado como Home; atalhos separados e ação de gerenciamento por aparelho.
@@ -191,7 +191,7 @@ assert 'android:name=".ui.IncomingAccessActivity"' in manifest and 'android:expo
 assert 'ACCESS_CHANNEL' in service and 'IMPORTANCE_DEFAULT' in service
 assert 'SettingsStore.isMonitorEnabled(this) && !MonitorService.isRunning' in ui
 assert 'private fun recoverAuthorizedServiceIfStopped()' in ui
-assert 'options.chunked(2)' in ui and 'settingsIcon(' in ui
+assert 'renderSettingsModule()' in ui and 'openSettingsModule()' in ui
 assert 'private fun MainActivity.compactMetricCard(' in ui and 'minimumHeight = dp(115)' in ui
 assert (root / 'app/src/test/java/br/dev/monitorremoto/transport/AppVersionTest.kt').is_file()
 assert len(list((root / 'app/src/main/res/drawable').glob('ic_*.xml'))) >= 10
@@ -312,8 +312,8 @@ assert 'twoColumnTiles(shortcuts' in home and 'R.drawable.ic_phone' in home and 
 assert 'iconTile(R.drawable.ic_qr, "Conectar novo aparelho"' in home
 assert 'addCompact("Gerar QR"' in monitor and 'addCompact("Mostrar info"' in monitor and 'addCompact("Interromper"' in monitor
 assert 'iconMetric("IP da rede"' in monitor and 'SettingsStore.setMonitorEnabled(this, false)' in monitor
-assert 'options.chunked(2)' in settings_ui and 'iconMenuRow(R.drawable.ic_sim' in settings_ui
-assert 'iconMetric("Porta TCP"' in settings_ui and 'showAppearanceDialog()' in settings_ui
+assert 'renderSettingsModule()' in settings_ui and 'iconMenuRow(R.drawable.ic_sim' in settings_ui
+assert 'iconMetric("Porta TCP"' in settings_ui and 'fillAppearanceSettings(' in settings_ui
 assert 'iconTile(R.drawable.ic_qr, "QR Code"' in pairing_ui and 'iconTile(R.drawable.ic_phone, "Manual"' in pairing_ui
 assert 'showManualConnectionDialog()' in pairing_ui and 'setOnClickListener' in pairing_ui
 assert 'iconSectionHeader(R.drawable.ic_qr, "Pareamento seguro"' in pairing_qr
@@ -396,3 +396,20 @@ assert 'SmsDeliveryJournal.latest()' in server and 'MmsMetadataReader.snapshot(c
 assert 'SmsSubscriptions.sender(context, subscriptionId)' in (root / 'app/src/main/java/br/dev/monitorremoto/core/SmsReplySender.kt').read_text()
 assert 'WindowManager.LayoutParams.FLAG_SECURE' in module_ui['MonitorCredentialsUi.kt'] and 'FLAG_SECURE' in module_ui['PairingQrUi.kt']
 print('PASSOU: alpha.31, SMS realtime/status/SIM, MMS metadados, notificações opt-in e captura permitida somente em Mensagens')
+
+# alpha.32: módulo de Configurações real, estado TCP verificado sem depender da UI.
+monitor_service = (root / 'app/src/main/java/br/dev/monitorremoto/service/MonitorService.kt').read_text()
+monitor_server = (root / 'app/src/main/java/br/dev/monitorremoto/transport/MonitorServer.kt').read_text()
+assert 'mode = 3' in main_ui and 'settingsSection = "home"' in main_ui
+assert '3 -> renderSettingsModule()' in main_ui and 'navigateBackFromSettings()' in main_ui
+assert 'renderSettingsModule()' in settings_ui and 'fillNotificationSettings(' in settings_ui
+assert 'fillSmsSettings(' in settings_ui and 'fillServiceSettings(' in settings_ui
+assert 'fillDiagnosticsSettings(' in settings_ui and 'showManagedDialog(' in settings_ui  # only app-picker dialog
+assert 'fun isHealthy()' in monitor_server and 'acceptThread?.isAlive' in monitor_server
+assert 'private val serverWatchdog' in monitor_service and 'ensureServerReady()' in monitor_service
+assert 'registerNetworkCallback(' in monitor_service and 'nextRecoveryMs' in monitor_service
+assert 'return START_STICKY' in monitor_service and 'ACTION_STOP' in monitor_service
+assert 'recordServerHealth(' in monitor_service and 'serverLastCheck(' in settings
+assert 'Intent.ACTION_MY_PACKAGE_REPLACED' in (root / 'app/src/main/java/br/dev/monitorremoto/service/BootReceiver.kt').read_text()
+assert 'android.intent.action.MY_PACKAGE_REPLACED' in manifest
+print('PASSOU: alpha.32, recuperação TCP, diagnóstico e Configurações sem janela gigante')
