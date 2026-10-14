@@ -1,4 +1,4 @@
-# Arquitetura (0.1.0-alpha.24)
+# Arquitetura (0.1.0-alpha.25)
 
 ```text
 MONITORADO                                      CONTROLE
@@ -19,9 +19,9 @@ O FGS `connectedDevice` mantém o socket de escuta durante monitoramento ativo. 
 
 ## Distribuição e assinatura
 
-O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.24` e `versionCode=24`.
+O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.25` e `versionCode=25`.
 
-- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.24.apk`.
+- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.25.apk`.
 - `upload-artifact` sempre distribui um ZIP; GitHub Releases recebe o **arquivo APK direto**.
 - Com quatro Secrets, Gradle gera APK Release assinado e AAB. Sem Secrets, o arquivo é Debug de teste e não preserva necessariamente a assinatura entre execuções.
 - Releases são prévias, não substituem a futura revisão da Google Play e nem os ensaios reais.
@@ -127,3 +127,7 @@ invalida respostas pendentes quando se troca de dispositivo. A lógica de autent
 comunicação AES-GCM e credenciais por host continua em `transport/` e `security/`.
 A Activity ainda recebe callbacks de permissões e de captura QR; novos módulos
 visuais são extensões internas transitórias, para reduzir o risco da migração.
+
+## Correção alpha.25
+
+No helper `IncomingAccessActivity.infoMetric` em `IncomingAccessScreenUi.kt`, os construtores de Views dentro de `LinearLayout.apply` usam `this@infoMetric` como `Context`. Isto evita capturar implicitamente o receiver `LinearLayout` em vez da Activity. Nenhum ajuste de arquitetura ou protocolo foi necessário.

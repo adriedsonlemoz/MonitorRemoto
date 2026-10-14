@@ -1,4 +1,4 @@
-# Monitor Remoto 0.1.0-alpha.24
+# Monitor Remoto 0.1.0-alpha.25
 # Convenções permanentes do projeto Monitor Remoto
 
 - Toda alteração de código incrementa sequencialmente `versionCode` e `versionName` (ex.: `0.1.0-alpha.8` -> `0.1.0-alpha.9`). Sincronizar tela, README, CHANGELOG, RELEASE_NOTES e documentação.
@@ -21,7 +21,7 @@
 - Alpha.10: manter tema **claro padrão**, as opções da engrenagem, janela Conectar, botão de atualização compacto, lista de até 5 aparelhos recentes e os dados do Controle no topo. Não reintroduzir formulário longo na tela principal.
 - Credenciais por dispositivo usam `RecentDevices` + `SecretVault.profileKeyName`, com migração única da alpha.9. Não reaproveitar `CONTROLLER_KEY` antigo para IPs novos nem gravar segredo em preferências sem criptografia. Esquecer apaga o segredo correspondente.
 - Respostas HTTP/TCP não são conexão persistente. Exibir "Conectado" apenas após consulta autenticada bem-sucedida e "Sem resposta" após erro. Não inventar tempos de atualização.
-- Próxima versão sequencial: `0.1.0-alpha.25`, `versionCode 25`.
+- Próxima versão sequencial: `0.1.0-alpha.26`, `versionCode 26`.
 
 - Alpha.15: preservar a seleção Conectar → QR/Manual/Salvos, confirmação do QR antes de parear, cartões salvos com três ações e o scanner em Activity com tema Dialog.
 
@@ -47,3 +47,5 @@
 
 - Alpha.24: `MainActivity` coordena ciclo de vida/navegação; estados/consultas ficam em `RemoteConnectionManager`, callbacks em `ConnectionController`, diálogos de pareamento em `PairingScreenUi` e QR em `PairingQrUi`, com worker separado em `PairingController`. Credenciais locais ficam em `MonitorCredentialsUi`.
 - Preservar a invalidação de requisições obsoletas ao trocar/desconectar aparelhos. Ao parear por QR ou conectar manualmente, sempre salvar o host selecionado antes de consultar. Não mover chaves para preferências em texto puro, nem autorizar operações remotas sem consentimento.
+
+- Alpha.25: Em `IncomingAccessScreenUi.kt`, dentro de `LinearLayout.apply`, construtores `View` e `LinearLayout` devem receber `this@infoMetric`, não `this` implicitamente. Rodar `tools/check_distribution.py` e compilar o Android após refatorações.

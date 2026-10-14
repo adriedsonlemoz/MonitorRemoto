@@ -16,7 +16,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.24" and code.group(1) == "24", "Versões incompatíveis"
+assert version == "0.1.0-alpha.25" and code.group(1) == "25", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -264,3 +264,14 @@ assert 'assertFalse(AppVersion.compatible("0.1.0-alpha.23"))' in app_version_tes
 for fname in ['ConnectionController.kt','ConnectionScreenUi.kt','PairingScreenUi.kt','PairingQrUi.kt','MonitorCredentialsUi.kt']:
     assert len(module_ui[fname].strip()) > 100
 print('PASSOU: alpha.24, controles separados, host selecionado, cancelamento de respostas antigas e credenciais protegidas')
+
+# alpha.25: regressão compileDebugKotlin do build #25.
+# Dentro de LinearLayout.apply, `this` e a View.current do layout não são o Context.
+# Referenciar explicitamente o receiver da extensão IncomingAccessActivity.infoMetric.
+incoming_screen = module_ui["IncomingAccessScreenUi.kt"]
+assert 'addView(View(this@infoMetric), LinearLayout.LayoutParams(dp(10), 1))' in incoming_screen
+assert 'val column = LinearLayout(this@infoMetric).apply' in incoming_screen
+assert 'addView(View(this), LinearLayout.LayoutParams(dp(10), 1))' not in incoming_screen
+assert 'val column = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }' not in incoming_screen
+assert 'assertFalse(AppVersion.compatible("0.1.0-alpha.24"))' in app_version_test
+print('PASSOU: alpha.25, Context correto nos construtores View/LinearLayout e versão sincronizada')

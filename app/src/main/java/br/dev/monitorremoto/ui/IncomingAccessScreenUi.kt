@@ -110,8 +110,8 @@ private fun IncomingAccessActivity.infoMetric(iconId: Int, label: String, value:
         setPadding(dp(12), dp(12), dp(12), dp(12))
         minimumHeight = dp(74)
         addView(icon(iconId, accent, 19))
-        addView(View(this), LinearLayout.LayoutParams(dp(10), 1))
-        val column = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        addView(View(this@infoMetric), LinearLayout.LayoutParams(dp(10), 1))
+        val column = LinearLayout(this@infoMetric).apply { orientation = LinearLayout.VERTICAL }
         column.addView(text(label, 10.5f, subtle = true))
         column.addView(gap(3))
         column.addView(text(value.ifBlank { "—" }, 13.5f, bold = true).apply {

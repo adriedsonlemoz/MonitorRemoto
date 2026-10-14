@@ -1,5 +1,13 @@
 # Histórico de versões
 
+## 0.1.0-alpha.25 (14/10/2026)
+
+- Corrigidos dois erros de compilação Kotlin do workflow **Gerar APK e Release 25** na tela de acesso recebido (`IncomingAccessScreenUi.kt`, linhas 113 e 114), onde o receiver de `LinearLayout.apply` era passado como `Context` para `View` e `LinearLayout`.
+- Usados `View(this@infoMetric)` e `LinearLayout(this@infoMetric)`, fazendo referência inequívoca à `IncomingAccessActivity` no método de extensão.
+- Validação estática adicionada para impedir regressão desse tipo; versão sincronizada em Gradle, `AppVersion`, teste JUnit e documentação.
+- Preservados design, protocolo, pareamento e permissões da alpha.24. Novos detalhes do aparelho e recuperação de dados ficam para etapa posterior.
+- Compilação Android completa e testes físicos ainda precisam ser confirmados no GitHub Actions e em aparelhos.
+
 ## 0.1.0-alpha.24 (13/10/2026)
 
 - Segunda etapa da refatoração modular, preservando layouts, permissões, endpoint e criptografia.

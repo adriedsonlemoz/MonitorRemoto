@@ -1,18 +1,16 @@
-# Monitor Remoto v0.1.0-alpha.24
+# Monitor Remoto v0.1.0-alpha.25
 
-## Novidades da alpha.24
+## Correção da alpha.25
 
-- Segunda etapa da refatoração para reduzir a `MainActivity` a cerca de 322 linhas.
-- Novo gerenciador de conexão remota independente de Views, com cache, atualização e invalidação de respostas de conexões antigas.
-- Diálogos de conexão manual, dispositivos salvos, QR Code e credenciais separados em módulos próprios.
-- A tela de acesso recebido continua mostrando nome, IP, método e horários na mesma tela, com o ícone centralizado e ação Parar acesso.
-- A conexão por QR/manual agora define o host ativo antes da consulta inicial.
-- Nenhuma permissão nova e nenhuma mudança intencional de layout ou protocolo além do identificador de versão exigido.
+- Ajuste dos dois erros `Argument type mismatch: actual type is LinearLayout, but Context was expected` do workflow 25, encontrados em `IncomingAccessScreenUi.kt:113` e `:114`.
+- Os construtores de `View` e `LinearLayout` dentro do helper `infoMetric` agora recebem explicitamente a Activity como contexto (`this@infoMetric`), em vez do receptor implícito `LinearLayout.apply`.
+- Mantidos o visual atual do alerta de acesso recebido, o aviso de autenticação, os dados e as permissões existentes.
+- Exigida alpha.25 nos **dois celulares** pela política de versão exata.
 
-## Compatibilidade
+## Ainda não implementado
 
-Os dois aparelhos precisam executar **alpha.24**, pois a verificação da versão exata permanece ativa.
+A futura reorganização de Detalhes do aparelho (bateria, armazenamento e redes) e a função Recuperar dados não fazem parte desta correção.
 
 ## Validação pendente
 
-Ainda é necessário executar o GitHub Actions com o compilador Android e testar em dois celulares, incluindo o fluxo de QR, conexão manual, consulta periódica e desconexão. O ZIP é código-fonte, não APK.
+Executar novamente `:app:compileDebugKotlin`, testes JVM e criação do APK pelo GitHub Actions. O ZIP contém somente o código-fonte.

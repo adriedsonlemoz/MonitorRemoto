@@ -271,3 +271,12 @@
 - [x] Kotlin do gerenciador de conexão e do pareamento compilados isoladamente com stubs; troca de aparelho, cancelamento de resposta antiga e cache testados.
 - [ ] Compilação Gradle/Android completa e testes físicos em dois aparelhos.
 - [ ] Confirmar visual e interações em Android com modos claro/escuro, escala de fonte, QR e navegação.
+
+## alpha.25: correção do build 25 (14/10/2026)
+
+- [x] Lidos logs do workflow 25: `:app:compileDebugKotlin` falhou apenas nos erros registrados em `IncomingAccessScreenUi.kt:113` e `:114` (`LinearLayout` onde `Context` era esperado).
+- [x] Corrigidos ambos os construtores qualificando explicitamente o receiver da Activity (`this@infoMetric`).
+- [x] Adicionada regressão ao verificador de distribuição; versão 25 sincronizada no Gradle, `AppVersion`, JUnit e documentação.
+- [x] Parser PSI: zero erros sintáticos em Kotlin; 14 XML válidos; typecheck Kotlin isolado de `IncomingAccessScreenUi.kt` com stubs mínimos Android/Activity sem erros de tipo.
+- [ ] Compilação Android real e testes instrumentados ainda pendentes da CI.
+- [ ] Teste físico do alerta de acesso com múltiplos dispositivos.
