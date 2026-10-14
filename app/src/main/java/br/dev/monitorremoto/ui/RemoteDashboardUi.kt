@@ -39,7 +39,7 @@ internal fun MainActivity.displayResult(root: JSONObject, fromCache: Boolean = f
             showRemoteNotifications(root)
         },
         actionTile(R.drawable.ic_message, "Mensagens", "SMS e respostas", enabled = true) {
-            loadRemoteMessages()
+            openRemoteMessagesScreen()
         },
         actionTile(R.drawable.ic_monitor, "Ver tela", "Em breve") {
             showFeatureSoon("Ver tela", "A transmissão exigirá permissão de captura concedida no aparelho monitorado.")

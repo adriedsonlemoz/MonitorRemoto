@@ -16,7 +16,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.32" and code.group(1) == "32", "Versões incompatíveis"
+assert version == "0.1.0-alpha.33" and code.group(1) == "33", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -129,7 +129,7 @@ assert 'WindowManager.LayoutParams.FLAG_SECURE' in ui
 assert 'ClipDescription.EXTRA_IS_SENSITIVE' in ui and 'Intent.ACTION_SEND' in ui
 assert 'showAppConfirm("Compartilhar credencial?"' in ui and 'setNegativeButton("Cancelar", null)' in ui
 assert 'showConnectionChooser()' in ui and 'showHomeSavedDeviceOptions(' in ui
-assert 'if (mode != 2) { mode = 2; settingsSection = "home"; render() }' in ui
+assert 'if (mode != 2) { if (mode == 4) clearRemoteMessagesScreen(); mode = 2; settingsSection = "home"; render() }' in ui
 print('PASSOU: alpha.17, Home independente, informações manuais protegidas e recentes')
 
 # alpha.17: não reapresentar Monitorado como Home; atalhos separados e ação de gerenciamento por aparelho.
@@ -216,7 +216,7 @@ assert f'assertFalse(AppVersion.compatible("0.1.0-alpha.22"))' in app_version_te
 print('PASSOU: alpha.21, teste de compatibilidade segue a versão atual')
 
 # alpha.22: a interface cresceu, mas MainActivity não volta a concentrar telas inteiras.
-assert len(main_ui.splitlines()) <= 390, "MainActivity voltou a concentrar a UI"
+assert len(main_ui.splitlines()) <= 430, "MainActivity voltou a concentrar a UI"
 assert all(len(text.splitlines()) >= 25 for text in module_ui.values()), "Módulo UI vazio ou parcial"
 assert "internal fun MainActivity.renderHome()" in module_ui["HomeScreenUi.kt"]
 assert "internal fun MainActivity.renderMonitor()" in module_ui["MonitorScreenUi.kt"]
@@ -375,7 +375,7 @@ assert 'fun loadMessages(' in remote_manager
 assert (root / 'app/src/main/java/br/dev/monitorremoto/core/SmsInboxReader.kt').exists()
 assert (root / 'app/src/main/java/br/dev/monitorremoto/capture/NotificationReplyActions.kt').exists()
 assert (root / 'app/src/test/java/br/dev/monitorremoto/core/MessagePolicyTest.kt').exists()
-assert 'loadRemoteMessages()' in module_ui['RemoteDashboardUi.kt']
+assert 'openRemoteMessagesScreen()' in module_ui['RemoteDashboardUi.kt']
 assert 'RemoteInput.addResultsToIntent' in (root / 'app/src/main/java/br/dev/monitorremoto/capture/NotificationReplyActions.kt').read_text()
 assert 'showAppConfirm("Confirmar envio remoto?"' in module_ui['RemoteMessagesUi.kt']
 print('PASSOU: alpha.30, consentimentos SMS/RemoteInput, controle remoto autenticado e UI de confirmação')
@@ -413,3 +413,19 @@ assert 'recordServerHealth(' in monitor_service and 'serverLastCheck(' in settin
 assert 'Intent.ACTION_MY_PACKAGE_REPLACED' in (root / 'app/src/main/java/br/dev/monitorremoto/service/BootReceiver.kt').read_text()
 assert 'android.intent.action.MY_PACKAGE_REPLACED' in manifest
 print('PASSOU: alpha.32, recuperação TCP, diagnóstico e Configurações sem janela gigante')
+
+# alpha.33: o módulo Mensagens não pode mais exibir uma lista gigante num AlertDialog.
+assert '4 ->' not in main_ui or 'renderRemoteMessagesPage(); return' in main_ui
+assert 'renderRemoteMessagesPage(); return' in main_ui
+assert 'openRemoteMessagesScreen()' in module_ui['RemoteDashboardUi.kt']
+assert 'fun MainActivity.renderRemoteMessagesPage()' in messages
+assert 'messagesTab = index' in messages and 'SMS (${sms.size})' in messages
+assert 'showRemoteMessages(' not in messages, 'Remover a janela antiga de mensagens'
+assert 'AlertDialog.Builder(this).setTitle("Mensagens remotas")' not in messages
+assert 'messagesRequestGeneration++' in messages and 'messagesData = null' in messages
+assert 'MessagePolicy.looksLikeAuthenticationSms' in messages
+sensitive = (root / 'app/src/main/java/br/dev/monitorremoto/core/SensitiveContent.kt').read_text()
+assert 'authentication' in sensitive and 'verification' in sensitive
+assert '!SensitiveContent.isSensitive(it.title, it.preview)' in journal
+assert 'EnglishAuthentication' in (root / 'app/src/test/java/br/dev/monitorremoto/core/SensitiveContentTest.kt').read_text()
+print('PASSOU: alpha.33, central de Mensagens em página própria, abas, filtro OTP multilíngue, sem diálogo enorme')

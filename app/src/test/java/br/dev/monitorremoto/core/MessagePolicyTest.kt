@@ -15,6 +15,8 @@ class MessagePolicyTest {
 
     @Test fun obviousAuthenticationSmsIsExcluded() {
         assertTrue(MessagePolicy.looksLikeAuthenticationSms("123456"))
+        assertTrue(MessagePolicy.looksLikeAuthenticationSms("123456 is your GitHub authentication code."))
+        assertTrue(MessagePolicy.looksLikeAuthenticationSms("Your verification code is 123456"))
         assertTrue(MessagePolicy.looksLikeAuthenticationSms("Código: 428173"))
         assertTrue(MessagePolicy.looksLikeAuthenticationSms("Senha de acesso 004521"))
         assertFalse(MessagePolicy.looksLikeAuthenticationSms("Chego às 14h"))

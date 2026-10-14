@@ -47,7 +47,10 @@ object EventJournal {
      * Separar o filtro da serialização permite testá-lo na JVM sem android.jar mockável.
      */
     @Synchronized fun latest(allowedPackages: Set<String>, allApps: Boolean = false): List<RecordedEvent> =
-        records.filter { allApps || it.app in allowedPackages }.takeLast(30)
+        records.filter { (allApps || it.app in allowedPackages) &&
+            !SensitiveContent.isSensitive(it.title, it.preview) &&
+            !SensitiveContent.isBlockedFinancialApp(it.app, it.app)
+        }.takeLast(30)
 
     fun latestJson(allowedPackages: Set<String>, allowReply: Boolean = false, allApps: Boolean = false): JSONArray = JSONArray().apply {
         latest(allowedPackages, allApps).forEach { put(it.toJson(allowReply)) }
@@ -55,7 +58,7 @@ object EventJournal {
 
     /** Defesa parcial. O filtro não substitui cuidados com dados sensíveis. */
     internal fun sanitized(body: String): String {
-        val words = Regex("(?i)(c[oó]digo|verification|verifica[cç][aã]o|otp|2fa|token|senha tempor[aá]ria)")
+        val words = Regex("(?i)(c[oó]digo|verification|authentication|verifica[cç][aã]o|otp|2fa|token|senha tempor[aá]ria)")
         val digits = Regex("(?<!\\d)\\d{4,8}(?!\\d)")
         return if (words.containsMatchIn(body) && digits.containsMatchIn(body))
             "[Possível código de verificação ocultado]" else body

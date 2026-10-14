@@ -1,4 +1,4 @@
-# Arquitetura (0.1.0-alpha.32)
+# Arquitetura (0.1.0-alpha.33)
 
 ```text
 MONITORADO                                      CONTROLE
@@ -19,9 +19,9 @@ O FGS `connectedDevice` mantém o socket de escuta durante monitoramento ativo. 
 
 ## Distribuição e assinatura
 
-O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.32` e `versionCode=32`.
+O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.33` e `versionCode=33`.
 
-- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.32.apk`.
+- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.33.apk`.
 - `upload-artifact` sempre distribui um ZIP; GitHub Releases recebe o **arquivo APK direto**.
 - Com quatro Secrets, Gradle gera APK Release assinado e AAB. Sem Secrets, o arquivo é Debug de teste e não preserva necessariamente a assinatura entre execuções.
 - Releases são prévias, não substituem a futura revisão da Google Play e nem os ensaios reais.
@@ -167,3 +167,7 @@ O botão de recuperar dados não implementa transferência, acesso a arquivos ou
 `MonitorService` mantém o FGS autorizado e supervisiona `MonitorServer.isHealthy()` a cada 15 s, sem abrir socket cliente ou gastar tráfego. `isHealthy` exige `ServerSocket` aberto e thread de aceitação ativa. Em falha, o listener antigo é fechado, um novo é criado, e erros de bind provocam atrasos progressivos com máximo de cinco minutos. Retorno de rede aciona uma verificação adicional. Diagnóstico persistente registra **apenas metadados** (estado, falhas e horário) com limitação de escritas em intervalo normal. Não registra credenciais, IP de controlador nem conteúdo das mensagens. O `START_STICKY` permite recriação pelo Android após finalização involuntária; **não** garante retomada se usuário força parada nem diante de restrições de fabricantes.
 
 `MainActivity` mantém `mode=3` para Configurações e `settingsSection` (home, notifications, sms, service, diagnostics, security, appearance, about). `SettingsScreenUi.kt` monta telas completas e mantém diálogos curtos somente para solicitações e confirmações sensíveis. Voltar retorna à categoria anterior, depois ao modo de onde Configurações foi aberto. Sem novos componentes exportados ou permissões.
+
+## Tela Mensagens alpha.33
+
+`MainActivity` mantém o estado efêmero em RAM (`mode=4`), e `RemoteMessagesUi.kt` renderiza uma página com abas e ações compactas, sem diálogo. O servidor não é consultado automaticamente no polling da home; o usuário abre/atualiza a tela sob demanda. A recuperação da conexão é autenticada antes da consulta. Saída descarta `JSONObject`, invalida callbacks e preserva apenas a marca temporal de leitura. Conteúdo não entra no estado salvo da Activity. `SensitiveContent` reconhece OTP em PT/EN; `SmsInboxReader`, `SmsLiveJournal`, `EventJournal.latest` e a UI rejeitam conteúdo elegível à filtragem em camadas. As mensagens que não puderem ser identificadas como OTP ainda representam risco residual de privacidade.

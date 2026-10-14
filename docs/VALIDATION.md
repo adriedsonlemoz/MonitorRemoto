@@ -354,3 +354,16 @@
 - [ ] Teste real: alternar Wi-Fi e dados, derrubar listener, conferir backoff e retomada com a mesma chave; verificar que a UI não marca servidor morto como ativo após 15 s.
 - [ ] Teste real: remover tarefa, reiniciar aparelho com opção de início automático, e forçar parada nas configurações Android (não deve reiniciar até novo início explícito).
 - [ ] Teste de interface: Configurações → Notificações / SMS / Serviço / Diagnóstico / Segurança / Aparência / Sobre, botão voltar, rotação, permissão negada, screenshots SMS e QR.
+
+## alpha.33 (14/10/2026)
+
+- Redesign da UI Mensagens como página dedicada com abas SMS e Notificações; remoção do diálogo antigo e de botões Copiar de tela inteira.
+- Defesas adicionais contra SMS OTP em inglês, revalidação do EventJournal e checagem antes de copiar. Testes Kotlin/JVM de reconhecimento com frases PT/EN.
+- Validar compilação Gradle/Android no GitHub Actions e UX/scroll/voltar/reconexão em aparelho físico, ainda pendentes.
+
+### Verificações locais executadas na alpha.33
+
+- `python3 tools/check_distribution.py`: aprovado; inclui travas contra retorno ao diálogo antigo e contra remoção de filtros OTP.
+- Kotlin PSI: **65 fontes `.kt`, nenhum erro sintático** (incluindo testes).
+- Smoke test Kotlin/JVM sem Android SDK: 7 amostras de OTP bloqueadas, 3 mensagens comuns preservadas, 1 teste de app financeiro bloqueado.
+- Integridade do ZIP e XML de Manifest conferidos; Gradle/Android completo não compilado neste ambiente.

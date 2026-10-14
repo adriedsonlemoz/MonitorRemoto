@@ -57,7 +57,17 @@ class MainActivity : Activity() {
     internal val remoteConnection by lazy { RemoteConnectionManager(applicationContext) }
     internal val pairingController = PairingController()
     internal val lastMessageViewedMs = mutableMapOf<String, Long>() // Apenas carimbo temporal em RAM
-    internal var mode = 2 // 2: início, 0: monitorado, 1: controle, 3: configurações
+    // Dados temporários: não persistir mensagens em Bundle, preferências ou disco.
+    internal var messagesData: org.json.JSONObject? = null
+    internal var messagesHost = ""
+    internal var messagesTab = 0 // 0: SMS; 1: notificações
+    internal var messagesBaselineMs = 0L
+    internal var messagesLatestShownMs = 0L
+    internal var messagesLoading = false
+    internal var messagesError: String? = null
+    internal var messagesTechnicalExpanded = false
+    internal var messagesRequestGeneration = 0
+    internal var mode = 2 // 2: início, 0: monitorado, 1: controle, 3: configurações, 4: mensagens
     internal var settingsSection = "home"
     private var settingsReturnMode = 2
     internal val cameraPermissionRequest = 4317
@@ -122,8 +132,13 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         RecentDevices.migrateLegacy(this)
         mode = if (intent.getBooleanExtra(EXTRA_OPEN_MONITOR, false)) 0
-            else savedInstanceState?.getInt("active_mode", 2)?.takeIf { it in 0..3 } ?: 2
+            else savedInstanceState?.getInt("active_mode", 2)?.takeIf { it in 0..4 } ?: 2
         settingsSection = savedInstanceState?.getString("settings_section", "home") ?: "home"
+        messagesTab = savedInstanceState?.getInt("messages_tab", 0)?.coerceIn(0, 1) ?: 0
+        if (mode == 4) {
+            messagesHost = SettingsStore.getRemoteHost(this)
+            messagesBaselineMs = lastMessageViewedMs[messagesHost] ?: 0L
+        }
         settingsReturnMode = savedInstanceState?.getInt("settings_return_mode", 2)?.takeIf { it in 0..2 } ?: 2
         window.statusBarColor = bg
         window.navigationBarColor = bg
@@ -139,6 +154,7 @@ class MainActivity : Activity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val callback = android.window.OnBackInvokedCallback {
                 if (mode == 3) navigateBackFromSettings()
+                else if (mode == 4) closeRemoteMessagesScreen()
                 else if (mode == 2) finish() else navigateHome()
             }
             systemBackCallback = callback
@@ -152,6 +168,7 @@ class MainActivity : Activity() {
     override fun onDestroy() {
         activeUiDialog?.dismiss()
         activeUiDialog = null
+        if (mode == 4) clearRemoteMessagesScreen()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             systemBackCallback?.let { onBackInvokedDispatcher.unregisterOnBackInvokedCallback(it) }
             systemBackCallback = null
@@ -161,6 +178,7 @@ class MainActivity : Activity() {
 
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putInt("active_mode", mode)
+        outState.putInt("messages_tab", messagesTab)
         outState.putString("settings_section", settingsSection)
         outState.putInt("settings_return_mode", settingsReturnMode)
         super.onSaveInstanceState(outState)
@@ -172,6 +190,7 @@ class MainActivity : Activity() {
         AuthenticatedAccess.subscribe(incomingListener)
         render()
         if (!showIncomingAccessIfNeeded()) recoverAuthorizedServiceIfStopped()
+        if (mode == 4) loadRemoteMessages()
         handler.removeCallbacks(monitorStatusPoll)
         if (mode == 0) handler.postDelayed(monitorStatusPoll, 5_000L)
         handler.removeCallbacks(poller)
@@ -195,11 +214,15 @@ class MainActivity : Activity() {
 
     override fun onPause() {
         active = false
+        if (mode == 4) {
+            messagesRequestGeneration++
+            messagesLoading = false
+        }
         AuthenticatedAccess.unsubscribe(incomingListener)
         handler.removeCallbacks(monitorStatusPoll)
         handler.removeCallbacks(poller)
         // Uma resposta anterior não significa que ainda haja conexão ao voltar ao app.
-        if (mode == 1 && remoteConnection.state == "connected") {
+        if ((mode == 1 || mode == 4) && remoteConnection.state == "connected") {
             remoteConnection.pause()
             updateConnectionLabels()
         }
@@ -208,6 +231,7 @@ class MainActivity : Activity() {
 
     internal fun render() {
         content.removeAllViews()
+        if (mode == 4) { renderRemoteMessagesPage(); return }
         handler.removeCallbacks(monitorStatusPoll)
         if (active && mode == 0) handler.postDelayed(monitorStatusPoll, 5_000L)
         val header = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
@@ -261,11 +285,11 @@ class MainActivity : Activity() {
 
     /** Home retorna à escolha inicial, preservando serviço e chaves de pareamento. */
     private fun navigateHome() {
-        if (mode != 2) { mode = 2; settingsSection = "home"; render() }
+        if (mode != 2) { if (mode == 4) clearRemoteMessagesScreen(); mode = 2; settingsSection = "home"; render() }
     }
 
     internal fun openSettingsModule() {
-        if (mode != 3) settingsReturnMode = mode
+        if (mode != 3) settingsReturnMode = if (mode == 4) 1 else mode
         mode = 3
         settingsSection = "home"
         render()
@@ -286,6 +310,7 @@ class MainActivity : Activity() {
     @Deprecated("Android Activity back callback")
     override fun onBackPressed() {
         if (mode == 3) navigateBackFromSettings()
+        else if (mode == 4) closeRemoteMessagesScreen()
         else if (mode != 2) navigateHome() else super.onBackPressed()
     }
 

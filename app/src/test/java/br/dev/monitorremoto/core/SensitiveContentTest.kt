@@ -11,6 +11,13 @@ class SensitiveContentTest {
         assertFalse(SensitiveContent.isSensitive("Amigo", "Bom dia, tudo bem?"))
     }
 
+    @Test fun blocksEnglishAuthenticationMessagesSeenOnRealDevices() {
+        assertTrue(SensitiveContent.isSensitive("9150000", "123456 is your GitHub authentication code."))
+        assertTrue(SensitiveContent.isSensitive("SMS", "Your verification code is 123456"))
+        assertTrue(SensitiveContent.isSensitive("SMS", "Use your one-time passcode to sign in"))
+        assertFalse(SensitiveContent.isSensitive("Maria", "Chego em 5 minutos."))
+    }
+
     @Test fun blocksKnownFinancialAppsWithoutBlockingChatAndSmsNotifications() {
         assertTrue(SensitiveContent.isBlockedFinancialApp("com.nu.production", "Nubank"))
         assertTrue(SensitiveContent.isBlockedFinancialApp("x.y", "Banco Exemplo"))

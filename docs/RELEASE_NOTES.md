@@ -1,4 +1,10 @@
-# Monitor Remoto v0.1.0-alpha.32
+# Monitor Remoto v0.1.0-alpha.33
+
+## Principal novidade: central de mensagens
+
+- Mensagens em tela própria, abas SMS e Notificações, ações compactas Copiar e Responder, controle de volta/atualização.
+- Filtros de autenticação multilíngues corrigidos e aplicados também na leitura dos registros antes da transmissão. Mensagens não ficam gravadas no aparelho controlador.
+- Compatibilidade de respostas continua condicionada ao RemoteInput do app/à permissão SMS no monitorado.
 
 ## Implementado no código-fonte
 
@@ -13,7 +19,7 @@
 - Opção explícita para notificações de todos os aplicativos elegíveis ou lista individual. Filtros de aplicativos financeiros, notificações secretas e códigos suspeitos continuam.
 - Botões **Copiar** e **Responder** nas telas de SMS/notificações. Responder via `RemoteInput` ou SMS com revisão/confirmacão e autorização separadas.
 - Remoção de `FLAG_SECURE` somente dos diálogos de Mensagens e respostas, para capturas de tela. QR e credenciais continuam protegidos.
-- `versionCode 32` e versão exata exigida em ambos os aparelhos.
+- `versionCode 33` e versão exata exigida em ambos os aparelhos.
 
 ## Limites e testes pendentes
 

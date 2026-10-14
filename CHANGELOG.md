@@ -1,5 +1,13 @@
 # Histórico de versões
 
+## 0.1.0-alpha.33 (14/10/2026)
+
+- Mensagens remotas redesenhadas como página própria do controlador, com abas SMS e Notificações, cabeçalho Voltar/Atualizar e cartões compactos; não usa mais uma janela longa com botões Copiar de largura total.
+- Cada conversa apresenta mensagens com data/direção e ação de cópia por ícone; Responder SMS aparece no cabeçalho quando autorizado, e Responder notificação apenas nas mensagens com token válido.
+- Agrupamento por remetente/conversa, revalidação de conexão ao abrir/atualizar e descarte dos conteúdos da memória ao sair. Status de SMS e MMS ficam recolhidos em Detalhes.
+- Corrigido vazamento de códigos de autenticação em inglês (“authentication code”, “verification code”): filtragem no monitorado, revalidação antes de envio e na UI antes de exibição/cópia. Testes de regressão adicionados. Filtros heurísticos não garantem bloqueio absoluto.
+- `versionCode 33` / `versionName 0.1.0-alpha.33`, documentação e validador sincronizados. Build Android e testes de UI em aparelho pendentes.
+
 ## 0.1.0-alpha.32 (14/10/2026)
 
 - Nova página de **Configurações** no fluxo de navegação, sem abrir uma janela gigante: categorias Notificações, SMS, Serviço, Diagnóstico, Segurança, Aparência e Sobre. Cada categoria é uma tela independente, com Voltar.

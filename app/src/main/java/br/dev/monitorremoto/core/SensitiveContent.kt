@@ -8,7 +8,7 @@ import java.util.Locale
  */
 object SensitiveContent {
     private val sensitive = Regex(
-        """(?i)(\botp\b|\b2fa\b|token|c[oó]digo|verifica[cç][aã]o|senha|password|autentica[cç][aã]o|banco|bank|pix|transfer[eê]ncia|cart[aã]o|conta banc[aá]ria|pagamento|login|acesso à conta)"""
+        """(?i)(\botp\b|\b2fa\b|token|c[oó]digo|verifica[cç][aã]o|senha|password|autentica[cç][aã]o|\bauthentication\b|\bauthenticat(?:e|ion|ing)\b|\bverification\b|\bverify\b|\bsecurity[\s-]?code\b|\bone[\s-]?time\b|\bpasscode\b|\brecovery[\s-]?code\b|\bconfirm(?:ation)?[\s-]?code\b|\bsign[\s-]?in\b|\btwo[\s-]?factor\b|banco|bank|pix|transfer[eê]ncia|cart[aã]o|conta banc[aá]ria|pagamento|login|acesso à conta)"""
     )
     private val financialName = Regex(
         """(?i)(\bnubank\b|\bcaixa\b|\bitau\b|\bitaú\b|\bbradesco\b|\bsantander\b|\bbanco\b|\bbank\b|\bsicoob\b|\bsicredi\b|\bpicpay\b|\bmercado pago\b|\bneon\b|\binter\b|\bc6 bank\b|\bbtg\b|\bpagbank\b)"""
