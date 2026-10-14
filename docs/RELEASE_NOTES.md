@@ -1,4 +1,12 @@
-# Monitor Remoto v0.1.0-alpha.40
+# Monitor Remoto v0.1.0-alpha.41
+
+## Controles transparentes no modo tela cheia (alpha.41)
+
+- Barra superior flutuante: Sair, Ajustar/Preencher, Print, Ouvir áudio e Foto HD.
+- Barra inferior flutuante: Voltar, Início, Recentes, Notificações, Toque e Acender tela.
+- Os botões permanecem visíveis e discretos, com leitura acessível; fora da faixa de controles os toques continuam na imagem.
+- Indicador discreto do estado real do streaming, rede e FPS de quadros exibidos; respeito ao recorte da tela; opção de tela cheia preservada ao recriar a Activity.
+- Mecanismos existentes de autenticação e autorização preservados. FPS/latência em aparelho e compilação Gradle pendentes. v0.1.0-alpha.41 / versionCode 41.
 
 ## AVC/H.264 experimental, JPEG reserva e comando Acender tela (alpha.40)
 

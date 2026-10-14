@@ -421,3 +421,13 @@
 - Novo comando WakeScreen com autorização local explícita, proteção contra repetição, cooldown e wake lock limitado; estado de bloqueio seguro continua intacto.
 - Verificar no GitHub Actions `:app:testDebugUnitTest :app:assembleDebug :app:lintDebug` e ensaiar codecs de dois modelos reais, falha do codec, reconexão, orientação, latência, áudio, bateria, aquecimento e permissões.
 - Nenhuma latência real/FPS foi medida nesta sessão de desenvolvimento.
+
+## alpha.41 (14/10/2026)
+
+- Verificar tela cheia nas orientações retrato/paisagem, barra superior/inferior, clique em cada ação, recortes/notch e status visível sem ocultar toda a imagem.
+- Conferir que Voltar/Início/Recentes/Notificações acionam `RemoteClient.touch` com chave AES-GCM e independem do modo Toque; sem Acessibilidade e captura, devem mostrar indisponibilidade.
+- Testar Print e Foto HD no MediaStore, áudio, Acender tela apenas após opt-in local, alternância Ajustar/Preencher com coordenadas corretas, rotação e saída da imersão.
+- Verificar H.264/JPEG e tempos medidos na tela, comparar latência, bateria e aquecimento em dispositivos físicos. Compilação Android e testes de integração ainda pendentes.
+
+- O indicador de FPS calcula (N-1)/(t_último - t_primeiro) dos últimos até 12 quadros exibidos nos últimos 2 segundos, e zera após 2,5 s sem quadro. O dado não é latência de ponta a ponta.
+- Em desenvolvimento: 87 arquivos Kotlin passaram no verificador PSI sem erros sintáticos, XML e YAML válidos, verificador estrutural do projeto passou e 10 verificações JVM do cálculo de FPS passaram com `kotlinc` 1.9. A compilação Android completa e os testes visuais permanecem pendentes.

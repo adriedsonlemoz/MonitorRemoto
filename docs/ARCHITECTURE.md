@@ -1,4 +1,4 @@
-# Arquitetura (0.1.0-alpha.40)
+# Arquitetura (0.1.0-alpha.41)
 
 ```text
 MONITORADO                                      CONTROLE
@@ -25,9 +25,9 @@ A captura usa `ImageReader` RGBA, `Bitmap` JPEG com largura máxima 540 px, taxa
 
 ## Distribuição e assinatura
 
-O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.40` e `versionCode=40`.
+O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.41` e `versionCode=41`.
 
-- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.40.apk`.
+- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.41.apk`.
 - `upload-artifact` sempre distribui um ZIP; GitHub Releases recebe o **arquivo APK direto**.
 - Com quatro Secrets, Gradle gera APK Release assinado e AAB. Sem Secrets, o arquivo é Debug de teste e não preserva necessariamente a assinatura entre execuções.
 - Releases são prévias, não substituem a futura revisão da Google Play e nem os ensaios reais.
@@ -189,3 +189,7 @@ O servidor aceita `screenCapture` somente após autenticação AES-GCM/nonce e c
 ## Vídeo alpha.40 (experimental)
 
 Projeção única consentida por sessão no monitorado usa `ImageReader` RGBA. Quando há visualizador autenticado, os quadros são opcionalmente redimensionados e codificados H.264/AVC por `MediaCodec` usando entrada YUV flexível. Um ring limitado em RAM protege contra crescimento indefinido. O comando `videoFrame` recupera amostras ordenadas via AES-GCM com checagem de nonce, versão e chave; o controlador usa decoder `MediaCodec` ou retorna a JPEG. Não há socket persistente, logo 10 FPS são **alvo**, não medição. Acordar a tela é comando independente da projeção, com preferência local OFF, não desbloqueia o Keyguard e pode ser barrado pelo sistema.
+
+## Interface imersiva alpha.41
+
+A `RemoteScreenActivity` mantém o vídeo como camada de fundo do `FrameLayout` e desenha barras de ação com fundo translúcido na parte superior/inferior, visíveis somente no modo fullscreen. Os botões usam a mesma API remota e autorização local; não enviam comandos pela simples visualização. Os toques no `ImageView` seguem `RemoteGesturePolicy.fitCenterPoint/centerCropPoint`, respeitando recortes e barras que interceptam apenas toques diretamente sobre seus próprios botões. Exibir estado H.264/JPEG e tempo de rede somente quando recebidos do servidor.

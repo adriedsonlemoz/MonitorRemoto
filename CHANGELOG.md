@@ -1,3 +1,10 @@
+## 0.1.0-alpha.41 (14/10/2026)
+
+- Adicionadas barras flutuantes semitransparentes em Ver tela, visíveis no modo imersivo, com navegação remota (Voltar/Início/Recentes/Notificações), Toque, Acender tela, Print, Áudio, Foto HD, Ajustar/Preencher e Sair. Todas as ações usam os comandos e permissões existentes.
+- Mantido conteúdo remoto em tela cheia, com áreas de controle compactas, contraste nos ícones, rótulos acessíveis, indicador real de estado/latência e FPS de quadros apresentados, respeito a recortes e insets e preservação do modo ao recriar a Activity.
+- Preservados MediaProjection autorizada, AVC/JPEG reserva, criptografia, prints sob demanda e bloqueio de desbloqueio seguro. Sem alegar ganho de FPS nem testes físicos ainda não realizados.
+- Compilação Gradle Android e verificação no dispositivo pendentes.
+
 ## 0.1.0-alpha.40 (14/10/2026)
 
 - Implementado streaming experimental AVC/H.264 via MediaCodec com decoder no controlador, fila curta de quadros voláteis (até 30), controle de sincronização IDR e fallback JPEG. Target de até 10 FPS, desempenho real ainda desconhecido.

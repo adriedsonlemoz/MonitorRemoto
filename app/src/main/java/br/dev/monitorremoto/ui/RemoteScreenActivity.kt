@@ -30,6 +30,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import br.dev.monitorremoto.R
+import br.dev.monitorremoto.core.DisplayedFrameRate
 import br.dev.monitorremoto.core.RecentDevices
 import br.dev.monitorremoto.core.RemoteGesturePolicy
 import br.dev.monitorremoto.core.SettingsStore
@@ -63,6 +64,13 @@ class RemoteScreenActivity : Activity() {
     private lateinit var placeholder: LinearLayout
     private lateinit var fullscreenExit: ImageButton
     private lateinit var fullscreenFit: TextView
+    private lateinit var fullscreenTopBar: LinearLayout
+    private lateinit var fullscreenBottomBar: LinearLayout
+    private lateinit var fullscreenStatus: TextView
+    private lateinit var fullscreenAudio: ImageButton
+    private lateinit var fullscreenTouch: ImageButton
+    private lateinit var fullscreenPrint: ImageButton
+    private val fullscreenNavigation = mutableListOf<ImageButton>()
     private var fillFullscreen = false
     private lateinit var cameraButton: ImageButton
     private lateinit var audioButton: ImageButton
@@ -103,6 +111,9 @@ class RemoteScreenActivity : Activity() {
     private var gestureAt = 0L
     private var requestedThisVisit = false
     private var previousStatus = ""
+    // Taxa medida somente em quadros efetivamente apresentados, não na frequência pretendida.
+    private val frameRate = DisplayedFrameRate()
+    private var measuredFps = 0f
 
     private val dark: Boolean get() = when (SettingsStore.theme(this)) {
         "dark" -> true
@@ -138,6 +149,44 @@ class RemoteScreenActivity : Activity() {
             scaleType = ImageView.ScaleType.CENTER_INSIDE
             setPadding(dp(11), dp(11), dp(11), dp(11))
         }
+
+    /** Botão acessível com contraste suficiente sobre vídeo, sem fundo opaco. */
+    private fun floatingButton(iconId: Int, label: String, action: () -> Unit): ImageButton =
+        ImageButton(this).apply {
+            setImageResource(iconId)
+            imageTintList = ColorStateList.valueOf(Color.WHITE)
+            contentDescription = label
+            background = shape(Color.TRANSPARENT, 12)
+            scaleType = ImageView.ScaleType.CENTER_INSIDE
+            setPadding(dp(10), dp(10), dp(10), dp(10))
+            isClickable = true
+            isFocusable = true
+            setOnClickListener { action() }
+            setOnLongClickListener { toast(label); true }
+        }
+
+    /** Transparência aplicada apenas à superfície; os ícones permanecem legíveis. */
+    private fun floatingBar(): LinearLayout = LinearLayout(this).apply {
+        gravity = Gravity.CENTER_VERTICAL
+        orientation = LinearLayout.HORIZONTAL
+        background = shape(Color.argb(112, 12, 21, 32), 19)
+        elevation = dp(6).toFloat()
+        setPadding(dp(3), dp(2), dp(3), dp(2))
+        visibility = View.GONE
+    }
+
+    private fun addFloatingButton(bar: LinearLayout, button: ImageButton, width: Int = 42) {
+        bar.addView(button, LinearLayout.LayoutParams(dp(width), dp(42)))
+    }
+
+    private fun toggleRemoteTouch() {
+        if (!touchReady) {
+            toast("Ative Acessibilidade e mantenha a captura autorizada")
+            return
+        }
+        touchMode = !touchMode
+        updateControls()
+    }
 
     private fun rowAction(image: Int, label: String, action: () -> Unit): Triple<LinearLayout, ImageView, TextView> {
         val container = LinearLayout(this).apply {
@@ -207,6 +256,7 @@ class RemoteScreenActivity : Activity() {
         bitmap?.recycle(); bitmap = null
         lastPreviewJpeg = null
         lastSequence = -1L; lastFrameAt = 0L
+        frameRate.reset(); measuredFps = 0f
     }
 
     private val poll = object : Runnable {
@@ -331,7 +381,6 @@ class RemoteScreenActivity : Activity() {
                 main.post {
                     fetching.set(false)
                     if (!active || isFinishing || isDestroyed) { nextBitmap?.recycle(); return@post }
-                    if (nextStatus != previousStatus) { status.text = nextStatus; previousStatus = nextStatus }
                     sharingReady = sharing
                     touchReady = canTouch && sharing
                     audioReady = canAudio && sharing
@@ -343,8 +392,18 @@ class RemoteScreenActivity : Activity() {
                         bitmap = nextBitmap
                         lastPreviewJpeg = nextJpeg
                         lastFrameAt = SystemClock.elapsedRealtime()
+                        measuredFps = frameRate.record(lastFrameAt)
                         if (nextSequence >= 0) lastSequence = nextSequence
                     } else if (clear) clearFrame()
+                    measuredFps = frameRate.current(SystemClock.elapsedRealtime())
+                    val realStatus = if (sharing && measuredFps > 0f)
+                        "$nextStatus · %.1f FPS reais".format(java.util.Locale.US, measuredFps)
+                    else nextStatus
+                    if (realStatus != previousStatus) {
+                        status.text = realStatus
+                        fullscreenStatus.text = realStatus
+                        previousStatus = realStatus
+                    }
                     placeholder.visibility = if (bitmap == null) View.VISIBLE else View.GONE
                     updateControls()
                     main.postDelayed(this, retryDelay)
@@ -448,18 +507,20 @@ class RemoteScreenActivity : Activity() {
             gravity = Gravity.CENTER; setPadding(0, dp(12), 0, 0)
         })
         stage.addView(placeholder, FrameLayout.LayoutParams(-1, -1))
-        fullscreenExit = icon(R.drawable.ic_remote_exitfullscreen, "Sair da tela cheia", Color.rgb(243, 246, 248)).apply {
-            visibility = View.GONE
-            setOnClickListener { toggleFullscreen() }
+        // Os dois painéis abaixo só são exibidos em tela cheia. A captura continua
+        // preenchendo todo o FrameLayout e recebe os gestos fora da área dos botões.
+        fullscreenTopBar = floatingBar()
+        fullscreenExit = floatingButton(R.drawable.ic_remote_exitfullscreen, "Sair da tela cheia") {
+            toggleFullscreen()
         }
-        stage.addView(fullscreenExit, FrameLayout.LayoutParams(dp(48), dp(48),
-            Gravity.TOP or Gravity.END).apply { setMargins(0, dp(18), dp(12), 0) })
-        fullscreenFit = text("Preencher", 12f, Color.BLACK, true).apply {
+        addFloatingButton(fullscreenTopBar, fullscreenExit)
+        fullscreenFit = text("Preencher", 12f, Color.WHITE, true).apply {
             gravity = Gravity.CENTER
-            background = shape(Color.rgb(243, 246, 248), 12)
             visibility = View.GONE
-            isClickable = true; isFocusable = true
+            isClickable = true
+            isFocusable = true
             contentDescription = "Alternar entre ajustar imagem e preencher tela"
+            setPadding(dp(4), 0, dp(4), 0)
             setOnClickListener {
                 fillFullscreen = !fillFullscreen
                 picture.scaleType = if (fillFullscreen) ImageView.ScaleType.CENTER_CROP
@@ -467,8 +528,52 @@ class RemoteScreenActivity : Activity() {
                 text = if (fillFullscreen) "Ajustar" else "Preencher"
             }
         }
-        stage.addView(fullscreenFit, FrameLayout.LayoutParams(dp(100), dp(48),
-            Gravity.TOP or Gravity.END).apply { setMargins(0, dp(18), dp(68), 0) })
+        fullscreenTopBar.addView(fullscreenFit, LinearLayout.LayoutParams(dp(75), dp(42)))
+        fullscreenPrint = floatingButton(R.drawable.ic_remote_camera, "Salvar print da tela remota") {
+            saveQuickFrame()
+        }
+        fullscreenPrint.setOnLongClickListener { saveHighQuality(); true }
+        addFloatingButton(fullscreenTopBar, fullscreenPrint)
+        fullscreenAudio = floatingButton(R.drawable.ic_remote_volume, "Ouvir áudio remoto") {
+            if (audioWanted) stopAudio() else startAudio()
+        }
+        addFloatingButton(fullscreenTopBar, fullscreenAudio)
+        val hd = floatingButton(R.drawable.ic_remote_save, "Salvar Foto HD") { saveHighQuality() }
+        addFloatingButton(fullscreenTopBar, hd)
+        stage.addView(fullscreenTopBar, FrameLayout.LayoutParams(-2, -2,
+            Gravity.TOP or Gravity.END).apply { setMargins(dp(7), dp(12), dp(7), 0) })
+
+        fullscreenBottomBar = floatingBar()
+        fun navOverlay(image: Int, label: String, action: String) {
+            val item = floatingButton(image, label) { remoteCommand(action) }
+            addFloatingButton(fullscreenBottomBar, item)
+            fullscreenNavigation.add(item)
+        }
+        navOverlay(R.drawable.ic_remote_back, "Voltar no celular remoto", "back")
+        navOverlay(R.drawable.ic_remote_home, "Início no celular remoto", "home")
+        navOverlay(android.R.drawable.ic_menu_recent_history, "Recentes no celular remoto", "recents")
+        navOverlay(R.drawable.ic_bell, "Notificações no celular remoto", "notifications")
+        fullscreenTouch = floatingButton(R.drawable.ic_remote_hand, "Ligar/desligar toque remoto") {
+            toggleRemoteTouch()
+        }
+        addFloatingButton(fullscreenBottomBar, fullscreenTouch)
+        val fullscreenWake = floatingButton(R.drawable.ic_remote_wake, "Acender tela remota") {
+            wakeRemoteScreen()
+        }
+        addFloatingButton(fullscreenBottomBar, fullscreenWake)
+        stage.addView(fullscreenBottomBar, FrameLayout.LayoutParams(-2, -2,
+            Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply { setMargins(dp(6), 0, dp(6), dp(14)) })
+
+        fullscreenStatus = text("Conectando ao monitorado...", 10f, Color.WHITE).apply {
+            maxLines = 1
+            maxWidth = dp(240)
+            ellipsize = android.text.TextUtils.TruncateAt.END
+            background = shape(Color.argb(134, 12, 21, 32), 10)
+            setPadding(dp(9), dp(5), dp(9), dp(5))
+            visibility = View.GONE
+        }
+        stage.addView(fullscreenStatus, FrameLayout.LayoutParams(-2, -2,
+            Gravity.BOTTOM or Gravity.START).apply { setMargins(dp(8), 0, dp(8), dp(66)) })
         normalStageHeight = minOf((resources.displayMetrics.heightPixels * 0.59f).toInt(),
             (resources.displayMetrics.widthPixels * 1.44f).toInt())
         stageSlot.addView(stage, LinearLayout.LayoutParams(-1, normalStageHeight))
@@ -487,9 +592,7 @@ class RemoteScreenActivity : Activity() {
 
         val tools = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
         val touch = rowAction(R.drawable.ic_remote_hand, "Toque na imagem", {
-            if (!touchReady) { toast("Ative Acessibilidade e mantenha a captura autorizada"); return@rowAction }
-            touchMode = !touchMode
-            updateControls()
+            toggleRemoteTouch()
         })
         touchAction = touch.first; touchIcon = touch.second; touchLabel = touch.third
         tools.addView(touchAction, LinearLayout.LayoutParams(0, dp(64), 1f).apply { rightMargin = dp(7) })
@@ -511,16 +614,20 @@ class RemoteScreenActivity : Activity() {
                 val safe = insets.getInsets(WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout())
                 normalScroll.setPadding(0, if (isFullscreen) 0 else safe.top,
                     0, if (isFullscreen) 0 else safe.bottom)
-                if (::fullscreenExit.isInitialized) {
-                    (fullscreenExit.layoutParams as? FrameLayout.LayoutParams)?.let { params ->
-                        params.topMargin = safe.top + dp(12)
-                        fullscreenExit.layoutParams = params
+                // No modo imersivo as barras somem, mas recortes de câmera ainda
+                // devem ser respeitados. Posicionar painéis sem cobrir a área segura.
+                val cutout = insets.getInsets(WindowInsets.Type.displayCutout())
+                if (::fullscreenTopBar.isInitialized) {
+                    (fullscreenTopBar.layoutParams as? FrameLayout.LayoutParams)?.let { params ->
+                        params.topMargin = dp(12) + if (isFullscreen) cutout.top else safe.top
+                        params.rightMargin = dp(7) + cutout.right
+                        fullscreenTopBar.layoutParams = params
                     }
                 }
-                if (::fullscreenFit.isInitialized) {
-                    (fullscreenFit.layoutParams as? FrameLayout.LayoutParams)?.let { params ->
-                        params.topMargin = safe.top + dp(12)
-                        fullscreenFit.layoutParams = params
+                if (::fullscreenBottomBar.isInitialized) {
+                    (fullscreenBottomBar.layoutParams as? FrameLayout.LayoutParams)?.let { params ->
+                        params.bottomMargin = dp(14) + if (isFullscreen) cutout.bottom else safe.bottom
+                        fullscreenBottomBar.layoutParams = params
                     }
                 }
                 insets
@@ -528,6 +635,14 @@ class RemoteScreenActivity : Activity() {
             screenRoot.requestApplyInsets()
         }
         updateControls()
+        if (savedInstanceState?.getBoolean("remote_viewer_fullscreen", false) == true) {
+            toggleFullscreen()
+        }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putBoolean("remote_viewer_fullscreen", isFullscreen)
+        super.onSaveInstanceState(outState)
     }
 
     private fun updateControls() {
@@ -552,6 +667,26 @@ class RemoteScreenActivity : Activity() {
         audioButton.alpha = if (audioReady) 1f else 0.42f
         audioButton.setImageResource(if (audioWanted) R.drawable.ic_remote_mute else R.drawable.ic_remote_volume)
         audioButton.contentDescription = if (audioWanted) "Silenciar áudio remoto" else "Ouvir áudio remoto"
+        if (::fullscreenAudio.isInitialized) {
+            fullscreenAudio.isEnabled = audioReady
+            fullscreenAudio.alpha = if (audioReady) 1f else 0.52f
+            fullscreenAudio.setImageResource(if (audioWanted) R.drawable.ic_remote_mute
+                else R.drawable.ic_remote_volume)
+            fullscreenAudio.contentDescription = audioButton.contentDescription
+        }
+        if (::fullscreenPrint.isInitialized) {
+            // No AVC, o Print solicita a foto HD quando não há JPEG da prévia.
+            fullscreenPrint.isEnabled = cameraButton.isEnabled
+            fullscreenPrint.alpha = cameraButton.alpha
+        }
+        if (::fullscreenTouch.isInitialized) {
+            fullscreenTouch.imageTintList = ColorStateList.valueOf(
+                if (touchMode && touchReady) accent else Color.WHITE)
+            fullscreenTouch.alpha = if (touchReady) 1f else 0.62f
+            fullscreenTouch.contentDescription = if (touchMode) "Desligar toque remoto"
+                else "Ativar toque remoto"
+        }
+        for (item in fullscreenNavigation) item.alpha = if (touchReady) 1f else 0.62f
     }
 
     private fun toggleFullscreen() {
@@ -562,6 +697,9 @@ class RemoteScreenActivity : Activity() {
             stage.background = shape(Color.BLACK, 0)
             stage.clipToOutline = false
             screenRoot.addView(stage, FrameLayout.LayoutParams(-1, -1))
+            fullscreenTopBar.visibility = View.VISIBLE
+            fullscreenBottomBar.visibility = View.VISIBLE
+            fullscreenStatus.visibility = View.VISIBLE
             fullscreenExit.visibility = View.VISIBLE
             fullscreenFit.visibility = View.VISIBLE
             applyImmersiveMode(true)
@@ -570,6 +708,9 @@ class RemoteScreenActivity : Activity() {
             screenRoot.removeView(stage)
             stage.background = shape(Color.rgb(9, 16, 24), 22)
             stage.clipToOutline = true
+            fullscreenTopBar.visibility = View.GONE
+            fullscreenBottomBar.visibility = View.GONE
+            fullscreenStatus.visibility = View.GONE
             fullscreenExit.visibility = View.GONE
             fullscreenFit.visibility = View.GONE
             picture.scaleType = ImageView.ScaleType.FIT_CENTER

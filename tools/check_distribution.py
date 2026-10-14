@@ -16,7 +16,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.40" and code.group(1) == "40", "Versões incompatíveis"
+assert version == "0.1.0-alpha.41" and code.group(1) == "41", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -564,3 +564,24 @@ assert 'wakeScreen' in server and 'VideoStreamPolicy.allowWake' in server and 'W
 assert 'wakeRemoteScreen' in viewer and 'ic_remote_wake' in viewer
 assert (root / 'app/src/test/java/br/dev/monitorremoto/video/VideoStreamPolicyTest.kt').exists()
 print('PASSOU: alpha.40 AVC/fallback JPEG, limite de quadros, permissão local de acordar tela')
+
+# alpha.41: botões flutuantes e ações reais na tela cheia sem fingir permissões.
+viewer = (root / 'app/src/main/java/br/dev/monitorremoto/ui/RemoteScreenActivity.kt').read_text()
+for token in ['fullscreenTopBar', 'fullscreenBottomBar', 'fullscreenStatus',
+              'floatingButton(', 'floatingBar()', 'navOverlay(', 'toggleRemoteTouch()',
+              'RemoteClient.wakeScreen(', 'saveQuickFrame()', 'saveHighQuality()',
+              'fullscreenTopBar.visibility = View.VISIBLE',
+              'fullscreenBottomBar.visibility = View.VISIBLE',
+              'fullscreenTopBar.visibility = View.GONE',
+              'fullscreenBottomBar.visibility = View.GONE',
+              'remote_viewer_fullscreen', 'WindowInsets.Type.displayCutout()']:
+    assert token in viewer, token
+for gesture in ['back', 'home', 'recents', 'notifications']:
+    assert f'"{gesture}")' in viewer, gesture
+assert 'Color.argb(112, 12, 21, 32)' in viewer
+assert 'fullscreenStatus.text = realStatus' in viewer and 'FPS reais' in viewer
+assert 'if (!global && !touchMode)' in viewer
+print('PASSOU: alpha.41, overlay translúcido, navegação, foto/áudio/despertar e rotação')
+
+assert 'DisplayedFrameRate' in viewer and (root / 'app/src/test/java/br/dev/monitorremoto/core/DisplayedFrameRateTest.kt').exists()
+print('PASSOU: alpha.41, cálculo de FPS medido com testes JVM')
