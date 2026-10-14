@@ -1,11 +1,12 @@
-## 0.1.0-alpha.48 (14/10/2026)
+## 0.1.0-alpha.49 (14/10/2026)
 
-- Modernizado o visual do **Modo avançado ADB** com cartões mais limpos, resumo no topo, chip de estado (“Conectado”, “Pareado”, “Aguardando” ou “Desconectado”) e ações principais destacadas na abertura.
-- A tela inicial agora segue o fluxo pedido pelo usuário: botão principal dinâmico (**+ Configurar novo** ou **Controlar aparelho**), ação secundária (**Conectar** ou **Desconectar**) e botão para **Mostrar/Ocultar configurações avançadas**.
-- Melhoradas as instruções do assistente com passos numerados. No papel **Permitir controle deste celular**, os passos agora orientam claramente abrir Configurações, ativar Opções do desenvolvedor/Depuração sem fios, usar o outro celular como controlador e concluir QR ou código.
-- Adicionados botões diretos para **Abrir Configurações do Android** e **Abrir Opções do desenvolvedor**, com fallback seguro para Configurações gerais quando necessário.
-- Mantida a separação honesta entre **parear** e **conectar**: pareamento bem-sucedido não aparece como conexão ativa, e o status conectado só aparece com `AdbClient.connected()` confirmado. `FLAG_SECURE` continua restrito ao QR temporário.
-- Sincronizados `versionName=0.1.0-alpha.48`, `versionCode=48`, `AppVersion`, documentação e verificador. Verificações estáticas locais pendentes de conclusão nesta entrega; build Gradle Android e testes físicos continuam pendentes.
+- Implementada a primeira etapa de **dispositivos ADB salvos**: após uma conexão ADB confirmada, o controlador grava nome, IP, porta e horário da última conexão bem-sucedida.
+- A tela inicial do **Modo avançado ADB** passou a mostrar a seção **Conectados anteriormente**, com cartões inspirados no layout sugerido e botão **Reconectar** por aparelho.
+- O botão **Reconectar** tenta usar diretamente o último IP e a última porta salvos, sem obrigar repetir o assistente completo quando o dispositivo já foi autorizado antes.
+- O fluxo principal ficou mais limpo: **+ Adicionar outro celular** para nova configuração, **Configurações avançadas** recolhidas por padrão e ação contextual **Controlar aparelho / Desconectar** somente quando há sessão ativa.
+- Mantidas as melhorias do assistente guiado: passos numerados, atalhos para Configurações/Opções do desenvolvedor no monitorado e separação clara entre pareamento e conexão.
+- Adicionado armazenamento local `AdbKnownDevices`, atualização do resumo visual de estado e opção de esquecer aparelho salvo por toque longo no cartão.
+- Sincronizados `versionName=0.1.0-alpha.49`, `versionCode=49`, `AppVersion`, README, AGENTS, RELEASE_NOTES, documentação ADB e verificador estrutural. Build Gradle/Android completo e testes físicos em dois celulares continuam pendentes.
 ## 0.1.0-alpha.46 (14/10/2026)
 
 - Corrigidos dois erros de compilação de `:app:compileDebugKotlin` do workflow 45, em `RemoteFilesActivity.kt:59` e `:66`. No escopo `TextView.apply`/`Button.apply`, `foreground` referia-se a `View.foreground: Drawable`, enquanto `setTextColor()` exige `Int` ou `ColorStateList`. Qualificado `this@RemoteFilesActivity.foreground` nas duas ocorrências.

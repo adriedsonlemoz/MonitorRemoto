@@ -1,15 +1,17 @@
-# Modo avançado ADB — implementação alpha.48
+# Modo avançado ADB — implementação alpha.49
 
-## Fluxo guiado alpha.48
+## Fluxo guiado alpha.49
 
-A alpha.48 moderniza a interface do **Modo avançado ADB** sem alterar o princípio de segurança do fluxo. A tela inicial mostra um resumo visual do estado (desconectado, pareado, aguardando ou conectado), ações principais e um botão para expandir apenas quando necessário as configurações avançadas.
+A alpha.49 evolui o **Modo avançado ADB** para um fluxo de reconexão mais prático. A tela inicial mostra um resumo visual do estado, a seção **Conectados anteriormente** e um conjunto de cartões para os aparelhos ADB que já conectaram com sucesso neste controlador. Cada cartão guarda nome, IP, porta e horário da última conexão bem-sucedida.
+
+O botão **Reconectar** tenta reutilizar diretamente o último IP e a última porta ADB conhecidos. Isso reduz a repetição do processo completo quando o aparelho já foi autorizado antes. O botão **+ Adicionar outro celular** continua disponível para um novo pareamento, enquanto mDNS, limpeza de credencial e demais recursos técnicos ficam atrás de **Configurações avançadas**.
 
 O assistente continua separado por papel:
 
 1. **Controlar outro celular**: este aparelho gera o QR ou recebe o código, depois realiza a conexão ADB.
 2. **Permitir controle deste celular**: este aparelho apenas autoriza a Depuração sem fios nas Configurações do Android e segue passos guiados.
 
-As instruções foram reescritas em **passos numerados**, com botões diretos para abrir **Configurações do Android** e **Opções do desenvolvedor**. O pareamento por QR/código permanece distinto da conexão ADB final. O status conectado só aparece depois que `AdbClient.connected()` confirma a sessão ativa.
+As instruções foram reescritas em **passos numerados**, com botões diretos para abrir **Configurações do Android** e **Opções do desenvolvedor**. O pareamento por QR/código permanece distinto da conexão ADB final. O status conectado só aparece depois que `AdbClient.connected()` confirma a sessão ativa. Os dispositivos salvos servem para conveniência; não provam identidade criptográfica do aparelho.
 
 ## Escopo entregue
 

@@ -1,15 +1,16 @@
 # Monitor Remoto
 
-**v0.1.0-alpha.48 / versionCode 48** · Android 8.0+ · Kotlin 2.2.21 · AGP 8.13.2 · Gradle 8.13
+**v0.1.0-alpha.49 / versionCode 49** · Android 8.0+ · Kotlin 2.2.21 · AGP 8.13.2 · Gradle 8.13
 
-## Assistente visual ADB (alpha.48)
+## Reconexão rápida ADB (alpha.49)
 
-- **Visual renovado:** o Modo avançado ADB abre com um **resumo moderno do estado**, chip visual, ações principais e área avançada recolhida por padrão.
-- **Fluxo guiado em linguagem simples:** **Configurar novo** → escolher **Controlar outro celular** ou **Permitir controle deste celular** → seguir apenas as etapas daquele papel.
-- **Instruções em passos numerados:** no telefone monitorado, o app explica melhor o processo e oferece botões diretos para **Abrir Configurações do Android** e **Abrir Opções do desenvolvedor**.
-- **Estado honesto:** o resumo diferencia **Desconectado**, **Pareado**, **Aguardando** e **Conectado**. O app só mostra conectado quando a sessão ADB TLS realmente está ativa.
-- **Avançado escondido por padrão:** mDNS, limpeza de credencial e diagnóstico ficam atrás de **Mostrar configurações avançadas**, reduzindo a poluição visual.
-- **QR temporário protegido:** `FLAG_SECURE` é aplicado somente enquanto o QR ADB sensível estiver visível. Parear continua diferente de conectar.
+- **Dispositivos conectados anteriormente:** o Modo avançado ADB agora mantém uma lista dos aparelhos já conectados com sucesso neste controlador.
+- **Reconectar com um toque:** cada cartão salvo exibe **Reconectar** e reutiliza o último IP e a última porta ADB conhecidos, reduzindo a repetição de etapas.
+- **Adicionar outro celular sem poluição visual:** o fluxo principal ficou mais simples, com **+ Adicionar outro celular** e as opções técnicas atrás de **Configurações avançadas**.
+- **Visual alinhado ao modelo sugerido:** resumo superior com chip de estado, seção **Conectados anteriormente** e botões mais limpos.
+- **Assistente passo a passo melhorado:** no papel **Permitir controle deste celular**, o app explica melhor a sequência e oferece atalhos para **Abrir Configurações do Android** e **Abrir Opções do desenvolvedor**.
+- **Estado honesto e segurança mantida:** o app diferencia **Desconectado**, **Pareado**, **Aguardando** e **Conectado**; `FLAG_SECURE` segue ativo apenas durante a exibição do QR temporário.
+
 
 
 ## Correção da compilação (alpha.46)
@@ -176,7 +177,7 @@ A Home, o Modo Monitorado, a escolha de conexão, os submenus de Configurações
 
 ## Como utilizar
 
-1. Execute GitHub Actions > **Gerar APK e Release** > Run workflow. Para baixar **APK sem ZIP**, use Releases > `v0.1.0-alpha.48` > Assets > **`MonitorRemoto-v0.1.0-alpha.48.apk`**. Em Actions > Artifacts, um APK de contingência (quando presente) continua vindo em ZIP por comportamento padrão do GitHub. Instale o mesmo APK nos dois aparelhos.
+1. Execute GitHub Actions > **Gerar APK e Release** > Run workflow. Para baixar **APK sem ZIP**, use Releases > `v0.1.0-alpha.49` > Assets > **`MonitorRemoto-v0.1.0-alpha.49.apk`**. Em Actions > Artifacts, um APK de contingência (quando presente) continua vindo em ZIP por comportamento padrão do GitHub. Instale o mesmo APK nos dois aparelhos.
 2. No telefone secundário: na nova **Home**, toque em **Monitorar este aparelho**; autorize a notificação de serviço e ative o monitoramento. Em Configurações, conceda apenas as permissões necessárias e selecione os aplicativos cujas notificações deseja compartilhar.
 3. Na página Monitorado, toque no cartão **Gerar QR**. Escolha o IP privado acessível. O QR expira em 2 minutos e é válido para um único pareamento.
 4. No telefone principal: na **Home**, toque em **Conectar novo aparelho > QR Code**, aponte a câmera na janela compacta e confirme os dados do aparelho antes do pareamento. Para um aparelho salvo, use **Aparelhos anteriores > Conectar**. A digitação manual de IP e chave continua disponível.
@@ -203,7 +204,7 @@ Requer Android SDK API 36, Java 17, Gradle 8.13. O repositório ainda não inclu
 gradle :app:testDebugUnitTest :app:assembleDebug
 ```
 
-APK local de teste: `app/build/outputs/apk/debug/app-debug.apk`. O workflow copia esse arquivo ou o Release assinado como **`MonitorRemoto-v0.1.0-alpha.48.apk`**. Baixe diretamente na aba GitHub **Releases**. **O APK não está incluído neste ZIP de código-fonte.** Veja `docs/PAIRING_QR.md` para segurança do QR.
+APK local de teste: `app/build/outputs/apk/debug/app-debug.apk`. O workflow copia esse arquivo ou o Release assinado como **`MonitorRemoto-v0.1.0-alpha.49.apk`**. Baixe diretamente na aba GitHub **Releases**. **O APK não está incluído neste ZIP de código-fonte.** Veja `docs/PAIRING_QR.md` para segurança do QR.
 
 Opcional: configure os quatro Secrets de assinatura para gerar APK Release assinado e AAB. Ver `docs/APK_DOWNLOAD.md`. Preservar a mesma keystore entre builds é essencial para atualizações sem reinstalação.
 

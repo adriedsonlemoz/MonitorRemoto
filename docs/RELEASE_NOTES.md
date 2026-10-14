@@ -1,12 +1,13 @@
-# Monitor Remoto v0.1.0-alpha.48
+# Monitor Remoto v0.1.0-alpha.49
 
-## Assistente de configuração ADB (alpha.48)
+## Reconexão rápida de dispositivos ADB (alpha.49)
 
-- Visual do Modo avançado ADB atualizado para um layout mais limpo, com resumo no topo, chip de status e ações principais destacadas.
-- Tela inicial simplificada: botão principal dinâmico, ação secundária para conectar/desconectar e área de configurações avançadas recolhida por padrão.
-- Assistente com passos numerados mais claros, especialmente para o papel **Permitir controle deste celular**.
-- Atalhos diretos para abrir **Configurações do Android** e **Opções do desenvolvedor** no monitorado.
-- Continuidade da segurança: QR temporário protegido por `FLAG_SECURE`, diferenciação entre pareamento e conexão e estado conectado apenas com sessão ADB TLS ativa.
+- O Modo avançado ADB agora lista os **dispositivos conectados anteriormente** neste controlador.
+- Cada cartão salvo mostra nome, última conexão e botão **Reconectar** para reutilizar o último IP e a última porta conhecidos.
+- Fluxo principal mais limpo, seguindo o design sugerido: seção de aparelhos salvos, **+ Adicionar outro celular** e **Configurações avançadas** recolhidas por padrão.
+- Continuidade do assistente guiado com passos melhores, atalhos para **Configurações do Android** e **Opções do desenvolvedor** no telefone monitorado.
+- O app continua mostrando **Conectado** apenas com sessão ADB TLS ativa e mantém `FLAG_SECURE` restrito ao QR temporário.
+
 
 
 ---

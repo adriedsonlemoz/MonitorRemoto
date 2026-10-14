@@ -14,23 +14,27 @@ import android.os.Looper
 import android.os.SystemClock
 import android.provider.Settings
 import android.text.InputType
+import android.text.format.DateFormat
 import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
 import android.widget.*
 import br.dev.monitorremoto.adb.AdbClient
+import br.dev.monitorremoto.adb.AdbKnownDevice
+import br.dev.monitorremoto.adb.AdbKnownDevices
 import br.dev.monitorremoto.adb.AdbDiscovery
 import br.dev.monitorremoto.adb.AdbIdentity
 import br.dev.monitorremoto.adb.AdbPolicy
 import br.dev.monitorremoto.core.SettingsStore
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.MultiFormatWriter
+import java.util.Calendar
 import java.util.concurrent.Executors
 
 /** Fluxo ADB explícito com visual mais simples: selecionar papel, parear e só depois conectar. */
 class AdbActivity : Activity() {
     private enum class Page { START, ROLE, METHOD, QR, CODE, CONNECT, CONNECTED, MONITORED, MONITORED_CHECK, TOOLS }
-    private enum class ButtonTone { PRIMARY, SECONDARY, OUTLINE }
+    private enum class ButtonTone { PRIMARY, SECONDARY, OUTLINE, DARK }
 
     private val handler = Handler(Looper.getMainLooper())
     private val worker = Executors.newSingleThreadExecutor()
@@ -67,6 +71,7 @@ class AdbActivity : Activity() {
     private lateinit var startHint: TextView
     private lateinit var advancedToggleButton: Button
     private lateinit var advancedPanel: LinearLayout
+    private lateinit var savedDevicesContainer: LinearLayout
 
     private val dark get() = when (SettingsStore.theme(this)) {
         "dark" -> true
@@ -94,6 +99,35 @@ class AdbActivity : Activity() {
             if (strokeWidth > 0) setStroke(dp(strokeWidth), strokeColor)
         }
 
+    private fun styleButton(view: Button, tone: ButtonTone) {
+        when (tone) {
+            ButtonTone.PRIMARY -> {
+                view.background = rounded(blue, 16)
+                view.setTextColor(Color.WHITE)
+            }
+            ButtonTone.SECONDARY -> {
+                view.background = rounded(softCardBg, 16)
+                view.setTextColor(fg)
+            }
+            ButtonTone.OUTLINE -> {
+                view.background = rounded(cardBg, 16, 1)
+                view.setTextColor(fg)
+            }
+            ButtonTone.DARK -> {
+                view.background = rounded(if (dark) Color.rgb(10, 12, 16) else Color.rgb(17, 19, 22), 18)
+                view.setTextColor(Color.WHITE)
+            }
+        }
+    }
+
+    private fun standaloneCard(title: String? = null): LinearLayout = LinearLayout(this).apply {
+        orientation = LinearLayout.VERTICAL
+        setPadding(dp(18), dp(18), dp(18), dp(18))
+        background = rounded(cardBg, 22, 1)
+        elevation = 0f
+        if (!title.isNullOrBlank()) addView(text(title, 14f, secondary = true, bold = true))
+    }
+
     private fun text(
         value: String,
         size: Float = 14f,
@@ -120,20 +154,7 @@ class AdbActivity : Activity() {
         isAllCaps = false
         minHeight = dp(52)
         elevation = 0f
-        when (tone) {
-            ButtonTone.PRIMARY -> {
-                background = rounded(blue, 16)
-                setTextColor(Color.WHITE)
-            }
-            ButtonTone.SECONDARY -> {
-                background = rounded(softCardBg, 16)
-                setTextColor(fg)
-            }
-            ButtonTone.OUTLINE -> {
-                background = rounded(cardBg, 16, 1)
-                setTextColor(fg)
-            }
-        }
+        styleButton(this, tone)
         setOnClickListener { if (allowBusy || !busy) action() }
     }
 
@@ -156,13 +177,8 @@ class AdbActivity : Activity() {
         layoutParams = LinearLayout.LayoutParams(-1, dp(56)).apply { bottomMargin = dp(10) }
     }
 
-    private fun card(root: LinearLayout, title: String? = null): LinearLayout = LinearLayout(this).apply {
-        orientation = LinearLayout.VERTICAL
-        setPadding(dp(18), dp(18), dp(18), dp(18))
-        background = rounded(cardBg, 22, 1)
-        elevation = 0f
+    private fun card(root: LinearLayout, title: String? = null): LinearLayout = standaloneCard(title).apply {
         root.addView(this, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) })
-        if (!title.isNullOrBlank()) addView(text(title, 14f, secondary = true, bold = true))
     }
 
     private fun page(root: LinearLayout, step: Page, headline: String): LinearLayout =
@@ -202,8 +218,131 @@ class AdbActivity : Activity() {
         advancedVisible = show
         if (this::advancedPanel.isInitialized) advancedPanel.visibility = if (show) View.VISIBLE else View.GONE
         if (this::advancedToggleButton.isInitialized) {
-            advancedToggleButton.text = if (show) "Ocultar configurações avançadas ▲" else "Mostrar configurações avançadas ▼"
+            advancedToggleButton.text = if (show) "Ocultar configurações avançadas ▲" else "Configurações avançadas ▼"
         }
+    }
+
+    private fun formatLastConnection(whenMs: Long): String {
+        if (whenMs <= 0L) return "há pouco"
+        val now = Calendar.getInstance()
+        val then = Calendar.getInstance().apply { timeInMillis = whenMs }
+        val time = DateFormat.format("HH:mm", whenMs).toString()
+        return when {
+            now.get(Calendar.YEAR) == then.get(Calendar.YEAR) &&
+                now.get(Calendar.DAY_OF_YEAR) == then.get(Calendar.DAY_OF_YEAR) -> "hoje, $time"
+            now.get(Calendar.YEAR) == then.get(Calendar.YEAR) &&
+                now.get(Calendar.DAY_OF_YEAR) - then.get(Calendar.DAY_OF_YEAR) == 1 -> "ontem, $time"
+            else -> DateFormat.format("dd/MM, HH:mm", whenMs).toString()
+        }
+    }
+
+    private fun renderSavedDevices() {
+        if (!this::savedDevicesContainer.isInitialized) return
+        savedDevicesContainer.removeAllViews()
+        val known = AdbKnownDevices.load(this)
+        if (known.isEmpty()) {
+            savedDevicesContainer.addView(
+                standaloneCard().apply {
+                    addView(text("Nenhum celular salvo ainda", 18f, bold = true))
+                    addView(text("Toque em Adicionar outro celular para fazer o primeiro pareamento e a primeira conexão.", 14f, secondary = true))
+                },
+                LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) }
+            )
+            return
+        }
+        known.forEach { device ->
+            val tile = standaloneCard().apply {
+                val row = LinearLayout(this@AdbActivity).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                }
+                val texts = LinearLayout(this@AdbActivity).apply {
+                    orientation = LinearLayout.VERTICAL
+                    layoutParams = LinearLayout.LayoutParams(0, -2, 1f)
+                }
+                texts.addView(text(device.name, 22f, bold = true))
+                texts.addView(text("Última conexão: ${formatLastConnection(device.lastConnectedAt)}", 14f, secondary = true))
+                val active = client?.connected() == true && client?.endpoint == "${device.host}:${device.port}"
+                val statusLine = if (active) {
+                    "Conectado agora"
+                } else {
+                    "Aguardando reconexão"
+                } + if (device.androidVersion.isNotBlank()) " • Android ${device.androidVersion}" else ""
+                texts.addView(text(statusLine, 14f, secondary = true))
+                row.addView(texts)
+                addView(row)
+                addView(button(if (active) "Abrir controles" else "Reconectar", tone = ButtonTone.DARK, allowBusy = true) {
+                    if (active) {
+                        go(Page.CONNECTED)
+                    } else {
+                        attemptReconnect(device)
+                    }
+                })
+                setOnLongClickListener {
+                    AlertDialog.Builder(this@AdbActivity)
+                        .setTitle("Esquecer aparelho salvo?")
+                        .setMessage("Remover ${device.name} da lista de reconexão rápida. Isso não revoga a autorização no Android do monitorado.")
+                        .setNegativeButton("Cancelar", null)
+                        .setPositiveButton("Esquecer") { _, _ ->
+                            AdbKnownDevices.forget(this@AdbActivity, device)
+                            renderSavedDevices()
+                            updateConnection()
+                        }
+                        .show()
+                    true
+                }
+            }
+            savedDevicesContainer.addView(tile, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) })
+        }
+    }
+
+    private fun rememberConnectedDevice(name: String, host: String, port: Int, androidVersion: String) {
+        AdbKnownDevices.remember(
+            this,
+            AdbKnownDevice(
+                name = name.ifBlank { "Aparelho em $host" },
+                host = host,
+                port = port,
+                androidVersion = androidVersion,
+                lastConnectedAt = System.currentTimeMillis()
+            )
+        )
+        renderSavedDevices()
+    }
+
+    private fun attemptReconnect(device: AdbKnownDevice) {
+        connectionHost.setText(device.host)
+        connectPort.setText(device.port.toString())
+        status.text = "Tentando reconectar a ${device.name} usando o último IP e a última porta salvos."
+        connectToEndpoint(device.host, device.port)
+    }
+
+    private fun connectToEndpoint(hostValue: String, portValue: Int) {
+        var model = ""
+        var androidVersion = ""
+        runOperation(
+            "Conectando…",
+            operation = { adb ->
+                adb.connect(hostValue, portValue)
+                val lines = runCatching { adb.execute(AdbPolicy.Command.DIAGNOSTIC) }
+                    .getOrNull()?.lines()?.map { it.trim().take(72) }.orEmpty()
+                model = lines.getOrNull(0)?.takeIf { it.isNotBlank() }.orEmpty()
+                androidVersion = lines.getOrNull(1)?.takeIf { it.isNotBlank() }.orEmpty()
+                "Conectado a $hostValue:$portValue" + if (model.isNotBlank()) "\n$model" else ""
+            },
+            onSuccess = {
+                if (client?.connected() == true) {
+                    val displayName = model.ifBlank { "Aparelho em $hostValue" }
+                    reportedPhone = displayName
+                    rememberConnectedDevice(displayName, hostValue, portValue, androidVersion)
+                    status.text = "Conectado a $displayName."
+                    go(Page.CONNECTED)
+                } else {
+                    status.text = "ADB desconectou antes da confirmação. Confira a porta atual e tente novamente."
+                    renderSavedDevices()
+                }
+            }
+        )
     }
 
     private fun resetWizardFields() {
@@ -241,6 +380,7 @@ class AdbActivity : Activity() {
         if (!this::connectionLabel.isInitialized) return
         val active = client
         val connected = active?.connected() == true
+        val knownDevices = AdbKnownDevices.load(this)
         val state = AdbWizardStatus.resolve(
             connected,
             pairedThisSession,
@@ -274,23 +414,38 @@ class AdbActivity : Activity() {
                 summaryMeta.text = "A confirmação real aparece no controlador após ele conectar."
             }
             AdbWizardStatus.State.DISCONNECTED -> {
-                summaryTitle.text = "Nenhum aparelho conectado"
-                summarySubtitle.text = "Use o assistente para parear e conectar"
-                summaryMeta.text = "Uma credencial salva não prova conexão ativa."
+                if (knownDevices.isNotEmpty()) {
+                    summaryTitle.text = "Dispositivos ADB prontos para reconectar"
+                    summarySubtitle.text = "${knownDevices.size} salvo(s) neste controlador"
+                    summaryMeta.text = "Toque em Reconectar para tentar usar o último IP e a última porta salvos."
+                } else {
+                    summaryTitle.text = "Nenhum aparelho salvo ainda"
+                    summarySubtitle.text = "Adicione o primeiro celular pelo assistente"
+                    summaryMeta.text = "Uma credencial salva sozinha não prova conexão ativa."
+                }
             }
         }
 
         if (this::primaryActionButton.isInitialized) {
             if (connected) {
+                primaryActionButton.visibility = View.VISIBLE
                 primaryActionButton.text = "Controlar aparelho"
+                styleButton(primaryActionButton, ButtonTone.PRIMARY)
+                secondaryActionButton.visibility = View.VISIBLE
                 secondaryActionButton.text = "Desconectar"
-                startHint.text = "O ADB conectou de verdade. O nome exibido vem do Android do aparelho remoto."
+                styleButton(secondaryActionButton, ButtonTone.OUTLINE)
+                startHint.text = "O ADB conectou de verdade. Os aparelhos salvos continuam disponíveis para reconexão futura."
             } else {
-                primaryActionButton.text = "+ Configurar novo"
-                secondaryActionButton.text = if (pairedThisSession) "Continuar · Conectar" else "Já autorizei antes · Conectar"
-                startHint.text = "O assistente mostra cada etapa e diferencia autorização, pareamento e conexão ativa."
+                primaryActionButton.visibility = View.VISIBLE
+                primaryActionButton.text = "+ Adicionar outro celular"
+                styleButton(primaryActionButton, ButtonTone.OUTLINE)
+                secondaryActionButton.visibility = if (pairedThisSession) View.VISIBLE else View.GONE
+                secondaryActionButton.text = "Continuar · Conectar"
+                styleButton(secondaryActionButton, ButtonTone.SECONDARY)
+                startHint.text = "A lista acima guarda os aparelhos conectados anteriormente. Toque em Reconectar para tentar novamente com um toque."
             }
         }
+        renderSavedDevices()
     }
 
     override fun onCreate(state: Bundle?) {
@@ -346,7 +501,7 @@ class AdbActivity : Activity() {
             layoutParams = LinearLayout.LayoutParams(0, -2, 1f)
         }
         headerTexts.addView(text("Monitor Remoto", 16f, bold = true))
-        headerTexts.addView(text("Resumo do modo ADB", 12f, secondary = true))
+        headerTexts.addView(text("Dispositivos ADB", 12f, secondary = true))
         cardHeader.addView(headerTexts)
         connectionLabel = text("Desconectado", 13f, bold = true).apply {
             setPadding(dp(14), dp(8), dp(14), dp(8))
@@ -359,7 +514,7 @@ class AdbActivity : Activity() {
         stateCard.addView(summarySubtitle)
         summaryMeta = text("Uma credencial salva não prova conexão ativa.", 14f, secondary = true)
         stateCard.addView(summaryMeta)
-        status = text("Escolha Configurar novo para começar.", 13f, secondary = true)
+        status = text("Use Adicionar outro celular ou reconecte um aparelho salvo.", 13f, secondary = true)
         stateCard.addView(status)
 
         progress = text("ETAPA 1 DE 3", 12f, secondary = true, bold = true)
@@ -367,7 +522,11 @@ class AdbActivity : Activity() {
         root.addView(progress)
 
         val start = page(root, Page.START, "")
-        primaryActionButton = button("+ Configurar novo", tone = ButtonTone.PRIMARY, allowBusy = true) {
+        start.addView(text("Conectados anteriormente", 22f, bold = true))
+        start.addView(text("Os aparelhos abaixo já conectaram por ADB com sucesso neste controlador. Reconectar tenta usar o último IP e a última porta salvos.", 14f, secondary = true))
+        savedDevicesContainer = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        start.addView(savedDevicesContainer)
+        primaryActionButton = button("+ Adicionar outro celular", tone = ButtonTone.OUTLINE, allowBusy = true) {
             if (client?.connected() == true) {
                 go(Page.CONNECTED)
             } else {
@@ -375,7 +534,7 @@ class AdbActivity : Activity() {
             }
         }
         start.addView(primaryActionButton)
-        secondaryActionButton = button("Já autorizei antes · Conectar", tone = ButtonTone.OUTLINE, allowBusy = true) {
+        secondaryActionButton = button("Continuar · Conectar", tone = ButtonTone.SECONDARY, allowBusy = true) {
             if (client?.connected() == true) {
                 cancel()
                 status.text = "Desconectado manualmente."
@@ -386,7 +545,7 @@ class AdbActivity : Activity() {
             }
         }
         start.addView(secondaryActionButton)
-        advancedToggleButton = button("Mostrar configurações avançadas ▼", tone = ButtonTone.OUTLINE, allowBusy = true) {
+        advancedToggleButton = button("Configurações avançadas ▼", tone = ButtonTone.OUTLINE, allowBusy = true) {
             setAdvancedVisible(!advancedVisible)
         }
         start.addView(advancedToggleButton)
@@ -399,9 +558,9 @@ class AdbActivity : Activity() {
         advancedCard.addView(button("Ferramentas e diagnóstico ADB", tone = ButtonTone.SECONDARY) { go(Page.TOOLS) })
         advancedCard.addView(button("Reiniciar configuração guiada", tone = ButtonTone.SECONDARY, allowBusy = true) { startWizard() })
         start.addView(advancedPanel)
-        startHint = text("O assistente mostra cada etapa e diferencia autorização, pareamento e conexão ativa.", 14f, secondary = true)
+        startHint = text("A lista acima guarda os aparelhos conectados anteriormente. Toque em Reconectar para tentar novamente com um toque.", 14f, secondary = true)
         start.addView(startHint)
-        start.addView(text("O ADB é experimental e não transmite a tela nem desbloqueia PIN ou biometria. Para ver a tela, use o modo normal do Monitor Remoto com MediaProjection.", 13f, secondary = true))
+        start.addView(text("Dica: toque e segure um cartão salvo para esquecê-lo. O ADB continua experimental e não transmite a tela nem desbloqueia PIN ou biometria.", 13f, secondary = true))
 
         val role = page(root, Page.ROLE, "Qual será a função deste celular?")
         option(
@@ -553,31 +712,7 @@ class AdbActivity : Activity() {
         connectCard.addView(button("Conectar e identificar telefone", tone = ButtonTone.PRIMARY) {
             validate {
                 val endpoint = AdbPolicy.endpoint(connectionHost.text.toString().trim(), connectPort.text.toString().trim())
-                runOperation(
-                    "Conectando…",
-                    operation = { adb ->
-                        adb.connect(endpoint.first, endpoint.second)
-                        val lines = runCatching { adb.execute(AdbPolicy.Command.DIAGNOSTIC) }
-                            .getOrNull()?.lines()?.map { it.trim().take(72) }.orEmpty()
-                        val model = lines.getOrNull(0)?.takeIf { it.isNotBlank() }.orEmpty()
-                        val android = lines.getOrNull(1)?.takeIf { it.isNotBlank() }.orEmpty()
-                        val summary = if (model.isBlank()) {
-                            "Modelo não disponível"
-                        } else {
-                            "Modelo informado: $model" + (if (android.isNotBlank()) " • Android $android" else "")
-                        }
-                        "Conectado a ${endpoint.first}:${endpoint.second}\n$summary"
-                    },
-                    onSuccess = { result ->
-                        if (client?.connected() == true) {
-                            reportedPhone = result.substringAfter('\n', "Modelo não disponível")
-                            status.text = "Conectado a aparelho identificado pelo Android."
-                            go(Page.CONNECTED)
-                        } else {
-                            status.text = "ADB desconectou antes da confirmação. Confira a porta atual e tente novamente."
-                        }
-                    }
-                )
+                connectToEndpoint(endpoint.first, endpoint.second)
             }
         })
         connect.addView(button("Ainda preciso parear", tone = ButtonTone.OUTLINE) { go(Page.METHOD) })
@@ -727,6 +862,7 @@ class AdbActivity : Activity() {
         root.addView(text("ADB experimental. O QR ADB não é o QR normal do Monitor Remoto. Ao sair desta tela, a sessão local é encerrada; a autorização pode permanecer no Android até ser revogada manualmente.", 13f, secondary = true))
 
         setAdvancedVisible(false)
+        renderSavedDevices()
         go(Page.START)
     }
 
