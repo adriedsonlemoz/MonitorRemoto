@@ -10,9 +10,13 @@ import br.dev.monitorremoto.transport.AuthenticatedAccess
 internal fun IncomingAccessActivity.renderIncomingAccessScreen(
     peers: List<AuthenticatedAccess.Peer>,
     onStop: () -> Unit,
+    onBackToMonitor: () -> Unit,
 ) {
     val main = peers.first()
     root.removeAllViews()
+    root.addView(action("‹ Voltar ao aplicativo", false) { onBackToMonitor() },
+        LinearLayout.LayoutParams(-1, dp(52)))
+    root.addView(gap(14))
     root.addView(text("MONITOR REMOTO", 13.5f, bold = true).apply { setTextColor(accent) })
     root.addView(gap(20))
 

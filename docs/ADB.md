@@ -1,5 +1,9 @@
 # Modo avançado ADB — implementação alpha.52
 
+## Reinício remoto explícito (alpha.53)
+
+O serviço ADB `reboot:` é solicitado somente por toque explícito na opção Reiniciar da Manutenção e confirmação digitada `REINICIAR`, após reconexão ADB autorizada com o mesmo aparelho. Não inclui desligamento, bootloader, recovery, shell arbitrário nem repetição do comando após EOF/timeout. O Android pode não reativar Depuração sem fios após iniciar; em aparelho sem botão Power, há risco relevante de perda de acesso.
+
 ## Visualizador de tela com navegação por ADB (alpha.52)
 
 Após estabelecer uma sessão ADB TLS no **Modo avançado ADB**, a ação explícita **Ver tela remota • controle ADB** verifica se existe uma chave de pareamento **normal** do Monitor Remoto para o mesmo IP. Em caso negativo, apresenta as instruções para autorizar a captura de tela no aparelho monitorado, sem fingir que ADB já entrega o vídeo.

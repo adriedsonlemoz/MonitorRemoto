@@ -52,6 +52,9 @@ class RemoteFilesActivity : Activity() {
     private val foreground get() = if (dark) Color.WHITE else Color.rgb(21, 38, 55)
     private val muted get() = if (dark) Color.rgb(170, 193, 210) else Color.rgb(95, 110, 125)
     private val panelColor get() = if (dark) Color.rgb(28, 42, 60) else Color.WHITE
+    private val backgroundColor get() = if (dark) Color.rgb(15, 23, 34) else Color.rgb(247, 249, 252)
+    private val borderColor get() = if (dark) Color.rgb(61, 76, 94) else Color.rgb(224, 230, 237)
+    private val accent get() = if (dark) Color.rgb(119, 195, 235) else Color.rgb(39, 110, 197)
     private fun dp(n: Int) = (n * resources.displayMetrics.density).toInt()
     private fun label(value: String, size: Float = 14f, bold: Boolean = false) = TextView(this).apply {
         text = value
@@ -63,9 +66,20 @@ class RemoteFilesActivity : Activity() {
     private fun button(title: String, action: () -> Unit) = Button(this).apply {
         text = title
         isAllCaps = false
+        textSize = 14f
+        minHeight = dp(50)
+        elevation = 0f
         setTextColor(this@RemoteFilesActivity.foreground)
+        background = GradientDrawable().apply {
+            setColor(panelColor)
+            cornerRadius = dp(16).toFloat()
+            setStroke(dp(1), borderColor)
+        }
         setOnClickListener { action() }
-        minHeight = dp(48)
+    }
+    private fun goBack() {
+        if (copying) { cancel.set(true); status.text = "Cancelando cópia…"; return }
+        if (path.isNotEmpty()) { path = path.dropLast(1); listFolder() } else finish()
     }
     private fun card(title: String, subtitle: String, action: () -> Unit) = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
@@ -87,9 +101,12 @@ class RemoteFilesActivity : Activity() {
         host = intent.getStringExtra(EXTRA_HOST).orEmpty()
         method = intent.getStringExtra(EXTRA_METHOD).orEmpty().ifBlank { "Chave salva" }
         key = RecentDevices.key(this, host)
-        window.statusBarColor = if (dark) Color.rgb(14, 22, 35) else Color.rgb(247, 249, 252)
-        window.navigationBarColor = window.statusBarColor
-        val scroll = ScrollView(this).apply { setBackgroundColor(window.statusBarColor); isFillViewport = true }
+        window.statusBarColor = backgroundColor
+        window.navigationBarColor = backgroundColor
+        @Suppress("DEPRECATION")
+        window.decorView.systemUiVisibility = if (dark) 0 else
+            View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+        val scroll = ScrollView(this).apply { setBackgroundColor(backgroundColor); isFillViewport = true }
         content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(18), dp(20), dp(18), dp(35))
@@ -102,19 +119,52 @@ class RemoteFilesActivity : Activity() {
 
     private fun header() {
         content.removeAllViews()
-        addCard(label("Recuperar dados", 21f, true))
+        addCard(button("‹ Voltar ${if (path.isNotEmpty()) "à pasta anterior" else "ao aparelho"}") { goBack() })
+        addCard(label("Recuperar dados", 24f, true))
         val deviceName = RecentDevices.list(this).firstOrNull { it.host.equals(host, true) }?.name.orEmpty()
-        addCard(label("Telefone: ${deviceName.ifBlank { "Não identificado" }} · $host", 12f)
-            .apply { setTextColor(muted) })
-        addCard(label("Somente arquivos da pasta escolhida e autorizada no telefone monitorado. " +
-            "Nada é recuperado de arquivos apagados ou de outros aplicativos.", 12f))
-        status = label("", 12f)
+        addCard(label("${deviceName.ifBlank { "Telefone remoto" }} · $host", 12f).apply { setTextColor(muted) })
+        val intro = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(15), dp(13), dp(15), dp(13))
+            background = GradientDrawable().apply {
+                setColor(panelColor)
+                cornerRadius = dp(18).toFloat()
+                setStroke(dp(1), borderColor)
+            }
+            addView(label("Arquivos compartilhados", 17f, true))
+            addView(label("Somente arquivos da pasta escolhida e autorizada no telefone monitorado. " +
+                "Não recupera arquivos apagados nem dados privados de outros aplicativos.", 12f).apply { setTextColor(muted) })
+        }
+        addCard(intro)
+        status = label("", 13f)
         addCard(status)
     }
-    private fun showProblem(text: String) {
+    private fun showProblem(message: String) {
         header()
-        status.text = text
-        addCard(button("Voltar") { finish() })
+        status.text = message
+        addCard(button("Voltar ao painel") { finish() })
+    }
+    private fun showListingError(message: String) {
+        status.text = "Pasta ainda indisponível"
+        val help = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(16), dp(16), dp(16), dp(16))
+            background = GradientDrawable().apply {
+                setColor(panelColor)
+                cornerRadius = dp(18).toFloat()
+                setStroke(dp(1), borderColor)
+            }
+            addView(label("Como permitir o acesso", 18f, true))
+            addView(label("1. No telefone MONITORADO, abra Monitor Remoto.", 13f))
+            addView(label("2. Acesse Configurações → Arquivos e recuperação.", 13f))
+            addView(label("3. Escolha a pasta que deseja disponibilizar e autorize a leitura no Android.", 13f))
+            addView(label("4. Volte a este controlador e toque em Tentar novamente.", 13f))
+            addView(label("Essa autorização não pode ser dada remotamente pelo controlador.", 12f).apply { setTextColor(muted) })
+        }
+        addCard(help)
+        addCard(label("Detalhes: $message", 12f).apply { setTextColor(muted) })
+        addCard(button("Tentar novamente") { listFolder() })
+        addCard(button("Voltar ao painel") { finish() })
     }
 
     private fun listFolder() {
@@ -160,7 +210,7 @@ class RemoteFilesActivity : Activity() {
                         })
                     }
                     addCard(button("Atualizar lista") { listFolder() })
-                }.onFailure { status.text = "Não foi possível listar arquivos: ${it.message ?: "falha de rede"}" }
+                }.onFailure { showListingError(it.message?.take(180) ?: "falha de conexão ou autorização") }
             }
         }
     }
@@ -263,9 +313,7 @@ class RemoteFilesActivity : Activity() {
 
     @Deprecated("Navegação simples")
     override fun onBackPressed() {
-        if (copying) { cancel.set(true); return }
-        if (path.isNotEmpty()) { path = path.dropLast(1); listFolder() }
-        else super.onBackPressed()
+        goBack()
     }
 
     override fun onDestroy() {

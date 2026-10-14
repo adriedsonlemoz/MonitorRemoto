@@ -1,4 +1,11 @@
-# Monitor Remoto v0.1.0-alpha.52
+# Monitor Remoto v0.1.0-alpha.53
+
+## Manutenção e recuperação visual (alpha.53)
+
+- Manutenção no painel de funções remotas, pop-up apenas com Reiniciar via ADB. Proteção por confirmação digitada e aviso para aparelho sem botão Power; comando normal `reboot:`.
+- Removida abertura automática da tela de acesso remoto. Notificação e painel continuam informando acessos autorizados; detalhes têm Voltar.
+- Recuperar dados agora inclui Voltar visível, Tentar novamente e instruções para liberar a pasta no monitorado.
+- Testes reais e compilação Android da versão ainda pendentes.
 
 ## Integração ADB com Ver tela (alpha.52)
 

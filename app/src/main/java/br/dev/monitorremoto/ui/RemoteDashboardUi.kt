@@ -50,6 +50,9 @@ internal fun MainActivity.displayResult(root: JSONObject, fromCache: Boolean = f
                 putExtra(RemoteScreenActivity.EXTRA_METHOD, remoteConnection.method)
             })
         },
+        actionTile(R.drawable.ic_settings, "Manutenção", "Reiniciar via ADB", enabled = true) {
+            showRemoteMaintenance()
+        },
         actionTile(R.drawable.ic_pin, "Localização", "Em breve") {
             showFeatureSoon("Localização", "A localização remota dependerá de permissão explícita no aparelho monitorado.")
         },
@@ -59,6 +62,28 @@ internal fun MainActivity.displayResult(root: JSONObject, fromCache: Boolean = f
         sectionGap(container, 12)
         container.addView(label("Exibindo a última leitura armazenada. Aguarde nova consulta para confirmar os dados.", 11f, muted = true))
     }
+}
+
+/** A conexão normal AES-GCM não confere privilégio de reinicialização. */
+private fun MainActivity.showRemoteMaintenance() {
+    val selectedHost = br.dev.monitorremoto.core.SettingsStore.getRemoteHost(this)
+    val (wrapper, layout) = dialogWrapper()
+    dialogIntro(layout, "Manutenção do aparelho remoto. Nesta versão, apenas reinicialização normal por ADB autorizado.")
+    layout.addView(label("Atenção: em um aparelho sem botão Power, um reinício com falha pode deixá-lo inacessível. Após reiniciar, a Depuração sem fios pode não voltar automaticamente.", 12f, muted = true))
+    sectionGap(layout, 12)
+    layout.addView(actionButton("Reiniciar aparelho · ADB") {
+        // A reconexão ADB é independente da conexão normal e exige confirmação adicional.
+        startActivity(Intent(this, AdbActivity::class.java).apply {
+            putExtra(AdbActivity.EXTRA_MAINTENANCE_HOST, selectedHost)
+        })
+        activeUiDialog?.dismiss()
+    })
+    val dialog = AlertDialog.Builder(this)
+        .setTitle("Manutenção")
+        .setView(wrapper)
+        .setNegativeButton("Cancelar", null)
+        .create()
+    showManagedDialog(dialog)
 }
 
 private fun MainActivity.compactMetricCard(icon: Int, title: String, value: String): LinearLayout =

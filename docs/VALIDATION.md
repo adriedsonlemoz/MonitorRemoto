@@ -1,3 +1,8 @@
+## Alpha.53 — Manutenção / navegação / Recuperar dados (14/10/2026)
+
+- Código: opção Reiniciar normal por ADB `reboot:` com confirmação digitada; remoção da Activity automática de acesso remoto, mantendo notificação/cartão; novo Voltar e instruções SAF.
+- Verificações locais: verificador estrutural aprovado; parser PSI Kotlin de 85 fontes de produção, sem erros sintáticos; XML e empacotamento verificados antes da entrega. Build Gradle/Android e testes reais de reinicialização **não executados**. Não testar a reinicialização em aparelho sem botão Power sem alternativa de recuperação.
+
 ## Alpha.52 — integração entre ADB e Ver tela (14/10/2026)
 
 - Escopo: transferência explícita de uma sessão ADB já ativa para o visualizador, somente se existir chave normal AES-GCM para o mesmo IP. Indicador separado de **Navegação ADB** e **Imagem via Monitor Remoto/MediaProjection**. Voltar/Início/Recentes usam ADB depois de uma resposta autenticada do canal de imagem; comandos restantes continuam no protocolo existente.

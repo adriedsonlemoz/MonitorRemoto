@@ -83,27 +83,12 @@ class MainActivity : Activity() {
     internal var active = false
     internal var resultBox: LinearLayout? = null
     companion object { const val EXTRA_OPEN_MONITOR = "br.dev.monitorremoto.OPEN_MONITOR" }
-    private var showingIncoming = false
-    private var lastRecoveryAttemptMs = 0L
+    // Alpha.53: acesso autenticado permanece visível no cartão Monitorado e na
+    // notificação do sistema; nunca abre Activity por cima das tarefas do usuário.
     private val incomingListener: () -> Unit = {
         handler.post {
-            if (active && !isFinishing && !isDestroyed) {
-                if (!showIncomingAccessIfNeeded() && mode == 0) render()
-            }
+            if (active && !isFinishing && !isDestroyed && mode == 0) render()
         }
-    }
-
-    /** Interrompe até mesmo diálogos de Configurações: uma nova Activity ocupa a tela. */
-    private fun showIncomingAccessIfNeeded(): Boolean {
-        if (!active || showingIncoming || isFinishing || isDestroyed ||
-            !SettingsStore.isMonitorEnabled(this) || !MonitorService.isRunning ||
-            AuthenticatedAccess.recent().isEmpty() ||
-            br.dev.monitorremoto.capture.ScreenFrameStore.sharing) return false
-        showingIncoming = true
-        startActivity(Intent(this, IncomingAccessActivity::class.java))
-        // Fecha também os diálogos abertos na Activity anterior.
-        finish()
-        return true
     }
 
     private val monitorStatusPoll = object : Runnable {
@@ -192,7 +177,7 @@ class MainActivity : Activity() {
         active = true
         AuthenticatedAccess.subscribe(incomingListener)
         render()
-        if (!showIncomingAccessIfNeeded()) recoverAuthorizedServiceIfStopped()
+        recoverAuthorizedServiceIfStopped()
         if (mode == 4) loadRemoteMessages()
         handler.removeCallbacks(monitorStatusPoll)
         if (mode == 0) handler.postDelayed(monitorStatusPoll, 5_000L)

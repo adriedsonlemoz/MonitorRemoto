@@ -51,6 +51,18 @@ class AdbClient(private val context: Context) {
             }
         }
     }
+    /** Equivalente ao ADB reboot normal: serviço `reboot:`, sem modo recovery/poweroff. */
+    fun requestNormalReboot() {
+        check(!cancelled) { "Operação cancelada" }
+        val active = connection ?: error("ADB não conectado")
+        check(connected()) { "ADB não conectado" }
+        // O dispositivo derruba a conexão durante o reboot. Não repetir se der timeout/EOF:
+        // uma exceção após o envio pode significar que a reinicialização já começou.
+        active.open("reboot:").use { stream ->
+            // A abertura do serviço já é o pedido; não enviamos argumentos nem comandos adicionais.
+        }
+    }
+
     fun requestCancel() { cancelled = true }
     fun close() {
         cancelled = true

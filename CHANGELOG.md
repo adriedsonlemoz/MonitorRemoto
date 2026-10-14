@@ -1,3 +1,11 @@
+## 0.1.0-alpha.53 (14/10/2026)
+
+- Adicionado cartão **Manutenção** aos principais recursos remotos: pop-up de opção única **Reiniciar aparelho · ADB**, com navegação até sessão ADB do mesmo aparelho. A conexão AES-GCM não concede capacidade ADB.
+- Implementado serviço ADB `reboot:` (reinício normal), sem argumentos e sem desligar/recovery. Confirmar digitando `REINICIAR` e avisar especialmente sobre ausência de botão Power. Pedido nunca é repetido automaticamente se o socket cair.
+- Removido o redirecionamento automático de `MainActivity` para `IncomingAccessActivity`, que atrapalhava a navegação. Mantidos notificação e cartão de acessos autenticados, com detalhe apenas quando o usuário solicitar, e botão Voltar na tela de detalhes.
+- Remodelada tela Recuperar dados com botão Voltar permanente e estado de erro guiando a autorização SAF local, além de Tentar novamente/Voltar ao painel.
+- VersionName/Code e documentação sincronizados. Build Android completo e testes físicos pendentes.
+
 ## 0.1.0-alpha.52 (14/10/2026)
 
 - Integrado o ADB real ao visualizador de tela remota por uma transferência explícita de sessão, sem serviço persistente nem abertura automática: o usuário toca em **Ver tela remota • controle ADB** no Modo avançado ADB.
@@ -5,7 +13,7 @@
 - Voltar/Início/Recentes usam comandos ADB permitidos durante a visualização após resposta autenticada da captura normal no mesmo host. Demais comandos e interação por toque continuam usando o protocolo Monitor Remoto e as permissões anteriores.
 - Para abrir o visualizador via ADB, exige chave normal já pareada para o mesmo IP. Sem ela, explica que o ADB não transmite vídeo nesta versão e orienta o consentimento local no monitorado.
 - Sessão ADB da ponte é encerrada quando Ver tela deixa o primeiro plano. Nenhum segredo/código/QR é persistido pelo visualizador e não foi adicionado serviço de fundo. Não há reconexão ADB durante a visualização nesta etapa.
-- Versionamento alpha.52 / versionCode 52, documentação, notas e verificações sincronizados. Build Android completo e testes de hardware continuam pendentes.
+- Versionamento alpha.52 / versionCode 53, documentação, notas e verificações sincronizados. Build Android completo e testes de hardware continuam pendentes.
 
 ## 0.1.0-alpha.51 (14/10/2026)
 
@@ -16,7 +24,7 @@
 - Mantidas as autenticações TLS, QR e identidade Android Keystore. Se a Depuração sem fios for desligada no monitorado, o app aguarda o usuário/Android reativar o serviço; não é possível ligá-la à força. A reconexão depende da disponibilidade do mesmo IP/serviço, com fallback manual.
 - Versionamento e documentação sincronizados. Validações de fonte locais não substituem build Android CI nem testes em dois aparelhos.
 
-## 0.1.0-alpha.51 (14/10/2026)
+## 0.1.0-alpha.50 (14/10/2026)
 
 - Simplificada a tela principal ADB de acordo com a referência: dispositivos salvos, Reconectar/Desconectar e Adicionar outro celular; controles técnicos recolhidos.
 - Substituídas as telas do wizard por diálogos centralizados de papel, método, QR temporário, código e orientação do monitorado. Comandos Voltar/Início/Recentes movidos para diálogo de Controles ADB nas configurações avançadas.

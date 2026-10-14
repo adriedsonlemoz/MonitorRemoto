@@ -16,7 +16,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.52" and code.group(1) == "52", "Versões incompatíveis"
+assert version == "0.1.0-alpha.53" and code.group(1) == "53", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -183,9 +183,9 @@ assert 'AppVersion.compatible(regular.optString("appVersion"))' in server
 assert 'AppVersion.compatible(pairing.optString("appVersion"))' in server
 assert 'AuthenticatedAccess.disconnected(' in server and 'fun disconnected(' in tracker
 assert 'NetworkReader.snapshot(context)' in server and 'TRANSPORT_WIFI' in network
-assert 'private fun showIncomingAccessIfNeeded()' in ui and 'IncomingAccessActivity::class.java' in ui
+assert 'private fun showIncomingAccessIfNeeded()' not in ui, 'Alpha.53: não abrir tela de acesso automaticamente'
 assert 'class IncomingAccessActivity : Activity()' in incoming
-assert ('Acesso remoto detectado' in incoming or 'Acesso remoto detectado' in ui) and ('Parar acesso' in incoming or 'Parar acesso' in ui)
+assert 'Acesso remoto detectado' in module_ui['IncomingAccessScreenUi.kt'] and 'Parar acesso' in module_ui['IncomingAccessScreenUi.kt']
 assert 'Quem está?' not in incoming and 'showWho(' not in incoming
 assert 'android:name=".ui.IncomingAccessActivity"' in manifest and 'android:exported="false"' in manifest
 assert 'ACCESS_CHANNEL' in service and 'IMPORTANCE_DEFAULT' in service
@@ -722,3 +722,25 @@ assert 'Thread({ client.close() }' in adb_bridge52 and 'session = null' in adb_b
 assert (root / 'app/src/test/java/br/dev/monitorremoto/adb/AdbScreenRoutingTest.kt').is_file()
 assert 'context.startForegroundService' not in adb_bridge52
 print('PASSOU: alpha.52, canais ADB/imagem separados, comandos limitados, handoff foreground e fechamento')
+
+# Alpha.53: reinicialização normal somente após confirmação digitada, nenhuma abertura invasiva.
+main53 = (ui_root / 'MainActivity.kt').read_text()
+dash53 = (ui_root / 'RemoteDashboardUi.kt').read_text()
+files53 = (ui_root / 'RemoteFilesActivity.kt').read_text()
+adb53 = (ui_root / 'AdbActivity.kt').read_text()
+client53 = (root / 'app/src/main/java/br/dev/monitorremoto/adb/AdbClient.kt').read_text()
+access53 = (ui_root / 'IncomingAccessScreenUi.kt').read_text()
+assert 'showIncomingAccessIfNeeded' not in main53
+assert 'AuthenticatedAccess.subscribe(incomingListener)' in main53
+assert 'ACCESS_CHANNEL' in monitor_service and 'IncomingAccessActivity::class.java' in monitor_service
+assert 'onBackToMonitor' in access53 and 'Voltar ao aplicativo' in access53
+assert 'Manutenção' in dash53 and 'Reiniciar aparelho · ADB' in dash53
+assert 'EXTRA_MAINTENANCE_HOST' in dash53 and 'putExtra(AdbActivity.EXTRA_MAINTENANCE_HOST, selectedHost)' in dash53
+assert 'requestNormalReboot' in adb53 and 'requestNormalReboot' in client53
+assert 'active.open("reboot:")' in client53
+assert '"REINICIAR"' in adb53 and 'yes.isEnabled = false' in adb53
+assert 'active.open("poweroff' not in client53 and 'active.open("reboot:recovery' not in client53
+assert 'desiredTarget = null' in adb53
+assert 'showListingError' in files53 and 'Tentar novamente' in files53 and 'Voltar ao painel' in files53
+assert '‹ Voltar ' in files53 and 'private fun goBack()' in files53
+print('PASSOU: alpha.53, reboot ADB de sistema, consentimento reforçado, aviso não invasivo e arquivos com Voltar')

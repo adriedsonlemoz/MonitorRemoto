@@ -128,8 +128,11 @@ class IncomingAccessActivity : Activity() {
             returnToMonitor()
             return
         }
-        renderIncomingAccessScreen(peers) { confirmStop() }
+        renderIncomingAccessScreen(peers, { confirmStop() }, { returnToMonitor() })
     }
+
+    @Deprecated("Compatibilidade com a navegação Android")
+    override fun onBackPressed() { returnToMonitor() }
 
     private fun confirmStop() {
         val confirmation = LinearLayout(this).apply {

@@ -1,4 +1,4 @@
-# Monitor Remoto 0.1.0-alpha.52
+# Monitor Remoto 0.1.0-alpha.53
 # Convenções permanentes do projeto Monitor Remoto
 
 - Toda alteração de código incrementa sequencialmente `versionCode` e `versionName` (ex.: `0.1.0-alpha.8` -> `0.1.0-alpha.9`). Sincronizar tela, README, CHANGELOG, RELEASE_NOTES e documentação.
@@ -21,7 +21,7 @@
 - Alpha.10: manter tema **claro padrão**, as opções da engrenagem, janela Conectar, botão de atualização compacto, lista de até 5 aparelhos recentes e os dados do Controle no topo. Não reintroduzir formulário longo na tela principal.
 - Credenciais por dispositivo usam `RecentDevices` + `SecretVault.profileKeyName`, com migração única da alpha.9. Não reaproveitar `CONTROLLER_KEY` antigo para IPs novos nem gravar segredo em preferências sem criptografia. Esquecer apaga o segredo correspondente.
 - Respostas HTTP/TCP não são conexão persistente. Exibir "Conectado" apenas após consulta autenticada bem-sucedida e "Sem resposta" após erro. Não inventar tempos de atualização.
-- Próxima versão sequencial: `0.1.0-alpha.53`, `versionCode 53`.
+- Próxima versão sequencial: `0.1.0-alpha.54`, `versionCode 54`.
 
 - Alpha.15: preservar a seleção Conectar → QR/Manual/Salvos, confirmação do QR antes de parear, cartões salvos com três ações e o scanner em Activity com tema Dialog.
 
@@ -103,3 +103,5 @@
 - Alpha.51: reconexão automática ADB apenas para a sessão escolhida, com Activity visível, heartbeat 30 s e timeout 8 s, espera 2/4/8/15/30 s; não reativar Depuração sem fios desligada, não varrer IPs nem assumir identidade por mDNS. Botão Cancelar interrompe. `onStop` fecha conexão; não alegar serviço em segundo plano nem melhoria de FPS. Atalho Comandos ADB limitado a navegação e volume. Testar perda/reentrada Wi-Fi, porta dinâmica, revogação, multi-aparelhos, economia de bateria e parada do usuário.
 
 - Alpha.52: entrada "Ver tela remota • controle ADB" só depois de ADB TLS ativo e chave AES-GCM normal presente para o mesmo host; sessão ADB explicitamente transferida por `AdbScreenBridge` apenas enquanto o visualizador estiver em primeiro plano e encerrada em onPause. `AdbScreenRouting` permite ADB somente para Voltar/Início/Recentes após resposta autenticada do canal de imagem. Indicar claramente **Controle ADB** versus **Imagem Monitor Remoto/MediaProjection**. Toque, áudio, vídeo e notificações continuam dependentes dos caminhos consentidos anteriores. Não alegar streaming via ADB nem auto-reconexão dentro do visualizador nesta revisão; testar hardware antes de prometer uso pleno.
+
+- Alpha.53: Manutenção nos cartões principais abre diálogo com apenas Reiniciar via ADB. Exigir ADB ativo para o mesmo host, confirmação digitada REINICIAR; serviço `reboot:` sem modo recovery/shutdown e sem repetição em falha/EOF. Nunca reiniciar por conexão AES-GCM comum nem prometer auto-reconexão após reboot. MainActivity não pode abrir IncomingAccessActivity automaticamente: notificação e cartão Monitorado mostram acessos autenticados, detalhes apenas por toque; botão Voltar deve estar sempre disponível na tela manual. Recuperar dados mantém autorização SAF explícita e botão Voltar/erro com instruções.

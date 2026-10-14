@@ -14,6 +14,8 @@ import android.os.Looper
 import android.os.SystemClock
 import android.provider.Settings
 import android.text.InputType
+import android.text.Editable
+import android.text.TextWatcher
 import android.text.format.DateFormat
 import android.view.Gravity
 import android.view.View
@@ -42,6 +44,11 @@ import java.util.concurrent.Executors
 
 /** ADB consentido, sempre visível; QR -> pareamento -> descoberta -> conexão TLS. */
 class AdbActivity : Activity() {
+    companion object { const val EXTRA_MAINTENANCE_HOST = "br.dev.monitorremoto.MAINTENANCE_ADB_HOST" }
+    private var pendingMaintenanceHost: String? = null
+    private var maintenanceRequiredHost: String? = null
+    private var maintenanceLaunchConsumed = false
+    private var rebootRequested = false
     private val handler = Handler(Looper.getMainLooper())
     private val worker = Executors.newSingleThreadExecutor()
     private val heartbeatWorker = Executors.newSingleThreadExecutor()
@@ -72,6 +79,7 @@ class AdbActivity : Activity() {
     private var lastHeartbeatMs = 0L
     private lateinit var stopRetryButton: Button
     private lateinit var openControlsButton: Button
+    private lateinit var maintenanceActionButton: Button
     private lateinit var openViewerButton: Button
     private val endpoints = linkedMapOf<String, AdbDiscovery.Endpoint>()
     private lateinit var root: LinearLayout
@@ -156,6 +164,9 @@ class AdbActivity : Activity() {
     override fun onCreate(state: Bundle?) {
         setTheme(if (dark) android.R.style.Theme_Material_NoActionBar else android.R.style.Theme_Material_Light_NoActionBar)
         super.onCreate(state)
+        pendingMaintenanceHost = intent.getStringExtra(EXTRA_MAINTENANCE_HOST)
+            ?.takeIf { it.isNotBlank() }
+        maintenanceRequiredHost = pendingMaintenanceHost
         window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
         val scroll = ScrollView(this).apply {
             isFillViewport = true
@@ -199,6 +210,11 @@ class AdbActivity : Activity() {
         openControlsButton = button("Comandos ADB") { showControls() }
         openControlsButton.visibility = View.GONE
         summaryCard.addView(openControlsButton)
+        val maintenanceButton = button("Manutenção · Reiniciar") { showMaintenance() }
+        // No ADB, a manutenção só é utilizável após confirmar uma sessão ativa.
+        summaryCard.addView(maintenanceButton)
+        maintenanceButton.visibility = View.GONE
+        maintenanceActionButton = maintenanceButton
 
         root.addView(text("Conectados anteriormente", 20f, bold = true))
         savedContainer = column()
@@ -241,6 +257,7 @@ class AdbActivity : Activity() {
         if (this::stopRetryButton.isInitialized) stopRetryButton.visibility = if (waiting) View.VISIBLE else View.GONE
         if (this::openViewerButton.isInitialized) openViewerButton.visibility = if (connected) View.VISIBLE else View.GONE
         if (this::openControlsButton.isInitialized) openControlsButton.visibility = if (connected) View.VISIBLE else View.GONE
+        if (this::maintenanceActionButton.isInitialized) maintenanceActionButton.visibility = if (connected) View.VISIBLE else View.GONE
         savedContainer.removeAllViews()
         val known = AdbKnownDevices.load(this)
         if (known.isEmpty()) {
@@ -557,6 +574,11 @@ class AdbActivity : Activity() {
         clearQr(); stopDiscovery(); closeDialog()
         render()
         setFeedback("Conectado a $model. A identificação foi informada pelo Android do aparelho.")
+        val requested = pendingMaintenanceHost
+        if (requested == host) {
+            pendingMaintenanceHost = null
+            handler.post { if (visible && client?.connected() == true) showMaintenance() }
+        }
     }
     /** Transfere ADB apenas se a imagem já tiver uma chave normal para o MESMO IP. */
     private fun openViewerWithAdb() {
@@ -598,6 +620,73 @@ class AdbActivity : Activity() {
             AdbScreenBridge.close(adbHost)
             setFeedback("Não foi possível abrir Ver tela: ${e.javaClass.simpleName}")
         }
+    }
+
+    /** Operação única e deliberada; NUNCA envia shutdown/poweroff nem repete reboot automaticamente. */
+    private fun showMaintenance() {
+        val active = client
+        if (busy || active?.connected() != true) {
+            setFeedback("Conecte um aparelho por ADB antes de abrir a manutenção.")
+            return
+        }
+        val address = active.endpoint.orEmpty()
+        val host = address.substringBeforeLast(':')
+        val requiredHost = maintenanceRequiredHost
+        if (host.isBlank() || (requiredHost != null && host != requiredHost)) {
+            setFeedback("O aparelho ADB conectado não corresponde ao aparelho selecionado.")
+            return
+        }
+        val body = modalBody()
+        body.addView(text("Aparelho: ${reportedPhone.ifBlank { host }}", 16f, bold = true))
+        body.addView(text("Opção disponível: reiniciar normalmente o Android. Não existe comando para desligar.", 14f))
+        body.addView(text("ATENÇÃO: se o telefone não voltar a iniciar, ou se a Depuração sem fios não reativar, você pode perder o acesso. Isso é especialmente sério sem botão Power. Não é possível garantir a reconexão após reiniciar.", 14f, secondary = true))
+        body.addView(text("Para confirmar, digite REINICIAR:", 14f, bold = true))
+        val verify = formField("REINICIAR")
+        body.addView(verify)
+        val check = AlertDialog.Builder(this)
+            .setTitle("Reiniciar o celular remoto?")
+            .setView(body)
+            .setNegativeButton("Cancelar", null)
+            .setPositiveButton("Reiniciar", null)
+            .create()
+        check.setOnShowListener {
+            val yes = check.getButton(AlertDialog.BUTTON_POSITIVE)
+            yes.isEnabled = false
+            verify.addTextChangedListener(object : TextWatcher {
+                override fun beforeTextChanged(s: CharSequence?, st: Int, count: Int, after: Int) {}
+                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                    yes.isEnabled = s?.toString()?.trim() == "REINICIAR"
+                }
+                override fun afterTextChanged(s: Editable?) {}
+            })
+            yes.setOnClickListener {
+                if (verify.text.toString().trim() != "REINICIAR" || busy || client !== active ||
+                    active.connected() != true || active.endpoint != address) return@setOnClickListener
+                check.dismiss()
+                // Não tentar reconectar/reemitir a reinicialização em caso de EOF ou timeout.
+                pendingMaintenanceHost = null
+                desiredTarget = null
+                cancelRetryTask(); cancelHeartbeat(); stopDiscovery()
+                rebootRequested = true
+                runOperation("Solicitando reinicialização normal…",
+                    operation = { adb ->
+                        adb.requestNormalReboot()
+                        "Comando de reinicialização enviado; aguardando Android iniciar novamente."
+                    },
+                    onSuccess = { result ->
+                        rebootRequested = false
+                        disconnect()
+                        setFeedback(result + " A conexão foi encerrada. Não foi enviado desligamento.")
+                    },
+                    onFailure = { _ ->
+                        rebootRequested = false
+                        disconnect()
+                        setFeedback("A sessão ADB foi interrompida. A reinicialização pode já ter começado. Por segurança, não reenvie o comando automaticamente.")
+                    }
+                )
+            }
+        }
+        check.show()
     }
 
     private fun showControls() {
@@ -810,6 +899,24 @@ class AdbActivity : Activity() {
         handingOffToViewer = false
         handler.removeCallbacks(watcher)
         handler.post(watcher)
+        if (!maintenanceLaunchConsumed && !pendingMaintenanceHost.isNullOrBlank()) {
+            maintenanceLaunchConsumed = true
+            val requested = pendingMaintenanceHost.orEmpty()
+            handler.post {
+                if (!visible) return@post
+                val saved = AdbKnownDevices.load(this).firstOrNull { it.host == requested }
+                if (saved != null) {
+                    setFeedback("Preparando manutenção de ${saved.name}. Confirme a sessão ADB antes de reiniciar.")
+                    reconnect(saved)
+                } else {
+                    pendingMaintenanceHost = null
+                    AlertDialog.Builder(this)
+                        .setTitle("ADB ainda não configurado")
+                        .setMessage("O aparelho selecionado não está salvo no módulo ADB. Primeiro autorize e conecte-o por esta tela. Depois abra Manutenção. Nenhum comando de reinicialização foi enviado.")
+                        .setPositiveButton("Entendi", null).show()
+                }
+            }
+        }
     }
     override fun onStop() {
         visible = false
