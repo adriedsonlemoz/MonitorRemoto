@@ -16,7 +16,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.36" and code.group(1) == "36", "Versões incompatíveis"
+assert version == "0.1.0-alpha.37" and code.group(1) == "37", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -493,3 +493,14 @@ assert '"screenCapture"' in server and 'fun screenCapture(' in client
 assert (root / 'app/src/test/java/br/dev/monitorremoto/core/ScreenCapturePolicyTest.kt').exists()
 assert 'MediaProjectionManager' not in viewer and 'MediaStore' not in screen
 print('PASSOU: alpha.36, print voluntário, captura HD efêmera, tela cheia e MediaStore')
+
+# alpha.37: regressões do compileDebugKotlin reportadas no workflow #37.
+# android.util.Base64 não é resolvido sem import explícito; a propriedade Kotlin Java
+# para ScrollView.setFillViewport(Boolean) é isFillViewport, não fillViewport.
+client_source = (root / 'app/src/main/java/br/dev/monitorremoto/transport/RemoteClient.kt').read_text()
+viewer_source = (root / 'app/src/main/java/br/dev/monitorremoto/ui/RemoteScreenActivity.kt').read_text()
+assert 'import android.util.Base64' in client_source
+assert 'Base64.decode(encoded, Base64.NO_WRAP)' in client_source
+assert 'isFillViewport = true' in viewer_source
+assert not re.search(r'(?<!is)\bfillViewport\s*=', viewer_source)
+print('PASSOU: alpha.37, Base64 importado e ScrollView.isFillViewport corrigido')

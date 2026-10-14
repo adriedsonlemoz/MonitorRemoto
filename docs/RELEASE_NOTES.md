@@ -1,4 +1,11 @@
-# Monitor Remoto v0.1.0-alpha.36
+# Monitor Remoto v0.1.0-alpha.37
+
+## Correção de compilação (alpha.37)
+
+- Corrigidas duas referências que impediram `:app:compileDebugKotlin` no workflow #37: importação ausente de `android.util.Base64` em `RemoteClient.kt` e propriedade `fillViewport` renomeada para `isFillViewport` em `RemoteScreenActivity.kt`.
+- Funções de Print, Foto HD, Tela cheia, áudio e toque remoto preservadas, com seus controles e consentimentos.
+- `versionCode 37` e compatibilidade exata da versão mantida entre controlador e monitorado. Build Android completo e teste físico continuam pendentes.
+
 
 ## Novidades: Print, Foto HD e Tela cheia (alpha.36)
 

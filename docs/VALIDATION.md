@@ -389,3 +389,13 @@
 - [x] Adicionar ação manual de print/Foto HD, sem captura automática nem armazenamento no monitorado.
 - [x] Preservar coordenadas de toque em `FIT_CENTER` e fornecer saída de tela cheia.
 - [ ] Compilar Android com GitHub Actions e testar MediaStore, captura HD, rotação e reconexão em dispositivos reais.
+
+
+## alpha.37 (14/10/2026)
+
+- [x] Diagnóstico de `:app:compileDebugKotlin` no workflow #37 via logs reais: `RemoteClient.kt:144` (Base64 ausente) e `RemoteScreenActivity.kt:263` (fillViewport inexistente).
+- [x] Importação `android.util.Base64` e substituição por `isFillViewport = true`.
+- [x] Regressões adicionadas ao `tools/check_distribution.py`; sincronizados Gradle, `AppVersion`, README, CHANGELOG, RELEASE_NOTES, AGENTS e arquitetura.
+- [x] `tools/check_distribution.py` aprovado, parser PSI Kotlin com 76 arquivos sem erros sintáticos, 40 XML válidos, YAML do workflow válido e 11 validações Kotlin/JVM de política de captura aprovadas.
+- [x] Integridade do arquivo ZIP verificada antes da entrega.
+- [ ] Confirmar `:app:compileDebugKotlin`, testes Gradle, geração do APK e funcionalidade em aparelhos reais após publicar código da alpha.37.

@@ -1,4 +1,4 @@
-# Monitor Remoto 0.1.0-alpha.36
+# Monitor Remoto 0.1.0-alpha.37
 # Convenções permanentes do projeto Monitor Remoto
 
 - Toda alteração de código incrementa sequencialmente `versionCode` e `versionName` (ex.: `0.1.0-alpha.8` -> `0.1.0-alpha.9`). Sincronizar tela, README, CHANGELOG, RELEASE_NOTES e documentação.
@@ -21,7 +21,7 @@
 - Alpha.10: manter tema **claro padrão**, as opções da engrenagem, janela Conectar, botão de atualização compacto, lista de até 5 aparelhos recentes e os dados do Controle no topo. Não reintroduzir formulário longo na tela principal.
 - Credenciais por dispositivo usam `RecentDevices` + `SecretVault.profileKeyName`, com migração única da alpha.9. Não reaproveitar `CONTROLLER_KEY` antigo para IPs novos nem gravar segredo em preferências sem criptografia. Esquecer apaga o segredo correspondente.
 - Respostas HTTP/TCP não são conexão persistente. Exibir "Conectado" apenas após consulta autenticada bem-sucedida e "Sem resposta" após erro. Não inventar tempos de atualização.
-- Próxima versão sequencial: `0.1.0-alpha.37`, `versionCode 37`.
+- Próxima versão sequencial: `0.1.0-alpha.38`, `versionCode 38`.
 
 - Alpha.15: preservar a seleção Conectar → QR/Manual/Salvos, confirmação do QR antes de parear, cartões salvos com três ações e o scanner em Activity com tema Dialog.
 
@@ -72,3 +72,5 @@
 - Alpha.35: permissão de toque pelo AccessibilityService somente depois de habilitação **manual** e preferência explícita, sem varredura de UI. A sessão MediaProjection aprovada permanece entre reconexões, mas nunca se reinicia após ser encerrada ou bloqueada. AudioPlaybackCapture interno opt-in, RECORD_AUDIO, sem microfone ou captura de chamadas, em chunks PCM em RAM. A notificação de pedido de tela não substitui consentimento e é limitada por taxa. Comandos por AES-GCM+nonce/replay e versão exata, sem nova porta aberta. Parada local encerra a projeção. Testes físicos e build Android ainda necessários.
 
 - Alpha.36: tela Ver tela segue conceito enviado, com cabeçalho compacto e ícones, painel arredondado e controles compactos. Botão de print salva apenas após ação do usuário e com frame recente; Foto HD requer MediaProjection ativa consentida, é autenticada pelo mesmo canal e limitada a 480 KiB, com captura única em memória. Imagens são persistidas apenas no controlador. Modo imersivo nunca remove saída e deve preservar mapeamento FIT_CENTER dos toques. Testar rotações, Android 8–9 e Android 10+, tempo limite, autorizações e tema escuro.
+
+- Alpha.37: o workflow 37 falhou em `:app:compileDebugKotlin`. `RemoteClient.kt` deve importar explicitamente `android.util.Base64` antes de decodificar capturas; `RemoteScreenActivity.kt` deve usar `ScrollView.isFillViewport = true` (e não `fillViewport`). `tools/check_distribution.py` contém regressões para ambos; teste estático não substitui compilação Gradle.

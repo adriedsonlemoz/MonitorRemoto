@@ -1,5 +1,12 @@
 # Histórico de versões
 
+## 0.1.0-alpha.37 (14/10/2026)
+
+- Corrigidos erros de compilação observados no workflow **Gerar APK e Release #37** (`:app:compileDebugKotlin`): `Unresolved reference Base64` em `RemoteClient.kt:144` e `Unresolved reference fillViewport` em `RemoteScreenActivity.kt:263`.
+- Adicionado `import android.util.Base64` e substituído `fillViewport = true` por `isFillViewport = true`. Erros de inferência de tipo associados à referência Base64 também ficam resolvidos.
+- Regressões adicionadas ao verificador, versão 0.1.0-alpha.37/versionCode 37 sincronizada. Sem mudanças de permissões nem do fluxo consentido de tela/toques/áudio.
+- A compilação Android completa da alpha.37 ainda precisa ser confirmada no GitHub Actions; o ZIP contém código-fonte, não APK.
+
 ## 0.1.0-alpha.36 (14/10/2026)
 
 - Redesenhada a página **Ver tela** de acordo com a referência visual: barra superior de ícones, área de imagem arredondada, controles compactos e temas claro/escuro.

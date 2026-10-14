@@ -260,7 +260,7 @@ class RemoteScreenActivity : Activity() {
             setPadding(dp(16), dp(8), dp(16), dp(14))
         }
         normalScroll = ScrollView(this).apply {
-            fillViewport = true
+            isFillViewport = true
             isVerticalScrollBarEnabled = false
         }
         normalScroll.addView(normal)

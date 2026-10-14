@@ -1,6 +1,13 @@
 # Monitor Remoto
 
-**v0.1.0-alpha.36 / versionCode 36** · Android 8.0+ · Kotlin 2.2.21 · AGP 8.13.2 · Gradle 8.13
+**v0.1.0-alpha.37 / versionCode 37** · Android 8.0+ · Kotlin 2.2.21 · AGP 8.13.2 · Gradle 8.13
+
+## Correção de compilação do workflow #37 (alpha.37)
+
+- Corrigida a referência `Base64` em `RemoteClient.kt` com importação de `android.util.Base64` na decodificação da Foto HD.
+- Corrigida a propriedade `ScrollView.isFillViewport` em `RemoteScreenActivity.kt`, que impedia `compileDebugKotlin`.
+- Adicionadas verificações de regressão e sincronizado `versionName/versionCode/AppVersion`. Nenhuma alteração em permissões, captura, criptografia ou protocolo além da exigência de versão exata.
+- **Status:** o workflow #37 falhou ao compilar a alpha.36; a compilação Android da alpha.37 ainda depende de nova execução no GitHub Actions.
 
 ## Ver tela: nova interface e capturas manuais (alpha.36)
 
@@ -20,7 +27,7 @@
 - **Controlador → Ver tela**: os botões **Toque**, **Ouvir áudio**, **Voltar remoto** e **Início remoto** operam somente quando o monitorado autorizar cada recurso. Tocar, manter pressionado e arrastar na imagem enviam comandos normalizados, respeitando barras laterais. Selecionar **tela inteira** no diálogo do Android oferece melhor correspondência de toques do que compartilhar uma janela isolada.
 - Se não houver projeção ativa, **Ver tela** envia **uma solicitação de autorização visível ao monitorado** (notificação limitada a uma por minuto). Apenas o próprio monitorado pode iniciar a captura; não há execução oculta, gravação nem reinício após encerramento.
 - **Áudio experimental**: PCM 16 kHz mono, até 500 ms por bloco efêmero em RAM, consulta periódica criptografada pela rede. Pode haver atraso, silêncio e cortes; a prévia usa ~1-2 quadros/s, com codificação JPEG somente quando há visualizador conectado, portanto toque remoto será limitado. Não há streaming H.264 nem audio em alta fidelidade.
-- Ao desativar o monitoramento, a sessão de captura é parada. Pareamento e AES-GCM são preservados; aparelhos com a **mesma chave** têm acesso durante sessão explicitamente autorizada. Proteja e revogue a chave quando necessário. **Instale alpha.36 nos dois aparelhos.**
+- Ao desativar o monitoramento, a sessão de captura é parada. Pareamento e AES-GCM são preservados; aparelhos com a **mesma chave** têm acesso durante sessão explicitamente autorizada. Proteja e revogue a chave quando necessário. **Instale alpha.37 nos dois aparelhos.**
 
 ## Ver tela autorizada (alpha.34)
 
@@ -95,7 +102,7 @@ A Home, o Modo Monitorado, a escolha de conexão, os submenus de Configurações
 
 ## Como utilizar
 
-1. Execute GitHub Actions > **Gerar APK e Release** > Run workflow. Para baixar **APK sem ZIP**, use Releases > `v0.1.0-alpha.36` > Assets > **`MonitorRemoto-v0.1.0-alpha.36.apk`**. Em Actions > Artifacts, um APK de contingência (quando presente) continua vindo em ZIP por comportamento padrão do GitHub. Instale o mesmo APK nos dois aparelhos.
+1. Execute GitHub Actions > **Gerar APK e Release** > Run workflow. Para baixar **APK sem ZIP**, use Releases > `v0.1.0-alpha.37` > Assets > **`MonitorRemoto-v0.1.0-alpha.37.apk`**. Em Actions > Artifacts, um APK de contingência (quando presente) continua vindo em ZIP por comportamento padrão do GitHub. Instale o mesmo APK nos dois aparelhos.
 2. No telefone secundário: na nova **Home**, toque em **Monitorar este aparelho**; autorize a notificação de serviço e ative o monitoramento. Em Configurações, conceda apenas as permissões necessárias e selecione os aplicativos cujas notificações deseja compartilhar.
 3. Na página Monitorado, toque no cartão **Gerar QR**. Escolha o IP privado acessível. O QR expira em 2 minutos e é válido para um único pareamento.
 4. No telefone principal: na **Home**, toque em **Conectar novo aparelho > QR Code**, aponte a câmera na janela compacta e confirme os dados do aparelho antes do pareamento. Para um aparelho salvo, use **Aparelhos anteriores > Conectar**. A digitação manual de IP e chave continua disponível.
@@ -122,7 +129,7 @@ Requer Android SDK API 36, Java 17, Gradle 8.13. O repositório ainda não inclu
 gradle :app:testDebugUnitTest :app:assembleDebug
 ```
 
-APK local de teste: `app/build/outputs/apk/debug/app-debug.apk`. O workflow copia esse arquivo ou o Release assinado como **`MonitorRemoto-v0.1.0-alpha.36.apk`**. Baixe diretamente na aba GitHub **Releases**. **O APK não está incluído neste ZIP de código-fonte.** Veja `docs/PAIRING_QR.md` para segurança do QR.
+APK local de teste: `app/build/outputs/apk/debug/app-debug.apk`. O workflow copia esse arquivo ou o Release assinado como **`MonitorRemoto-v0.1.0-alpha.37.apk`**. Baixe diretamente na aba GitHub **Releases**. **O APK não está incluído neste ZIP de código-fonte.** Veja `docs/PAIRING_QR.md` para segurança do QR.
 
 Opcional: configure os quatro Secrets de assinatura para gerar APK Release assinado e AAB. Ver `docs/APK_DOWNLOAD.md`. Preservar a mesma keystore entre builds é essencial para atualizações sem reinstalação.
 

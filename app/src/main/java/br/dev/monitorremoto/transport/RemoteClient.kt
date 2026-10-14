@@ -2,6 +2,7 @@ package br.dev.monitorremoto.transport
 
 import android.content.Context
 import android.os.Build
+import android.util.Base64
 import br.dev.monitorremoto.core.SettingsStore
 import br.dev.monitorremoto.core.RemoteGesturePolicy
 import br.dev.monitorremoto.core.ScreenCapturePolicy
