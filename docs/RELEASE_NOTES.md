@@ -1,4 +1,12 @@
-# Monitor Remoto v0.1.0-alpha.35
+# Monitor Remoto v0.1.0-alpha.36
+
+## Novidades: Print, Foto HD e Tela cheia (alpha.36)
+
+- Novo visualizador alinhado aos conceitos fornecidos, com ações compactas e tema claro/escuro.
+- **Print** salva o quadro recente no controlador. **Foto HD** solicita um quadro mais nítido, exclusivamente durante projeção consentida; não garante imagem nítida quando o conteúdo é protegido ou a rede está ruim.
+- Salvar em Imagens/Monitor Remoto (Android 10+) ou seletor de documentos (Android 8-9).
+- Tela cheia imersiva reversível, preserva proporção e mapeamento do toque remoto.
+- Código-fonte disponível. Compilação Android e testes nos aparelhos ainda pendentes.
 
 ## Principal novidade: controle por toque, áudio interno e reconexões
 
@@ -33,7 +41,7 @@
 - Opção explícita para notificações de todos os aplicativos elegíveis ou lista individual. Filtros de aplicativos financeiros, notificações secretas e códigos suspeitos continuam.
 - Botões **Copiar** e **Responder** nas telas de SMS/notificações. Responder via `RemoteInput` ou SMS com revisão/confirmacão e autorização separadas.
 - Remoção de `FLAG_SECURE` somente dos diálogos de Mensagens e respostas, para capturas de tela. QR e credenciais continuam protegidos.
-- `versionCode 35` e versão exata exigida em ambos os aparelhos.
+- `versionCode 36` e versão exata exigida em ambos os aparelhos.
 
 ## Limites e testes pendentes
 

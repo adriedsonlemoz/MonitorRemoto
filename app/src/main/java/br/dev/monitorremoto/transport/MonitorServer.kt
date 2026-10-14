@@ -103,7 +103,7 @@ class MonitorServer(private val context: Context) {
                 val regular = runCatching { WireProtocol.decode(permanentKey, encrypted) }.getOrNull()
                 if (regular != null) {
                     if (regular.optInt("v") != WireProtocol.VERSION ||
-                        regular.optString("op") !in setOf("snapshot", "disconnect", "notificationReply", "smsReply", "screenFrame", "remoteTouch", "audioChunk", "requestScreen")) return
+                        regular.optString("op") !in setOf("snapshot", "disconnect", "notificationReply", "smsReply", "screenFrame", "screenCapture", "remoteTouch", "audioChunk", "requestScreen")) return
                     if (abs(now - regular.optLong("ts")) > 5 * 60 * 1000L) return
                     synchronized(seenNonces) {
                         if (!seenNonces.add(nonce)) return
@@ -154,6 +154,29 @@ class MonitorServer(private val context: Context) {
                             .put("enabled", enabled).put("rate", AudioChunkStore.RATE)
                         if (chunk != null) reply.put("sequence", chunk.sequence)
                             .put("pcm", Base64.encodeToString(chunk.pcm, Base64.NO_WRAP))
+                        WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(permanentKey, reply))
+                        AuthenticatedAccess.authenticated(socket.inetAddress?.hostAddress.orEmpty(),
+                            regular.optString("clientId"), regular.optString("clientName"), regular.optString("accessMethod"))
+                        return
+                    }
+                    if (regular.optString("op") == "screenCapture") {
+                        // Uma imagem de melhor resolução SOMENTE com captura já autorizada.
+                        // O servidor espera no máximo 2,3 s por um novo frame; nunca ativa projeção.
+                        val id = ScreenFrameStore.requestStill()
+                        var bytes: ByteArray? = null
+                        if (id != null) {
+                            val deadline = android.os.SystemClock.elapsedRealtime() + 2_300L
+                            while (android.os.SystemClock.elapsedRealtime() < deadline &&
+                                ScreenFrameStore.sharing && bytes == null) {
+                                bytes = ScreenFrameStore.takeStill(id)
+                                if (bytes == null) Thread.sleep(65L)
+                            }
+                            ScreenFrameStore.cancelStill(id)
+                        }
+                        val reply = JSONObject().put("v", WireProtocol.VERSION)
+                            .put("op", "screenCapture").put("appVersion", AppVersion.NAME)
+                            .put("ok", bytes != null).put("sharing", ScreenFrameStore.sharing)
+                        if (bytes != null) reply.put("jpeg", Base64.encodeToString(bytes, Base64.NO_WRAP))
                         WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(permanentKey, reply))
                         AuthenticatedAccess.authenticated(socket.inetAddress?.hostAddress.orEmpty(),
                             regular.optString("clientId"), regular.optString("clientName"), regular.optString("accessMethod"))

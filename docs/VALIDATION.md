@@ -381,3 +381,11 @@
 
 - Testes locais: verificador estrutural; parser Kotlin; validação XML/YAML; testes JVM de RemoteGesturePolicy e integridade CRC do ZIP (resultados no relatório da entrega).
 - Pendentes: compilação Android/AGP no GitHub Actions, testes instrumentados de MediaProjection em Android 14+, acesso de Acessibilidade no aparelho, áudio de aplicativos compatíveis, reconexão de rede, Bluetooth, rotação e suspensão de tela.
+
+## alpha.36 (14/10/2026)
+
+- [x] Conferir versão 36 em Gradle, AppVersion, README, CHANGELOG e documentação.
+- [x] Incluir teste isolado para cabeçalho JPEG, tamanho de payload e expiração de quadro.
+- [x] Adicionar ação manual de print/Foto HD, sem captura automática nem armazenamento no monitorado.
+- [x] Preservar coordenadas de toque em `FIT_CENTER` e fornecer saída de tela cheia.
+- [ ] Compilar Android com GitHub Actions e testar MediaStore, captura HD, rotação e reconexão em dispositivos reais.

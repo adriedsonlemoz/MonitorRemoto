@@ -16,7 +16,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.35" and code.group(1) == "35", "Versões incompatíveis"
+assert version == "0.1.0-alpha.36" and code.group(1) == "36", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -475,3 +475,21 @@ assert 'touchReady' in server and 'audioReady' in server
 assert 'ACTION_AUDIO_STOP' in screen and 'ScreenShareService.stop(this)' in module_ui['MonitorScreenUi.kt']
 assert (root / 'app/src/test/java/br/dev/monitorremoto/core/RemoteGesturePolicyTest.kt').exists()
 print('PASSOU: alpha.35, toque e áudio internos opt-in, MediaProjection em foreground e solicitação local')
+
+# alpha.36: visualizador e captura local com expiração, sem gravação automática no servidor.
+viewer = (root / 'app/src/main/java/br/dev/monitorremoto/ui/RemoteScreenActivity.kt').read_text()
+saver = (root / 'app/src/main/java/br/dev/monitorremoto/ui/RemoteImageSaver.kt').read_text()
+frame_store = (root / 'app/src/main/java/br/dev/monitorremoto/capture/ScreenFrameStore.kt').read_text()
+screen = (root / 'app/src/main/java/br/dev/monitorremoto/capture/ScreenShareService.kt').read_text()
+client = (root / 'app/src/main/java/br/dev/monitorremoto/transport/RemoteClient.kt').read_text()
+assert 'R.drawable.ic_remote_camera' in viewer and 'R.drawable.ic_remote_fullscreen' in viewer
+assert 'fun toggleFullscreen()' in viewer and 'fullscreenExit.visibility = View.VISIBLE' in viewer
+assert 'RemoteClient.screenCapture(' in viewer and 'fun saveQuickFrame()' in viewer
+assert 'ScreenCapturePolicy.freshPreview(' in viewer and 'RemoteImageSaver.save(' in viewer
+assert 'MediaStore.Images.Media.IS_PENDING' in saver and 'Intent.ACTION_CREATE_DOCUMENT' in saver
+assert 'fun requestStill()' in frame_store and 'fun takeStill(' in frame_store
+assert 'encodeStill(cropped, stillId)' in screen and 'MAX_STILL_BYTES' in screen
+assert '"screenCapture"' in server and 'fun screenCapture(' in client
+assert (root / 'app/src/test/java/br/dev/monitorremoto/core/ScreenCapturePolicyTest.kt').exists()
+assert 'MediaProjectionManager' not in viewer and 'MediaStore' not in screen
+print('PASSOU: alpha.36, print voluntário, captura HD efêmera, tela cheia e MediaStore')

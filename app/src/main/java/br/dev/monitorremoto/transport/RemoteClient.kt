@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Build
 import br.dev.monitorremoto.core.SettingsStore
 import br.dev.monitorremoto.core.RemoteGesturePolicy
+import br.dev.monitorremoto.core.ScreenCapturePolicy
 import br.dev.monitorremoto.security.CryptoBox
 import org.json.JSONObject
 import java.net.InetSocketAddress
@@ -115,6 +116,36 @@ object RemoteClient {
                 result.optInt("v") == WireProtocol.VERSION &&
                 AppVersion.compatible(result.optString("appVersion"))) { "Resposta de tela inválida." }
             result
+        }
+    }
+
+    /** Foto única, mais nítida que a prévia. Somente com projeção local autorizada. */
+    fun screenCapture(host: String, key: ByteArray, context: Context, method: String): ByteArray {
+        require(host.isNotBlank() && host.length <= 253 && !host.contains('/') &&
+            !host.contains(':') && !host.contains(' '))
+        val request = JSONObject().put("v", WireProtocol.VERSION)
+            .put("op", "screenCapture").put("appVersion", AppVersion.NAME)
+            .put("ts", System.currentTimeMillis())
+            .put("clientId", SettingsStore.controllerId(context))
+            .put("clientName", listOf(Build.MANUFACTURER, Build.MODEL).joinToString(" ").take(72))
+            .put("accessMethod", method)
+        return Socket().use { socket ->
+            socket.connect(InetSocketAddress(host, WireProtocol.PORT), 4500)
+            socket.soTimeout = 6500
+            WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(key, request))
+            val result = WireProtocol.decode(key, WireProtocol.receive(socket.getInputStream(), 1_250_000))
+            if (result.optString("op") == "versionMismatch")
+                error(AppVersion.incompatibility(result.optString("appVersion")))
+            check(result.optString("op") == "screenCapture" && result.optInt("v") == WireProtocol.VERSION &&
+                AppVersion.compatible(result.optString("appVersion"))) { "Resposta de captura inválida" }
+            check(result.optBoolean("ok")) { "Captura indisponível ou sessão interrompida." }
+            val encoded = result.optString("jpeg")
+            require(encoded.length in 4..650_000) { "Captura acima do limite." }
+            Base64.decode(encoded, Base64.NO_WRAP).also { bytes ->
+                require(ScreenCapturePolicy.validJpeg(bytes)) {
+                    "Imagem JPEG inválida."
+                }
+            }
         }
     }
 

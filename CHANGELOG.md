@@ -1,11 +1,25 @@
 # Histórico de versões
 
+## 0.1.0-alpha.36 (14/10/2026)
+
+- Redesenhada a página **Ver tela** de acordo com a referência visual: barra superior de ícones, área de imagem arredondada, controles compactos e temas claro/escuro.
+- Botão **Print** para salvar o último quadro JPEG recente, sem tirar capturas contínuas. Android 10+ salva via MediaStore em `Imagens/Monitor Remoto`; Android 8–9 solicita destino pelo sistema.
+- Ação **Foto HD** autenticada e sob demanda: exige sessão MediaProjection local vigente, solicita novo frame e usa codificação adaptativa de até 1080 px/480 KiB. Nenhuma imagem é persistida no monitorado.
+- Botão **Tela cheia** em modo imersivo, com saída acessível, preservando proporção e coordenadas de toque remoto. Prevenção de captura de quadro vencido.
+- Atualizados `versionName=0.1.0-alpha.36`, `versionCode=36`, verificador e documentação; build Android e testes reais pendentes.
+
 ## 0.1.0-alpha.35 (14/10/2026)
+
+- Adicionados gestos remotos autorizados via serviço de acessibilidade opcional, áudio interno opcional por AudioPlaybackCapture, notificação de solicitação e reuso da mesma sessão de projeção após quedas de rede.
+- Áudio e toque exigem habilitação explícita no monitorado. Prévia de ~1–2 quadros/s, sem gravação automática. Testes Android pendentes.
+
+
+## 0.1.0-alpha.34 (14/10/2026)
 
 - Implementado **Ver tela** no painel remoto, com página própria, atualizações JPEG compactadas pela rede e pelo protocolo AES-GCM com autenticação e proteção contra replay.
 - No monitorado, botão local **Compartilhar tela** abre autorização nativa MediaProjection. Serviço foreground independente (`mediaProjection`) exibe notificação com **Parar tela**; sem captura em segundo plano sem consentimento e sem retomada automática após encerramento, bloqueio ou reinício.
 - Buffer estritamente em memória, quadro de no máximo 110 KiB, 1 FPS, limite de idade 3 s, sem áudio, gravação ou controle remoto por toque. Callback de parada e redimensionamento/rotação liberam recursos.
-- Manter versão exata nos dois celulares: `versionName=0.1.0-alpha.35`, `versionCode=34`. Build e testes físicos pendentes.
+- Manter versão exata nos dois celulares: `versionName=0.1.0-alpha.34`, `versionCode=34`. Build e testes físicos pendentes.
 
 ## 0.1.0-alpha.33 (14/10/2026)
 

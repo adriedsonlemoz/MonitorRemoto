@@ -189,10 +189,12 @@ class ScreenShareService : Service() {
             newReader.setOnImageAvailableListener({ source ->
                 val image = runCatching { source.acquireLatestImage() }.getOrNull() ?: return@setOnImageAvailableListener
                 try {
-                    if (!ScreenFrameStore.sharing || !ScreenFrameStore.viewerActive()) return@setOnImageAvailableListener
-                    val now = SystemClock.elapsedRealtime()
-                    if (now - lastFrameAt < FRAME_INTERVAL_MS) return@setOnImageAvailableListener
-                    lastFrameAt = now
+                    if (!ScreenFrameStore.sharing) return@setOnImageAvailableListener
+                    val stillId = ScreenFrameStore.pendingStill()
+                    val needPreview = ScreenFrameStore.viewerActive() &&
+                        SystemClock.elapsedRealtime() - lastFrameAt >= FRAME_INTERVAL_MS
+                    if (!needPreview && stillId == 0L) return@setOnImageAvailableListener
+                    if (needPreview) lastFrameAt = SystemClock.elapsedRealtime()
                     val plane = image.planes.firstOrNull() ?: return@setOnImageAvailableListener
                     val w = image.width
                     val h = image.height
@@ -214,6 +216,8 @@ class ScreenShareService : Service() {
                         } else full.copyPixelsFromBuffer(src)
                         val cropped = Bitmap.createBitmap(full, 0, 0, w, h)
                         try {
+                            if (stillId != 0L) encodeStill(cropped, stillId)
+                            if (needPreview) {
                             val targetW = w.coerceAtMost(540)
                             val targetH = (h.toDouble() * targetW / w).toInt().coerceAtLeast(1)
                             val small = Bitmap.createScaledBitmap(cropped, targetW, targetH, true)
@@ -226,6 +230,7 @@ class ScreenShareService : Service() {
                                 }
                                 ScreenFrameStore.publish(targetW, targetH, out.toByteArray())
                             } finally { if (small !== cropped) small.recycle() }
+                            }
                         } finally { if (cropped !== full) cropped.recycle() }
                     } finally { full.recycle() }
                 } catch (e: Exception) {
@@ -233,6 +238,27 @@ class ScreenShareService : Service() {
                 } finally { image.close() }
             }, worker)
         }
+
+    /** Executado apenas sob solicitação autenticada e com MediaProjection local ainda autorizada. */
+    private fun encodeStill(full: Bitmap, requestId: Long) {
+        for (targetW in listOf(1080, 720, 540)) {
+            val width = full.width.coerceAtMost(targetW)
+            val height = (full.height.toLong() * width / full.width).toInt().coerceAtLeast(1)
+            val scaled = if (width == full.width) full else Bitmap.createScaledBitmap(full, width, height, true)
+            try {
+                val out = ByteArrayOutputStream()
+                for (quality in listOf(85, 70, 55, 40, 28)) {
+                    out.reset()
+                    scaled.compress(Bitmap.CompressFormat.JPEG, quality, out)
+                    if (out.size() <= ScreenFrameStore.MAX_STILL_BYTES) {
+                        ScreenFrameStore.publishStill(requestId, out.toByteArray())
+                        return
+                    }
+                }
+            } finally { if (scaled !== full) scaled.recycle() }
+        }
+        Log.w(TAG, "Imagem acima do limite de captura, não enviada")
+    }
 
     private fun resizeSurface(width: Int, height: Int) {
         if (width < 1 || height < 1 || stopped || display == null) return
