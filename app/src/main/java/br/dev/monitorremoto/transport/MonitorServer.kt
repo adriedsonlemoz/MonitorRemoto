@@ -90,6 +90,13 @@ class MonitorServer(private val context: Context) {
                         put("epoch", EventJournal.epoch)
                     }
                     WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(permanentKey, response))
+                    // Register ONLY after a valid authenticated request and successful response.
+                    AuthenticatedAccess.authenticated(
+                        socket.inetAddress?.hostAddress.orEmpty(),
+                        regular.optString("clientId"),
+                        regular.optString("clientName"),
+                        regular.optString("accessMethod")
+                    )
                     return
                 }
 

@@ -1,4 +1,4 @@
-# Pareamento por QR (v0.1.0-alpha.17)
+# Pareamento por QR (v0.1.0-alpha.18)
 
 ## Uso
 
@@ -28,7 +28,7 @@ A captura de notificações permanece declarada no manifesto da variante atual. 
 
 A janela flutuante `QrScanActivity` agora controla a câmera **nativamente com Camera2**, não usa mais a Activity `CaptureActivity` do ZXing Embedded. Permissão CAMERA é solicitada na tela de controle, e o leitor apresenta erros na própria tela, com botão Cancelar. O conteúdo do QR não é registrado em logs nem em arquivos. O decoder ZXing Core trabalha sobre frames YUV em memória.
 
-Se a câmera continuar indisponível, é possível usar **Inserir código QR manualmente** no Controle, com o URI temporário completo obtido por um leitor de QR externo. Copiar o URI para a área de transferência expõe temporariamente o segredo a outros apps que tenham acesso ao clipboard; use apenas aparelhos confiáveis e não compartilhe o código. **Faltam testes físicos.** Para identificar a causa original exata do encerramento anterior, capturar logcat (`FATAL EXCEPTION`, `MonitorRemotoQR`, `Camera`) imediatamente após tocar em Ler QR.
+Se a câmera estiver indisponível, use **Manualmente** com IP e chave obtidos no próprio aparelho monitorado. A antiga opção de colar o URI completo do QR foi retirada na alpha.18. **Faltam testes físicos.** Para identificar a causa original exata do encerramento anterior, capturar logcat (`FATAL EXCEPTION`, `MonitorRemotoQR`, `Camera`) imediatamente após tocar em Ler QR.
 
 ### Correção de build alpha.8
 
@@ -45,3 +45,6 @@ A captura usa janela flutuante centralizada, não tela cheia. O leitor mostra **
 ## Compartilhamento manual (alpha.16)
 
 A janela **Minhas informações** só permite consultar a chave com o serviço Monitorado em execução e IP privado disponível. O texto fica oculto inicialmente; a janela bloqueia capturas de tela com `FLAG_SECURE`. A cópia de IP e chave é intencional, assinalada como sensível no Android 13+ (não impede leitura por apps que já tenham acesso à área de transferência). Antes de invocar o compartilhamento padrão do Android há alerta explícito de risco. Não salvar ou registrar essa chave em logs.
+
+
+Na alpha.18, a janela de escolha mostra somente QR Code e Manual lado a lado; colar o texto bruto do QR não é opção oferecida. O pareamento por QR segue temporário e exige confirmação. Após pareamento, as consultas autenticadas podem trazer método declarado 'QR Code' (não é prova independente de identidade).

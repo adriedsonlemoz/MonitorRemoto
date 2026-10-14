@@ -1,29 +1,18 @@
-# Monitor Remoto v0.1.0-alpha.17
+# Monitor Remoto v0.1.0-alpha.18
 
-## Novidades da alpha.17
+## Novidades da alpha.18
 
-- Home nova como primeira tela, com **Conectar novo aparelho**, **Aparelhos anteriores** e **Monitorar este aparelho**.
-- Em cada perfil anterior: último sucesso autenticado, IP, botão direto Conectar e engrenagem individual com Renomear/Esquecer.
-- Página Monitorado separada da Home, com ações **Gerar QR**, **Mostrar info** e **Interromper** compactas à direita do cartão. Ativar/Reiniciar aparece quando parado.
-- Home e Voltar não desligam o serviço nem apagam pareamentos. Configurações seguem acessíveis pela engrenagem no cabeçalho.
-- Preservados QR com confirmação, acesso manual, segredos no Keystore e atualização do Controle a cada 15 segundos.
+- Desconectar retorna à Home.
+- Janela Conectar com QR Code e Manual lado a lado, sem a opção textual de QR; três ações dos aparelhos anteriores também aparecem horizontalmente.
+- Janela Minhas informações com Mostrar, Copiar, Compartilhar na mesma linha.
+- Tela Monitorado informa o último aparelho com acesso autenticado (nome e método declarados pelo cliente, IP real da conexão) e permite abrir Ações e interromper serviço ou revogar a chave global. Indicador expira 45 s depois do último acesso.
+- Nome/método **não são identidade verificada** e não há sessão TCP permanente nem revogação individual com chave compartilhada.
 
-## Histórico: alpha.16
+## Histórico alpha.17
 
-- Nova tela inicial no modo Monitorado, com botão **⌂ Home** junto às Configurações.
-- Gerar QR Code, **Mostrar minhas informações** e Interromper monitoramento agrupados.
-- Nova janela manual mostra IP atual e chave oculta, com **Copiar informações** e **Compartilhar** (com confirmação).
-- **Conectados recentemente** na página inicial, com atalhos e acesso ao gerenciador de aparelhos salvos.
-- **Sobre o aplicativo** transferido para Configurações.
-- Permanecem a escolha QR/Manual/Salvos, cartões Conectar/Renomear/Esquecer, segurança no Keystore e sincronização a cada 15 s.
+- Nova Home independente do serviço, seleção de aparelhos recentes e atalhos compactos.
+- Monitorado separado, retorno por Home/Voltar e estado do Controle preservado.
 
-## Histórico resumido (alpha.15)
+## Ainda pendente
 
-- Entrada compacta QR/Manual/Colar QR/Salvos com confirmação antes do pareamento.
-- Scanner Camera2 em pop-up; botão Conectar/Reconectar compacto no painel e **↻ Atualizar** à direita.
-- Assinatura Release depende dos Secrets existentes; não criar outra keystore.
-
-## Validação pendente
-
-- Build Android completo, instalação em dois celulares e teste do pop-up de IP/chave, copiar/compartilhar, QR, navegação Home e aparelhos salvos.
-- Conferir tema claro/escuro, tela pequena, Android 8–16 e situação anterior do Google Play Protect por meios oficiais.
+Compilação Gradle Android na CI e testes físicos em dois aparelhos, inclusive rotação de chaves e timing de atualização. Código-fonte ZIP não contém APK.

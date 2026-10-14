@@ -1,5 +1,14 @@
 # Histórico de versões
 
+## 0.1.0-alpha.18 (13/10/2026)
+
+- Compactação do menu Conectar: QR | Manual horizontal, sem opção Inserir código QR. Aparelhos recentes exibem Conectar | Renomear | Esquecer na mesma linha.
+- Pop-up Minhas informações: Mostrar, Copiar e Compartilhar alinhados horizontalmente, preservando chave oculta e confirmação de envio.
+- Desconectar retorna automaticamente à Home. Navegação continua sem parar o Monitorado.
+- Registro volátil de acessos realmente autenticados no aparelho monitorado, com atualização por callback e expiração de 45 segundos. Nome e método declarados são identificados como informações não verificadas.
+- Cartão de acessos recebidos e Ações: detalhes, parar serviço ou trocar chave global; sem fingir que existe sessão TCP persistente ou revogação individual.
+- Mantidas compatibilidade do protocolo v1, validação AES-GCM, proteção do Keystore e polling de 15 segundos.
+
 ## 0.1.0-alpha.17 (13/10/2026)
 
 - **Home independente como tela inicial**, com o convite para conectar novo aparelho, mesmo quando o serviço monitorado ou a rede estão indisponíveis.

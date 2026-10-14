@@ -12,14 +12,14 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.17" and code.group(1) == "17", "Versões incompatíveis"
+assert version == "0.1.0-alpha.18" and code.group(1) == "18", "Versões incompatíveis"
 assert version in ui, "Tela de versão desatualizada"
 assert f"versionCode={code.group(1)}" in (root / 'docs/ARCHITECTURE.md').read_text(), "Arquitetura com versionCode desatualizado"
 # alpha.9 remove a Activity antiga do ZXing Embedded; Camera2 + ZXing Core offline.
 assert 'IntentIntegrator' not in ui and 'BarcodeEncoder' not in ui
 assert 'startActivityForResult(Intent(this, QrScanActivity::class.java), qrScanRequest)' in ui
 assert 'override fun onActivityResult(' in ui and 'QrScanActivity.EXTRA_QR_RESULT' in ui
-assert 'private fun askQrText()' in ui
+assert 'private fun askQrText()' not in ui
 assert 'QRCodeWriter().encode(' in ui, 'Gerador de QR não usa ZXing Core' 
 assert 'dist/MonitorRemoto-v${VERSION}.apk' in workflow, "Arquivo .apk final não é nomeado"
 assert 'gh release upload' in workflow and 'gh release create' in workflow, "Falta APK direto via Release"
@@ -132,10 +132,27 @@ assert 'else -> renderHome()' in ui and '0 -> renderMonitor()' in ui and '1 -> {
 assert '＋  Conectar novo aparelho' in ui and 'Aparelhos anteriores' in ui
 assert 'Última conexão: $lastUsed' in ui and 'item.lastSuccessMs > 0L' in ui
 assert 'showHomeSavedDeviceOptions(item)' in ui and 'returnToChooser = false' in ui
-assert 'Abrir modo monitorado' in ui and 'mode = 0' in ui
+assert 'Abrir tela do aparelho' in ui and 'mode = 0' in ui
 assert 'val columns = LinearLayout(this)' in ui and 'LinearLayout.LayoutParams(dp(118), -2)' in ui
 assert 'addCompact("Gerar QR"' in ui and 'addCompact("Mostrar info")' in ui and 'addCompact("Interromper")' in ui
 assert 'showMyConnectionInfo()' in ui and 'FLAG_SECURE' in ui
 assert 'startServiceExplicitly()' in ui and 'stopService(Intent(this, MonitorService::class.java))' in ui
 assert 'private fun renderRecentDevicesHome()' not in ui
 print('PASSOU: Home com recentes, última conexão real, engrenagem e controles locais compactos')
+
+# alpha.18: authenticated access tracking is optional in protocol and expires, no imaginary sessions.
+tracker = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AuthenticatedAccess.kt').read_text()
+client = (root / 'app/src/main/java/br/dev/monitorremoto/transport/RemoteClient.kt').read_text()
+assert 'AuthenticatedAccess.authenticated(' in server and 'WireProtocol.send(socket.getOutputStream()' in server
+assert 'STALE_AFTER_MS = 45_000L' in tracker and 'fun clear()' in tracker
+assert 'AuthenticatedAccess.clear()' in (root / 'app/src/main/java/br/dev/monitorremoto/service/MonitorService.kt').read_text()
+assert 'controllerId' in client and 'clientName' in client and 'accessMethod' in client
+assert 'mode = 2\n        render()' in ui, 'Desconectar não retorna à Home'
+assert 'actionButton("▣ QR Code"' in ui and 'actionButton("⌨ Manual"' in ui
+assert 'addAction("Conectar", true)' in ui and 'addAction("Renomear")' in ui
+assert 'addAction("Esquecer", red = true)' in ui
+assert 'addInfoAction(revealButton)' in ui and 'addInfoAction(actionButton("Copiar"' in ui
+assert 'addInfoAction(actionButton("Compartilhar"' in ui
+assert 'private fun renderIncomingAccess()' in ui and 'private fun showIncomingAccessActions(' in ui
+assert (root / 'app/src/test/java/br/dev/monitorremoto/transport/AuthenticatedAccessTest.kt').exists()
+print('PASSOU: alpha.18, menus compactos, Home após desconexão, alertas autenticados e tempo de expiração')

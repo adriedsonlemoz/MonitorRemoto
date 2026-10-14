@@ -1,8 +1,8 @@
 # Como obter APK em vez de ZIP no GitHub
 
-GitHub Actions > Artifacts: **o GitHub baixa um ZIP por decisão da plataforma**, mesmo quando o arquivo armazenado é `MonitorRemoto-v0.1.0-alpha.17.apk`. Renomear a identificação do Artifact não muda isso.
+GitHub Actions > Artifacts: **o GitHub baixa um ZIP por decisão da plataforma**, mesmo quando o arquivo armazenado é `MonitorRemoto-v0.1.0-alpha.18.apk`. Renomear a identificação do Artifact não muda isso.
 
-Para obter o APK **diretamente**, no repositório abra a aba **Releases** > `v0.1.0-alpha.17` > **Assets** > `MonitorRemoto-v0.1.0-alpha.17.apk`.
+Para obter o APK **diretamente**, no repositório abra a aba **Releases** > `v0.1.0-alpha.18` > **Assets** > `MonitorRemoto-v0.1.0-alpha.18.apk`.
 
 O workflow `Gerar APK e Release` publica automaticamente a Release quando é acionado manualmente por **Run workflow** ou quando ocorre push ao ramo principal/padrão, depois de passar nos testes/build. Pull requests nunca publicam release. Caso a etapa tenha falha HTTP 403, verifique **Settings > Actions > General > Workflow permissions** e as restrições do repositório/organização. `GITHUB_TOKEN` necessita `contents: write`.
 

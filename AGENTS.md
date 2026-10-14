@@ -1,4 +1,4 @@
-# Monitor Remoto 0.1.0-alpha.17
+# Monitor Remoto 0.1.0-alpha.18
 # Convenções permanentes do projeto Monitor Remoto
 
 - Toda alteração de código incrementa sequencialmente `versionCode` e `versionName` (ex.: `0.1.0-alpha.8` -> `0.1.0-alpha.9`). Sincronizar tela, README, CHANGELOG, RELEASE_NOTES e documentação.
@@ -21,10 +21,13 @@
 - Alpha.10: manter tema **claro padrão**, as opções da engrenagem, janela Conectar, botão de atualização compacto, lista de até 5 aparelhos recentes e os dados do Controle no topo. Não reintroduzir formulário longo na tela principal.
 - Credenciais por dispositivo usam `RecentDevices` + `SecretVault.profileKeyName`, com migração única da alpha.9. Não reaproveitar `CONTROLLER_KEY` antigo para IPs novos nem gravar segredo em preferências sem criptografia. Esquecer apaga o segredo correspondente.
 - Respostas HTTP/TCP não são conexão persistente. Exibir "Conectado" apenas após consulta autenticada bem-sucedida e "Sem resposta" após erro. Não inventar tempos de atualização.
-- Próxima versão sequencial: `0.1.0-alpha.18`, `versionCode 18`.
+- Próxima versão sequencial: `0.1.0-alpha.19`, `versionCode 19`.
 
 - Alpha.15: preservar a seleção Conectar → QR/Manual/Salvos, confirmação do QR antes de parear, cartões salvos com três ações e o scanner em Activity com tema Dialog.
 
 - Alpha.16: Home retorna ao modo Monitorado sem interromper serviço; tela inicial reúne QR, informações manuais e recentes. Sobre fica em Configurações. Chave oculta no pop-up `FLAG_SECURE`, cópia explícita marcada sensível e compartilhamento somente com confirmação prévia. Preservar.
 
 - Alpha.17: Home (modo 2) é a tela inicial, acessível offline; Monitorado (modo 0) e Controle (modo 1) são páginas separadas. Exibir última conexão real persistida por `RecentDevices.markSuccess`; não tratar tentativa como sucesso. Engrenagem de cada aparelho na Home oferece Renomear/Esquecer, nunca expor chave. Botões compactos no cartão Monitorado à direita. Home/Voltar não interrompem serviço. Na alpha.18, priorizar avaliação das telas de dados do aparelho remoto e do aparelho monitorado, sem alterar navegação silenciosamente.
+
+- Alpha.18: seleção QR/Manual compacta na mesma linha; dispositivos salvos com ações horizontais Conectar/Renomear/Esquecer; Minhas informações tem Mostrar/Copiar/Compartilhar lado a lado. Desconectar volta à Home.
+- Alpha.18: `AuthenticatedAccess` registra SOMENTE consultas respondidas após AES-GCM autenticado. Servidor não possui sessão TCP permanente: registro em memória expira após 45 s sem novas consultas. Nome/método são declarados pelo controlador e podem ser falsificados por outro portador da chave. Nunca apresentá-los como identidade verificada. Sem revogação individual enquanto a chave é compartilhada: interromper serviço ou rotacionar chave afeta todos os aparelhos.

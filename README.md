@@ -1,6 +1,6 @@
 # Monitor Remoto
 
-**v0.1.0-alpha.17 / versionCode 17** · Android 8.0+ · Kotlin 2.2.21 · AGP 8.13.2 · Gradle 8.13
+**v0.1.0-alpha.18 / versionCode 18** · Android 8.0+ · Kotlin 2.2.21 · AGP 8.13.2 · Gradle 8.13
 
 Dois modos no mesmo APK: **Monitorado** (servidor) e **Controle** (cliente).
 
@@ -20,8 +20,8 @@ Dois modos no mesmo APK: **Monitorado** (servidor) e **Controle** (cliente).
 
 ## Como utilizar
 
-1. Execute GitHub Actions > **Gerar APK e Release** > Run workflow. Para baixar **APK sem ZIP**, use Releases > `v0.1.0-alpha.17` > Assets > **`MonitorRemoto-v0.1.0-alpha.17.apk`**. Em Actions > Artifacts, um APK de contingência (quando presente) continua vindo em ZIP por comportamento padrão do GitHub. Instale o mesmo APK nos dois aparelhos.
-2. No telefone secundário: na nova **Home**, toque em **Monitorar este aparelho > Abrir modo monitorado**; autorize a notificação de serviço e ative o monitoramento. Em Configurações, conceda apenas as permissões necessárias e selecione os aplicativos cujas notificações deseja compartilhar.
+1. Execute GitHub Actions > **Gerar APK e Release** > Run workflow. Para baixar **APK sem ZIP**, use Releases > `v0.1.0-alpha.18` > Assets > **`MonitorRemoto-v0.1.0-alpha.18.apk`**. Em Actions > Artifacts, um APK de contingência (quando presente) continua vindo em ZIP por comportamento padrão do GitHub. Instale o mesmo APK nos dois aparelhos.
+2. No telefone secundário: na nova **Home**, toque em **Monitorar este aparelho > Abrir tela do aparelho**; autorize a notificação de serviço e ative o monitoramento. Em Configurações, conceda apenas as permissões necessárias e selecione os aplicativos cujas notificações deseja compartilhar.
 3. Na página Monitorado, toque em **Gerar QR** no lado direito do cartão. Escolha o IP privado acessível. O QR expira em 2 minutos e é válido para um único pareamento.
 4. No telefone principal: na **Home**, toque em **Conectar novo aparelho > QR Code**, aponte a câmera na janela compacta e confirme os dados do aparelho antes do pareamento. Para um aparelho salvo, use **Aparelhos anteriores > Conectar**. A digitação manual de IP e chave continua disponível.
 5. Na internet: configure **Tailscale/WireGuard** em ambos, conecte-os à mesma rede privada VPN e, em **Conectar novo aparelho > Manualmente**, informe o IP/nome acessível na VPN. Não abra a porta no roteador à internet pública.
@@ -47,7 +47,7 @@ Requer Android SDK API 36, Java 17, Gradle 8.13. O repositório ainda não inclu
 gradle :app:testDebugUnitTest :app:assembleDebug
 ```
 
-APK local de teste: `app/build/outputs/apk/debug/app-debug.apk`. O workflow copia esse arquivo ou o Release assinado como **`MonitorRemoto-v0.1.0-alpha.17.apk`**. Baixe diretamente na aba GitHub **Releases**. **O APK não está incluído neste ZIP de código-fonte.** Veja `docs/PAIRING_QR.md` para segurança do QR.
+APK local de teste: `app/build/outputs/apk/debug/app-debug.apk`. O workflow copia esse arquivo ou o Release assinado como **`MonitorRemoto-v0.1.0-alpha.18.apk`**. Baixe diretamente na aba GitHub **Releases**. **O APK não está incluído neste ZIP de código-fonte.** Veja `docs/PAIRING_QR.md` para segurança do QR.
 
 Opcional: configure os quatro Secrets de assinatura para gerar APK Release assinado e AAB. Ver `docs/APK_DOWNLOAD.md`. Preservar a mesma keystore entre builds é essencial para atualizações sem reinstalação.
 
@@ -59,9 +59,9 @@ Opcional: configure os quatro Secrets de assinatura para gerar APK Release assin
 ## Interface Controle (alpha.11)
 
 - Visual claro por padrão, com opções em **⚙ Configurações > Aparência**: claro, escuro e seguir sistema; escolha guardada apenas neste aparelho.
-- **Histórico:** a tela inicial já foi Controle (alpha.11) e Monitorado (alpha.16). **Na alpha.17**, a tela inicial é a **Home**, com Conectar novo aparelho, Aparelhos anteriores e Monitorar este aparelho; o ícone de casa sempre retorna à Home.
+- **Histórico:** a tela inicial já foi Controle (alpha.11) e Monitorado (alpha.16). **Desde a alpha.17**, a tela inicial é a **Home**, com Conectar novo aparelho, Aparelhos anteriores e Monitorar este aparelho; o ícone de casa sempre retorna à Home.
 - Cabeçalho com **⌂ Home** e **⚙ Configurações**; no cartão do aparelho, botão compacto **Conectar/Reconectar/Desconectar** junto ao nome e **↻ Atualizar** colorido à direita; chips de versão e estado do monitorado; atualização manual e polling automático a cada 15 s.
-- A etapa inicial **Conectar aparelho** oferece QR Code, Manualmente, Inserir código QR e aparelhos salvos com botões Conectar/Renomear/Esquecer. Somente Manualmente abre os blocos IP e chave com Colar/Limpar.
+- A etapa inicial **Conectar aparelho** oferece QR Code, Manualmente, aparelhos salvos com botões Conectar/Renomear/Esquecer. Somente Manualmente abre os blocos IP e chave com Colar/Limpar.
 - Até cinco aparelhos recentes com renomear/esquecer. Cada chave é protegida individualmente pelo Android Keystore, com migração da credencial antiga sem novo pareamento. O histórico registra somente nome/IP e último sucesso, **não** mensagens.
 - A informação "Conectado" representa a **última consulta autenticada** e não um socket persistentemente conectado; em falha, status troca para "Sem resposta" e dados anteriores permanecem rotulados.
 - QR continua com Camera2 (alpha.9); teste físico e compilação completa ainda pendentes.
@@ -103,7 +103,7 @@ A execução GitHub Actions #4 falhou na compilação do leitor QR. A chamada ao
 ## Correções alpha.7 (build 6 e leitura de QR)
 
 - Build #6 compilou o Kotlin principal, mas falhou em três testes `EventJournalTest` que acionavam os métodos `org.json` do `android.jar` mockado na JVM. Agora o teste usa `EventJournal.latest()` e testa a lógica de filtro sem serialização Android. `latestJson()` permanece disponível para transmissão real.
-- Scanner alpha.9 agora usa **Camera2 nativo**, sem `CaptureActivity`, `IntentIntegrator` ou bibliotecas de câmera ZXing Embedded. O ZXing Core (3.5.4) fica exclusivamente na codificação/decodificação local. O botão **Inserir código QR manualmente** permite continuar se a câmera não funcionar.
+- Scanner alpha.9 agora usa **Camera2 nativo**, sem `CaptureActivity`, `IntentIntegrator` ou bibliotecas de câmera ZXing Embedded. O ZXing Core (3.5.4) fica exclusivamente na codificação/decodificação local. Se a câmera falhar, permaneça a alternativa Manual com IP e chave.
 - O fechamento do leitor informado em aparelho físico ainda **não possui stacktrace Android/logcat**; não se pode confirmar que a causa original foi eliminada sem nova instalação e teste. Caso persista, capturar `adb logcat -b crash -d` ou logcat com `FATAL EXCEPTION` e `MonitorRemotoQR`.
 - Secrets de assinatura não acompanham o projeto nem devem ser adicionados ao GitHub. Para atualizar sem reinstalar é necessário **usar sempre o mesmo certificado** e manter o `applicationId`. APK Debug antigo e nova chave Release possuem assinaturas diferentes: talvez seja necessária uma única reinstalação ao migrar, com perda de dados locais sem backup.
 
@@ -120,7 +120,7 @@ A execução GitHub Actions #4 falhou na compilação do leitor QR. A chamada ao
 - A alpha.8 ainda abria a câmera usando a Activity do ZXing Embedded; as mudanças de manifesto e permissões não resolveram o encerramento relatado. Sem logcat do celular, a causa original específica **não foi comprovada**.
 - A alpha.9 substitui integralmente essa tela por `QrScanActivity` com **Android Camera2** e `ImageReader YUV_420_888`, pré-visualização via `TextureView` e leitura ZXing Core em memória, sem Play Services/internet.
 - Exibe estado e erros da câmera na própria tela (em vez de encerrá-la deliberadamente), com logs `MonitorRemotoQR` sem incluir o conteúdo confidencial do QR. Permissão continua sob autorização explícita.
-- Em **Controle > Inserir código QR manualmente**, é possível digitar/colar o URI temporário se um leitor externo obtiver o texto; o QR temporário deve ser mantido privado e só vale pelo prazo curto.
+- A opção antiga de colar o URI temporário do QR foi retirada na alpha.18; utilize QR pela câmera ou conexão Manual com IP e chave.
 - Nenhuma foto ou quadro é salvo/transmitido. O limite de leitura é de ~2,5 tentativas por segundo, economizando CPU em relação à decodificação de todos os frames.
 - Necessário confirmar build Android `:app:testDebugUnitTest :app:assembleDebug`, leitura física entre dois aparelhos, orientação/câmera de fabricantes diferentes e upgrade APK assinado. Não afirmar correção comprovada sem esses testes.
 
@@ -134,7 +134,7 @@ A tela Monitorado apresenta o estado real do serviço e IP local. Ativar, gerar 
 ## Fluxo de conexão e cartões (alpha.15)
 
 - Conectar/Reconectar abre a escolha de método, em vez do formulário grande. No modo conectado, Desconectar apenas limpa a seleção, preservando os aparelhos pareados.
-- Escolhas: QR Code (scanner em diálogo flutuante Camera2), Manualmente (IP e chave), Inserir código QR ou cartões de aparelhos anteriores.
+- Na alpha.15 havia as opções de QR Code, Manual e Inserir código QR. Na alpha.18 restaram QR e Manual lado a lado, mais cartões de aparelhos anteriores.
 - Cada cartão salvo traz os botões verticais **Conectar**, **Renomear** e **Esquecer**. Esquecer requer confirmação e apaga a chave do aparelho no Android Keystore.
 - QR escaneado **não conecta automaticamente**: apresenta endereço e nome local se o aparelho já estiver salvo; se for novo, apresenta «Não identificado (novo)» até ser autenticado. **Confirmar** inicia o pareamento e **Cancelar** o interrompe.
 - No painel, botões menores ficam alinhados à direita: ação de conexão junto ao título e **↻ Atualizar** em azul. As consultas continuam a cada 15 s com a tela aberta.
@@ -156,3 +156,14 @@ A tela Monitorado apresenta o estado real do serviço e IP local. Ativar, gerar 
 - Na página Monitorado, os botões **Gerar QR**, **Mostrar info** e **Interromper** aparecem empilhados à direita do resumo deste aparelho. Não se trata de uma nova página inicial.
 - O ícone **Home** e a ação **Voltar** nas telas de monitoramento/controle retornam à escolha inicial sem encerrar serviços, apagar dados ou revogar credenciais.
 - As telas detalhadas de controle remoto e de aparelho monitorado serão refinadas em versão posterior; a alpha.17 só reorganiza a navegação e as ações locais.
+
+
+## Mudanças da alpha.18: conectividade e acesso recebido
+
+- Na janela Conectar aparelho, **QR Code | Manual** dividem a mesma linha. A opção de inserir texto de QR foi retirada do menu (a conexão manual por IP/chave continua).
+- Em Aparelhos anteriores, os três controles **Conectar | Renomear | Esquecer** dividem uma única linha em vez de empilharem.
+- O pop-up **Minhas informações** exibe os botões **Mostrar | Copiar | Compartilhar** lado a lado, sem mostrar a chave até o usuário solicitar.
+- Em Controle, o botão **Desconectar** retorna automaticamente à Home e cancela a seleção do host.
+- O aparelho Monitorado exibe um quadro de **acesso recebido** assim que recebe resposta autenticada com sucesso, com IP de origem, nome/método declarados pelo cliente, primeiro e último acesso e botão Ações. A tela Home também sinaliza acessos recentes. A interface expira indicadores após 45 segundos sem consulta autenticada; atualiza via evento e temporizador de 5 segundos.
+- **Não existe sessão permanente**: cliente consulta a cada 15 segundos com tela Controle aberta. Método/nome enviados pelo cliente não provam identidade, pois os controladores autorizados compartilham a mesma chave. Encerrar serviço ou trocar chave revoga acesso globalmente; não existe controle individual nesta versão.
+- Controladores antigos, que não enviam nome/método, aparecem como **não identificados**. Não inventar método ou atribuir identidade com base apenas no IP.

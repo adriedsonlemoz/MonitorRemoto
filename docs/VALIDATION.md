@@ -205,3 +205,13 @@
 - [x] Home/Voltar não chamam stopService nem apagam chaves.
 - [ ] Compilação Gradle/Android completa, instalação e navegação física, temas claro/escuro e fontes grandes.
 - [ ] Prova prática com dois celulares da conexão, captura QR, autenticidade do último horário e reentrada do app.
+
+
+## alpha.18: conexões recebidas e interface compacta (13/10/2026)
+
+- `tools/check_distribution.py`: invariantes de versão, permissão e fluxo de segurança.
+- Kotlin PSI: 25+ fontes Kotlin, incluindo `AuthenticatedAccess` e testes, sem falhas sintáticas.
+- Teste JVM `AuthenticatedAccessTest`: registro autenticado, expiração, método declarado e observadores (pendente execução pela CI quando não houver Android SDK local).
+- Riscos ainda a validar em dois aparelhos: atualização de tela ao primeiro snapshot, latência real de atualização, atualização de estado após 45 s sem consulta, identificação informada pelo controlador, rotação global de credencial.
+- Limitação deliberada: sem sessão TCP contínua nem revogação individual; nomes enviados pelo cliente não são atestados.
+- Build Android / teste físico: não executados localmente se ferramentas/SDK ausentes.

@@ -134,7 +134,7 @@ class QrScanActivity : Activity(), TextureView.SurfaceTextureListener {
     private fun showCameraError(stage: String, error: Throwable) {
         Log.e(TAG, "Falha de câmera: $stage", error) // Nunca registrar conteúdo do QR.
         updateStatus("Não foi possível usar a câmera ($stage: ${error.javaClass.simpleName}). " +
-            "Volte e use 'Inserir código QR manualmente'.")
+            "Volte e use conexão manual com IP e chave.")
     }
 
     private fun openCamera() {

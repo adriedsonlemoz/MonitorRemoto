@@ -1,5 +1,8 @@
 package br.dev.monitorremoto.transport
 
+import android.content.Context
+import android.os.Build
+import br.dev.monitorremoto.core.SettingsStore
 import br.dev.monitorremoto.security.CryptoBox
 import org.json.JSONObject
 import java.net.InetSocketAddress
@@ -7,7 +10,7 @@ import java.net.Socket
 
 object RemoteClient {
     /** Executar somente fora da thread principal. */
-    fun snapshot(host: String, key: ByteArray): JSONObject {
+    fun snapshot(host: String, key: ByteArray, context: Context, method: String = "Chave salva"): JSONObject {
         require(host.isNotBlank() && host.length <= 253)
         require(!host.contains('/') && !host.contains(':') && !host.contains(' ')) {
             "Informe apenas o IP IPv4 ou hostname (sem http:// ou porta)."
@@ -16,6 +19,9 @@ object RemoteClient {
             .put("v", WireProtocol.VERSION)
             .put("op", "snapshot")
             .put("ts", System.currentTimeMillis())
+            .put("clientId", SettingsStore.controllerId(context))
+            .put("clientName", listOf(Build.MANUFACTURER, Build.MODEL).joinToString(" ").take(72))
+            .put("accessMethod", method)
         return Socket().use { socket ->
             socket.connect(InetSocketAddress(host, WireProtocol.PORT), 4500)
             socket.soTimeout = 6500

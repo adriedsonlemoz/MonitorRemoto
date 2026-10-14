@@ -1,6 +1,7 @@
 package br.dev.monitorremoto.core
 
 import android.content.Context
+import java.util.UUID
 
 object SettingsStore {
     private const val FILE = "monitor_remoto_settings"
@@ -31,6 +32,16 @@ object SettingsStore {
     fun setTheme(context: Context, value: String) {
         require(value in setOf("light", "dark", "system"))
         prefs(context).edit().putString("theme", value).apply()
+    }
+
+    /** Pseudonymous client identifier is not a secret or proof of device identity. */
+    @Synchronized fun controllerId(context: Context): String {
+        val preferences = prefs(context)
+        val known = preferences.getString("controller_id", null)
+        if (!known.isNullOrBlank()) return known
+        val generated = UUID.randomUUID().toString()
+        preferences.edit().putString("controller_id", generated).commit()
+        return generated
     }
 
     fun getRemoteHost(context: Context) = prefs(context).getString("remote_host", "").orEmpty()

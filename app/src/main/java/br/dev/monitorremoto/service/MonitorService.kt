@@ -13,6 +13,7 @@ import android.os.IBinder
 import br.dev.monitorremoto.core.EventJournal
 import br.dev.monitorremoto.core.SettingsStore
 import br.dev.monitorremoto.security.SecretVault
+import br.dev.monitorremoto.transport.AuthenticatedAccess
 import br.dev.monitorremoto.transport.MonitorServer
 import br.dev.monitorremoto.transport.PairingSession
 import br.dev.monitorremoto.ui.MainActivity
@@ -85,6 +86,7 @@ class MonitorService : Service() {
         // O processo pode continuar vivo após a interrupção do serviço.
         EventJournal.clear()
         PairingSession.revoke()
+        AuthenticatedAccess.clear()
         server?.stop()
         server = null
         isRunning = false

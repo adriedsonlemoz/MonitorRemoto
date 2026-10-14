@@ -1,4 +1,4 @@
-# Arquitetura (0.1.0-alpha.17)
+# Arquitetura (0.1.0-alpha.18)
 
 ```text
 MONITORADO                                      CONTROLE
@@ -19,9 +19,9 @@ O FGS `connectedDevice` mantém o socket de escuta durante monitoramento ativo. 
 
 ## Distribuição e assinatura
 
-O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.17` e `versionCode=17`.
+O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.18` e `versionCode=18`.
 
-- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.17.apk`.
+- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.18.apk`.
 - `upload-artifact` sempre distribui um ZIP; GitHub Releases recebe o **arquivo APK direto**.
 - Com quatro Secrets, Gradle gera APK Release assinado e AAB. Sem Secrets, o arquivo é Debug de teste e não preserva necessariamente a assinatura entre execuções.
 - Releases são prévias, não substituem a futura revisão da Google Play e nem os ensaios reais.
@@ -65,3 +65,10 @@ Na alpha.16, a tela inicial volta a ser Monitorado, com retorno por Home. Contro
 ## Fluxo de navegação alpha.17
 
 `MainActivity.mode` tem três estados: `2` Home (padrão), `0` Monitorado e `1` Controle. Salvar/restaurar a escolha na recriação não altera o estado do serviço foreground. Home oferece escolha de conexão, até cinco pares locais e entrada para o modo Monitorado. O histórico de conexão vem exclusivamente de `RecentDevices.lastSuccessMs`, persistido após sucesso autenticado, sem inventar conexões e sem ler segredos para exibição. Engrenagem do perfil invoca renomeação/revogação no armazenamento existente; Voltar/Home troca apenas a interface. O Monitorado reúne no cartão status, IP privado atual e controles curtos empilhados à direita; chaves seguem protegidas no diálogo seguro já existente.
+
+
+## Acessos recebidos na alpha.18
+
+`RemoteClient.snapshot()` transmite metadados não secretos (`clientId` aleatório local, nome Android informado e método informado) dentro do envelope AES-GCM autenticado já existente. `MonitorServer` aceita campos opcionais para compatibilidade com alpha.17 e versões anteriores. Após resposta autenticada enviada, `AuthenticatedAccess` registra no processo somente IP de origem, valores declarados e instante do acesso; até 12 entradas, tempo de vida 45 segundos. Atualiza UI local por callbacks em memória, sem notificação externa ou servidor push.
+
+Autenticação prova **posse da chave compartilhada**, não identidade do dispositivo. Portanto nome e método são exibidos como *informados pelo cliente*, não certificados; controladores antigos não os transmitem. Não há conexão permanente nem encerramento seletivo de cliente sem redesenhar credenciais por controlador. O botão Ações permite ver detalhes, parar serviço ou trocar a chave global com confirmação. Registro volátil é apagado ao parar serviço ou trocar chave.
