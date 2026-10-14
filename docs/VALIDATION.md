@@ -1,3 +1,9 @@
+## Alpha.46 — correção do workflow 45 (14/10/2026)
+
+- Falha observada no ZIP de logs workflow 45: `:app:compileDebugKotlin` em `RemoteFilesActivity.kt:59:9` e `:66:9` com `None of the following candidates is applicable: setTextColor(ColorStateList!), setTextColor(Int)`; demais tarefas alcançadas antes da compilação não validam o APK.
+- Causa: `View.foreground` de tipo `Drawable` prevalece sobre o getter `foreground` de cor da Activity dentro de `apply`. Duas chamadas passaram a usar `this@RemoteFilesActivity.foreground` (`Int`).
+- Testes locais: `tools/check_distribution.py` aprovado, parser PSI em 97 fontes Kotlin com 0 erros sintáticos e contrato isolado Kotlin/JVM das duas chamadas `setTextColor(Int)` aprovado. Essas verificações não fazem resolução completa das APIs Android; compilar com Android Gradle no CI ainda é necessário.
+
 ## Alpha.45 — Recuperar dados (14/10/2026)
 
 - Implementados picker SAF local e revogação, operações autenticadas `dataList` e `dataChunk`, UI de navegação/salvamento, limites e SHA-256 por bloco.

@@ -16,7 +16,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.45" and code.group(1) == "45", "Versões incompatíveis"
+assert version == "0.1.0-alpha.46" and code.group(1) == "46", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -650,3 +650,15 @@ assert 'MANAGE_EXTERNAL_STORAGE' not in manifest and 'READ_EXTERNAL_STORAGE' not
 assert 'android:name=".ui.RemoteFilesActivity" android:exported="false"' in manifest
 assert (root / 'app/src/test/java/br/dev/monitorremoto/core/RemoteFilePolicyTest.kt').exists()
 print('PASSOU: alpha.45, recuperação restrita à árvore SAF consentida, criptografia, limites e cancelamento')
+
+# Alpha.46: compileDebugKotlin workflow #45 falhou por conflito de nomes com View.foreground: Drawable.
+# O getter foreground do Activity retorna Int; aplicar o receiver explícito nas duas views.
+remote_ui46 = (ui_root / "RemoteFilesActivity.kt").read_text(encoding="utf-8")
+assert remote_ui46.count('setTextColor(this@RemoteFilesActivity.foreground)') == 2, (
+    "alpha.46: label e button precisam qualificar a cor Int da Activity"
+)
+assert not re.search(r'(?<![\w.])setTextColor\(foreground\)', remote_ui46), (
+    "alpha.46: foreground implícito dentro de View.apply é Drawable, não ColorInt"
+)
+assert 'private val foreground get() = if (dark) Color.WHITE else Color.rgb(21, 38, 55)' in remote_ui46
+print('PASSOU: alpha.46, TextView/Button usam ColorInt da Activity e não Drawable da View')

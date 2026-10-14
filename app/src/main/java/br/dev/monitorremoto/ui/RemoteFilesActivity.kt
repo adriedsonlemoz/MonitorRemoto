@@ -56,14 +56,14 @@ class RemoteFilesActivity : Activity() {
     private fun label(value: String, size: Float = 14f, bold: Boolean = false) = TextView(this).apply {
         text = value
         textSize = size
-        setTextColor(foreground)
+        setTextColor(this@RemoteFilesActivity.foreground)
         if (bold) setTypeface(null, Typeface.BOLD)
         setPadding(0, dp(4), 0, dp(6))
     }
     private fun button(title: String, action: () -> Unit) = Button(this).apply {
         text = title
         isAllCaps = false
-        setTextColor(foreground)
+        setTextColor(this@RemoteFilesActivity.foreground)
         setOnClickListener { action() }
         minHeight = dp(48)
     }

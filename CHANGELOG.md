@@ -1,3 +1,10 @@
+## 0.1.0-alpha.46 (14/10/2026)
+
+- Corrigidos dois erros de compilação de `:app:compileDebugKotlin` do workflow 45, em `RemoteFilesActivity.kt:59` e `:66`. No escopo `TextView.apply`/`Button.apply`, `foreground` referia-se a `View.foreground: Drawable`, enquanto `setTextColor()` exige `Int` ou `ColorStateList`. Qualificado `this@RemoteFilesActivity.foreground` nas duas ocorrências.
+- Adicionada regressão que falha se voltar o acesso não qualificado em `setTextColor(foreground)` na Activity de arquivos.
+- Sincronizados versionName 0.1.0-alpha.46, versionCode 46, AppVersion, documentação, notas e verificador. Sem alteração das permissões nem da transferência SAF.
+- Validações estáticas locais não substituem `gradle :app:testDebugUnitTest :app:assembleDebug` em CI e testes reais em dois aparelhos.
+
 ## 0.1.0-alpha.45 (14/10/2026)
 
 - Implementada primeira etapa funcional de Recuperar dados com compartilhamento somente leitura de uma pasta SAF escolhida no monitorado, revogável nas Configurações.

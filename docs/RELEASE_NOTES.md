@@ -1,4 +1,13 @@
-# Monitor Remoto v0.1.0-alpha.45
+# Monitor Remoto v0.1.0-alpha.46
+
+## Correção de compilação do workflow 45 (alpha.46)
+
+- Resolvidos dois erros de tipo em `RemoteFilesActivity.kt`, linhas 59 e 66 da versão anterior.
+- `TextView.apply` e `Button.apply` agora recebem o `Int` da cor da Activity em `setTextColor`, em vez de `View.foreground: Drawable`.
+- Preservados recuperação SAF, criptografia, limites, consentimento, QR/ADB e modos de tela.
+- Compilação Android e testes em aparelhos ainda aguardam execução para a alpha.46.
+
+## Histórico da versão anterior (alpha.45)
 
 ## Recuperação de dados por pasta autorizada (alpha.45)
 
