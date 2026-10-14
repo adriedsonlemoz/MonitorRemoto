@@ -1,10 +1,15 @@
-# Modo avançado ADB — implementação alpha.47
+# Modo avançado ADB — implementação alpha.48
 
-## Fluxo guiado alpha.47
+## Fluxo guiado alpha.48
 
-**Configurações → Modo avançado ADB → Configurar novo** pergunta se o telefone vai **controlar outro** ou **permitir ser controlado**. O controlador escolhe QR/código, faz pareamento TLS e em seguida conecta por porta de conexão. Estado mostra **pareado nesta tentativa** separado de **conectado** (`AdbClient.connected()`), incluindo modelo reportado após diagnóstico. Já pareou antes? Há opção de ir direto à conexão, sem presumir que a credencial ainda esteja autorizada.
+A alpha.48 moderniza a interface do **Modo avançado ADB** sem alterar o princípio de segurança do fluxo. A tela inicial mostra um resumo visual do estado (desconectado, pareado, aguardando ou conectado), ações principais e um botão para expandir apenas quando necessário as configurações avançadas.
 
-No monitorado, o wizard apenas explica como abrir Depuração sem fios no Android; a autorização ocorre localmente no sistema. Esta Activity não vê conexões de clientes ADB recebidas. Isso é separado do protocolo normal AES-GCM e das permissões MediaProjection.
+O assistente continua separado por papel:
+
+1. **Controlar outro celular**: este aparelho gera o QR ou recebe o código, depois realiza a conexão ADB.
+2. **Permitir controle deste celular**: este aparelho apenas autoriza a Depuração sem fios nas Configurações do Android e segue passos guiados.
+
+As instruções foram reescritas em **passos numerados**, com botões diretos para abrir **Configurações do Android** e **Opções do desenvolvedor**. O pareamento por QR/código permanece distinto da conexão ADB final. O status conectado só aparece depois que `AdbClient.connected()` confirma a sessão ativa.
 
 ## Escopo entregue
 

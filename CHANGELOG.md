@@ -1,11 +1,11 @@
-## 0.1.0-alpha.47 (14/10/2026)
+## 0.1.0-alpha.48 (14/10/2026)
 
-- Reestruturado Modo avançado ADB como assistente visual: página inicial “Configurar novo”, seleção do papel, método QR/código, conexão TLS e tela de sucesso. Papel monitorado orienta a autorização no Android, sem atribuir estado falso a conexões recebidas.
-- Cartão permanente com status real: desconectado, pareado nesta tentativa mas ainda sem conexão, ou conectado com IP e modelo reportado. Caminho para conexão previamente autorizada e descoberta mDNS opcional.
-- Corrigida condição de callback: pareamento completo aciona a navegação para conexão mesmo que `AdbClient.connected()` ainda seja false; falhas não podem sinalizar sucesso.
-- `FLAG_SECURE` restrito ao QR temporário, campos sensíveis sem autofill, comandos limitados/confirmados, finalização de sessão ao sair e segurança ADB mantidas. Sem novas permissões.
-- Atualizados `versionName=0.1.0-alpha.47`, `versionCode=47`, `AppVersion`, arquitetura, documentação e verificador. Parser Kotlin PSI, estado JVM e verificador estrutural aprovados; compilação Android e testes físicos pendentes.
-
+- Modernizado o visual do **Modo avançado ADB** com cartões mais limpos, resumo no topo, chip de estado (“Conectado”, “Pareado”, “Aguardando” ou “Desconectado”) e ações principais destacadas na abertura.
+- A tela inicial agora segue o fluxo pedido pelo usuário: botão principal dinâmico (**+ Configurar novo** ou **Controlar aparelho**), ação secundária (**Conectar** ou **Desconectar**) e botão para **Mostrar/Ocultar configurações avançadas**.
+- Melhoradas as instruções do assistente com passos numerados. No papel **Permitir controle deste celular**, os passos agora orientam claramente abrir Configurações, ativar Opções do desenvolvedor/Depuração sem fios, usar o outro celular como controlador e concluir QR ou código.
+- Adicionados botões diretos para **Abrir Configurações do Android** e **Abrir Opções do desenvolvedor**, com fallback seguro para Configurações gerais quando necessário.
+- Mantida a separação honesta entre **parear** e **conectar**: pareamento bem-sucedido não aparece como conexão ativa, e o status conectado só aparece com `AdbClient.connected()` confirmado. `FLAG_SECURE` continua restrito ao QR temporário.
+- Sincronizados `versionName=0.1.0-alpha.48`, `versionCode=48`, `AppVersion`, documentação e verificador. Verificações estáticas locais pendentes de conclusão nesta entrega; build Gradle Android e testes físicos continuam pendentes.
 ## 0.1.0-alpha.46 (14/10/2026)
 
 - Corrigidos dois erros de compilação de `:app:compileDebugKotlin` do workflow 45, em `RemoteFilesActivity.kt:59` e `:66`. No escopo `TextView.apply`/`Button.apply`, `foreground` referia-se a `View.foreground: Drawable`, enquanto `setTextColor()` exige `Int` ou `ColorStateList`. Qualificado `this@RemoteFilesActivity.foreground` nas duas ocorrências.

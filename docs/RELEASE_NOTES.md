@@ -1,13 +1,13 @@
-# Monitor Remoto v0.1.0-alpha.47
+# Monitor Remoto v0.1.0-alpha.48
 
-## Assistente de configuração ADB (alpha.47)
+## Assistente de configuração ADB (alpha.48)
 
-- Novo botão **Configurar novo** no modo avançado ADB, com escolha entre **Controlar outro celular** ou **Permitir controle deste celular**.
-- No controlador, etapas guiadas: QR ou código, parear, conectar por IP/porta de conexão e identificar modelo do telefone. Em **Já autorizei antes · Conectar**, permite ir direto à conexão sem afirmar que ela existe.
-- O indicador separa **desconectado**, **pareado nesta tentativa (falta conectar)** e **conectado por ADB**; um pareamento antigo não é marcado como conexão real. No monitorado, conexão recebida não é verificável nesta tela do app.
-- Callback após pareamento QR/código corrigido para avançar apenas após sucesso do handshake, sem exigir conexão ADB antes dela.
-- QR temporário permanece protegido por `FLAG_SECURE`; fora dele, capturas liberadas. Não habilita Depuração sem fios automaticamente, não remove bloqueios, nem permite captura de tela por ADB.
-- Mantidos SAF Recuperar dados, MediaProjection, AES-GCM, JPEG/H.264 e identidade ADB local. ZIP de código-fonte; build Android e teste real pendentes.
+- Visual do Modo avançado ADB atualizado para um layout mais limpo, com resumo no topo, chip de status e ações principais destacadas.
+- Tela inicial simplificada: botão principal dinâmico, ação secundária para conectar/desconectar e área de configurações avançadas recolhida por padrão.
+- Assistente com passos numerados mais claros, especialmente para o papel **Permitir controle deste celular**.
+- Atalhos diretos para abrir **Configurações do Android** e **Opções do desenvolvedor** no monitorado.
+- Continuidade da segurança: QR temporário protegido por `FLAG_SECURE`, diferenciação entre pareamento e conexão e estado conectado apenas com sessão ADB TLS ativa.
+
 
 ---
 
