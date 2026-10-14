@@ -37,6 +37,10 @@
             android:theme="@android:style/Theme.Material.Light.Dialog.NoActionBar"
             android:exported="false" />
 
+        <activity
+            android:name=".ui.IncomingAccessActivity"
+            android:exported="false" />
+
         <activity android:name=".ui.MainActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

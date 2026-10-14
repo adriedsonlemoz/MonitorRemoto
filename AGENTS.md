@@ -1,4 +1,4 @@
-# Monitor Remoto 0.1.0-alpha.19
+# Monitor Remoto 0.1.0-alpha.20
 # Convenções permanentes do projeto Monitor Remoto
 
 - Toda alteração de código incrementa sequencialmente `versionCode` e `versionName` (ex.: `0.1.0-alpha.8` -> `0.1.0-alpha.9`). Sincronizar tela, README, CHANGELOG, RELEASE_NOTES e documentação.
@@ -21,7 +21,7 @@
 - Alpha.10: manter tema **claro padrão**, as opções da engrenagem, janela Conectar, botão de atualização compacto, lista de até 5 aparelhos recentes e os dados do Controle no topo. Não reintroduzir formulário longo na tela principal.
 - Credenciais por dispositivo usam `RecentDevices` + `SecretVault.profileKeyName`, com migração única da alpha.9. Não reaproveitar `CONTROLLER_KEY` antigo para IPs novos nem gravar segredo em preferências sem criptografia. Esquecer apaga o segredo correspondente.
 - Respostas HTTP/TCP não são conexão persistente. Exibir "Conectado" apenas após consulta autenticada bem-sucedida e "Sem resposta" após erro. Não inventar tempos de atualização.
-- Próxima versão sequencial: `0.1.0-alpha.20`, `versionCode 20`.
+- Próxima versão sequencial: `0.1.0-alpha.21`, `versionCode 21`.
 
 - Alpha.15: preservar a seleção Conectar → QR/Manual/Salvos, confirmação do QR antes de parear, cartões salvos com três ações e o scanner em Activity com tema Dialog.
 
@@ -33,3 +33,7 @@
 - Alpha.18: `AuthenticatedAccess` registra SOMENTE consultas respondidas após AES-GCM autenticado. Servidor não possui sessão TCP permanente: registro em memória expira após 45 s sem novas consultas. Nome/método são declarados pelo controlador e podem ser falsificados por outro portador da chave. Nunca apresentá-los como identidade verificada. Sem revogação individual enquanto a chave é compartilhada: interromper serviço ou rotacionar chave afeta todos os aparelhos.
 
 - Alpha.19: tela do aparelho conectado deve priorizar cabeçalho compacto com ações principais no topo, resumo visual em grade e atalhos compactos lado a lado. Funções futuras podem aparecer como “Em breve”, mas sem simular implementação.
+
+- Alpha.20: `AppVersion.NAME` deve seguir o `versionName` do Gradle rigorosamente. QR, snapshots e `disconnect` autenticado exigem **igualdade exata** de versão em ambos os aparelhos. Não confundir versão do aplicativo com protocolo `v=1`.
+- Alpha.20: `IncomingAccessActivity` em primeiro plano alerta em qualquer área do app e volta ao Monitorado quando o acesso termina; em segundo plano usar apenas notificação Android, sem iniciar tela automaticamente. Identidade/método informados não são verificados; consultas têm expiração de 45s, não conexão permanente. Parada explícita deve permanecer parada.
+- Alpha.20: configurações em grade com ícones vetoriais, bateria compacta e ações remotas com toque adequado; não copiar diálogos antigos em lista simples. Rede remota não pode inventar SSID.

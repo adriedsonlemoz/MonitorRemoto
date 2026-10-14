@@ -3,6 +3,8 @@ package br.dev.monitorremoto.ui
 import android.Manifest
 import android.app.Activity
 import android.app.AlertDialog
+import android.content.res.ColorStateList
+import android.os.SystemClock
 import android.content.ClipData
 import android.content.ClipDescription
 import android.content.ClipboardManager
@@ -33,6 +35,7 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import br.dev.monitorremoto.R
 import br.dev.monitorremoto.capture.NotificationCaptureService
 import br.dev.monitorremoto.core.BatteryReader
 import br.dev.monitorremoto.core.RecentDevices
@@ -42,6 +45,7 @@ import br.dev.monitorremoto.core.SensitiveContent
 import br.dev.monitorremoto.security.CryptoBox
 import br.dev.monitorremoto.security.SecretVault
 import br.dev.monitorremoto.service.MonitorService
+import br.dev.monitorremoto.transport.AppVersion
 import br.dev.monitorremoto.transport.AuthenticatedAccess
 import br.dev.monitorremoto.transport.RemoteClient
 import br.dev.monitorremoto.transport.PairingCode
@@ -85,19 +89,29 @@ class MainActivity : Activity() {
     private var resultBox: LinearLayout? = null
     private var pairingInProgress = false
     private var selectedConnectionMethod: String = "Chave salva"
-    private val announcedIncoming = mutableSetOf<String>()
+    companion object { const val EXTRA_OPEN_MONITOR = "br.dev.monitorremoto.OPEN_MONITOR" }
+    private var showingIncoming = false
+    private var lastRecoveryAttemptMs = 0L
     private val incomingListener: () -> Unit = {
         handler.post {
             if (active && !isFinishing && !isDestroyed) {
-                val peers = AuthenticatedAccess.recent()
-                val fresh = peers.map { announcedIncoming.add("${it.key}:${it.sinceMs}") }.any { it }
-                // Incoming access is visible immediately on the monitored phone.
-                // Do not take over the Controller page during another user's active task.
-                if (mode == 2 && fresh) mode = 0
-                if (mode == 0 || (mode == 2 && fresh)) render()
+                if (!showIncomingAccessIfNeeded() && mode == 0) render()
             }
         }
     }
+
+    /** Interrompe até mesmo diálogos de Configurações: uma nova Activity ocupa a tela. */
+    private fun showIncomingAccessIfNeeded(): Boolean {
+        if (!active || showingIncoming || isFinishing || isDestroyed ||
+            !SettingsStore.isMonitorEnabled(this) || !MonitorService.isRunning ||
+            AuthenticatedAccess.recent().isEmpty()) return false
+        showingIncoming = true
+        startActivity(Intent(this, IncomingAccessActivity::class.java))
+        // Fecha também os diálogos abertos na Activity anterior.
+        finish()
+        return true
+    }
+
     private val monitorStatusPoll = object : Runnable {
         override fun run() {
             if (active && mode == 0) {
@@ -131,7 +145,8 @@ class MainActivity : Activity() {
         setTheme(if (darkTheme()) android.R.style.Theme_Material_NoActionBar else android.R.style.Theme_Material_Light_NoActionBar)
         super.onCreate(savedInstanceState)
         RecentDevices.migrateLegacy(this)
-        mode = savedInstanceState?.getInt("active_mode", 2)?.takeIf { it in 0..2 } ?: 2
+        mode = if (intent.getBooleanExtra(EXTRA_OPEN_MONITOR, false)) 0
+            else savedInstanceState?.getInt("active_mode", 2)?.takeIf { it in 0..2 } ?: 2
         window.statusBarColor = bg
         window.navigationBarColor = bg
         window.decorView.systemUiVisibility = if (darkTheme()) 0 else
@@ -173,10 +188,26 @@ class MainActivity : Activity() {
         active = true
         AuthenticatedAccess.subscribe(incomingListener)
         render()
+        if (!showIncomingAccessIfNeeded()) recoverAuthorizedServiceIfStopped()
         handler.removeCallbacks(monitorStatusPoll)
         if (mode == 0) handler.postDelayed(monitorStatusPoll, 5_000L)
         handler.removeCallbacks(poller)
         handler.postDelayed(poller, 15_000L)
+    }
+
+    /** Recuperação conservadora somente com o app visível; nunca após parada explícita. */
+    private fun recoverAuthorizedServiceIfStopped() {
+        if (!SettingsStore.isMonitorEnabled(this) || MonitorService.isRunning) return
+        val now = SystemClock.elapsedRealtime()
+        if (lastRecoveryAttemptMs != 0L && now - lastRecoveryAttemptMs < 60_000L) return
+        lastRecoveryAttemptMs = now
+        handler.postDelayed({
+            if (active && !isFinishing && !isDestroyed &&
+                SettingsStore.isMonitorEnabled(this) && !MonitorService.isRunning) {
+                runCatching { MonitorService.start(this) }
+                handler.postDelayed({ if (active && mode == 0) render() }, 1_000L)
+            }
+        }, 800L)
     }
 
     override fun onPause() {
@@ -351,7 +382,7 @@ class MainActivity : Activity() {
         content.addView(header)
 
         val metaRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        metaRow.addView(infoChip("v0.1.0-alpha.19"))
+        metaRow.addView(infoChip("v${AppVersion.NAME}"))
         metaRow.addView(View(this), LinearLayout.LayoutParams(dp(8), 1))
         val monitorActive = SettingsStore.isMonitorEnabled(this) && MonitorService.isRunning
         metaRow.addView(infoChip(if (monitorActive) "Monitorado ativo" else "Monitorado inativo", accent = monitorActive))
@@ -384,7 +415,7 @@ class MainActivity : Activity() {
         val (wrapper, layout) = dialogWrapper()
         dialogIntro(layout, "Resumo rápido do foco atual do projeto.")
         val card = panel(14)
-        card.addView(dialogMetricRow("Versão", "0.1.0-alpha.19"))
+        card.addView(dialogMetricRow("Versão", AppVersion.NAME))
         card.addView(dialogMetricRow("Tela inicial", "Home com escolha de aparelhos"))
         card.addView(dialogMetricRow("Modo monitorado", "No mesmo APK"))
         card.addView(dialogMetricRow("Segurança", "Pareamento local e Android Keystore"))
@@ -397,37 +428,75 @@ class MainActivity : Activity() {
             .show()
     }
 
+    /** Painel de opções moderno, sem os antigos itens de diálogo em listas longas. */
     private fun showSettingsDialog() {
-        showOptionDialog(
-            "Configurações",
-            listOf(
-                OptionItem("Aparência", "Tema claro, escuro ou automático") { showAppearanceDialog() },
-                OptionItem("Permissões e notificações", "Acesso às notificações e apps autorizados") { showPermissionSettings() },
-                OptionItem("Segurança e pareamento", "Mostrar chave ou revogar acessos") { showSecuritySettings() },
-                OptionItem("Serviço e inicialização", "Reiniciar serviço e início automático") { showServiceSettings() },
-                OptionItem("Diagnóstico", "IP, porta, estado do serviço e permissões") { showDiagnostics() },
-                OptionItem("Sobre o aplicativo", "Versão, objetivos e segurança") { showAboutDialog() },
-            )
+        val (wrapper, layout) = dialogWrapper()
+        val header = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+        val headText = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        headText.addView(label("Personalize e proteja", 17f, strong = true))
+        headText.addView(label("Controles do aparelho e do serviço", 11.5f, muted = true))
+        header.addView(headText, LinearLayout.LayoutParams(0, -2, 1f))
+        header.addView(settingsIcon(R.drawable.ic_settings, highlight, 26))
+        layout.addView(header)
+        sectionGap(layout, 12)
+
+        val options = listOf(
+            Triple("Aparência", "Claro · Escuro · Sistema", R.drawable.ic_palette),
+            Triple("Notificações", "Acesso e apps permitidos", R.drawable.ic_bell),
+            Triple("Segurança", "Chaves e pareamento", R.drawable.ic_shield),
+            Triple("Serviço", "Ativar e inicialização", R.drawable.ic_power),
+            Triple("Diagnóstico", "Rede e permissões", R.drawable.ic_activity),
+            Triple("Sobre", "Versão e privacidade", R.drawable.ic_info)
         )
+        val actions: List<() -> Unit> = listOf(
+            { showAppearanceDialog() }, { showPermissionSettings() },
+            { showSecuritySettings() }, { showServiceSettings() },
+            { showDiagnostics() }, { showAboutDialog() }
+        )
+        var popup: AlertDialog? = null
+        options.chunked(2).forEachIndexed { rowIndex, rowOptions ->
+            val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+            rowOptions.forEachIndexed { index, option ->
+                val itemIndex = rowIndex * 2 + index
+                val tile = LinearLayout(this).apply {
+                    orientation = LinearLayout.VERTICAL
+                    background = shape(fieldColor, 17, true)
+                    setPadding(dp(13), dp(14), dp(9), dp(12))
+                    minimumHeight = dp(112)
+                    isClickable = true
+                    isFocusable = true
+                    contentDescription = "${option.first}: ${option.second}"
+                    setOnClickListener { popup?.dismiss(); actions[itemIndex]() }
+                }
+                tile.addView(settingsIcon(option.third, if (itemIndex == 2) highlight else secondaryAccent, 26))
+                tile.addView(label(option.first, 13f, strong = true).apply {
+                    setPadding(0, dp(8), 0, 0)
+                    maxLines = 1
+                    ellipsize = android.text.TextUtils.TruncateAt.END
+                })
+                tile.addView(label(option.second, 10.5f, muted = true).apply {
+                    setPadding(0, dp(3), 0, 0)
+                    maxLines = 2
+                    ellipsize = android.text.TextUtils.TruncateAt.END
+                })
+                row.addView(tile, LinearLayout.LayoutParams(0, -2, 1f).apply {
+                    if (index == 0) rightMargin = dp(8)
+                })
+            }
+            layout.addView(row)
+            if (rowIndex < 2) sectionGap(layout, 8)
+        }
+        sectionGap(layout, 10)
+        layout.addView(label("Monitor Remoto  ·  ${AppVersion.NAME}", 11f, muted = true))
+        popup = AlertDialog.Builder(this).setTitle("Configurações")
+            .setView(wrapper).setNegativeButton("Fechar", null).create()
+        popup.show()
     }
 
-    private fun showOptionDialog(title: String, items: List<OptionItem>) {
-        val (wrapper, layout) = dialogWrapper()
-        dialogIntro(layout, "Ajustes agrupados para reduzir a quantidade de informações na tela principal.")
-        var popup: AlertDialog? = null
-        items.forEachIndexed { index, item ->
-            layout.addView(dialogCardRow(item.title, item.subtitle) {
-                popup?.dismiss(); item.action()
-            })
-            if (index != items.lastIndex) sectionGap(layout, 8)
-        }
-        val dialog = AlertDialog.Builder(this)
-            .setTitle(title)
-            .setView(wrapper)
-            .setNegativeButton("Fechar", null)
-            .create()
-        popup = dialog
-        dialog.show()
+    private fun settingsIcon(drawable: Int, tint: Int, size: Int) = ImageView(this).apply {
+        setImageResource(drawable)
+        imageTintList = ColorStateList.valueOf(tint)
+        layoutParams = LinearLayout.LayoutParams(dp(size), dp(size))
     }
 
     private fun showAppearanceDialog() {
@@ -492,19 +561,8 @@ class MainActivity : Activity() {
     }
 
     private fun showMonitorKey() {
-        try {
-            val key = CryptoBox.encode(SecretVault.getOrCreateMonitorKey(this))
-            val dialog = AlertDialog.Builder(this)
-                .setTitle("Chave secreta de pareamento")
-                .setMessage("Esta chave dá acesso aos dados remotos. Não compartilhe com terceiros.\n\n$key")
-                .setPositiveButton("Copiar") { _, _ ->
-                    val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                    clipboard.setPrimaryClip(ClipData.newPlainText("Chave Monitor Remoto", key))
-                    message("Chave copiada. Limpe a área de transferência depois do pareamento.")
-                }.setNegativeButton("Fechar", null).create()
-            dialog.show()
-            dialog.window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
-        } catch (error: Exception) { message("Keystore indisponível: ${error.message}") }
+        // Mesma janela protegida e chave oculta inicialmente usada no modo Monitorado.
+        showMyConnectionInfo()
     }
 
     private fun confirmRotateMonitorKey() {
@@ -523,7 +581,7 @@ class MainActivity : Activity() {
         val autostart = SettingsStore.autoStartEnabled(this)
         val (wrapper, layout) = dialogWrapper()
         dialogIntro(layout, "Controle o comportamento do serviço monitorado neste aparelho.")
-        layout.addView(dialogCardRow("Reiniciar serviço", "Reativa o monitoramento se ele já estiver autorizado", "›") {
+        layout.addView(dialogCardRow("Retomar serviço", "Recupera o monitoramento se estiver autorizado", "›") {
             if (SettingsStore.isMonitorEnabled(this)) startServiceExplicitly()
             else message("Ative o monitoramento antes de iniciar o serviço.")
         })
@@ -708,7 +766,7 @@ class MainActivity : Activity() {
                 render()
             }
         } else {
-            addCompact(if (enabled) "Reiniciar" else "Ativar", true) {
+            addCompact(if (enabled) "Retomar" else "Ativar", true) {
                 if (enabled) startServiceExplicitly() else requestStart()
             }
             addCompact("Mostrar info") { showMyConnectionInfo() }
@@ -998,6 +1056,13 @@ class MainActivity : Activity() {
     }
 
     private fun disconnectCurrent() {
+        val previousHost = SettingsStore.getRemoteHost(this)
+        val previousKey = RecentDevices.key(this, previousHost)
+        if (previousHost.isNotBlank() && previousKey != null) {
+            thread(name = "MonitorRemoto-disconnect") {
+                runCatching { RemoteClient.disconnect(previousHost, previousKey, applicationContext) }
+            }
+        }
         SettingsStore.setRemoteHost(this, "")
         fetching = false
         fetchingHost = ""
@@ -1047,9 +1112,9 @@ class MainActivity : Activity() {
 
     private fun connectionKind(host: String): String = when {
         host.isBlank() -> "Sem aparelho"
-        localWifiPrefix()?.let { host.startsWith(it) } == true -> "Mesmo Wi‑Fi"
-        PairingCode.isPrivateIpv4(host) -> "Rede local"
-        else -> "VPN/Internet"
+        localWifiPrefix()?.let { host.startsWith(it) } == true -> "IP da rede local"
+        PairingCode.isPrivateIpv4(host) -> "IP privado / VPN"
+        else -> "VPN / nome de rede"
     }
 
     /** Apenas o IP da interface de rede Wi-Fi ativa; sem supor prefixos de outras redes. */
@@ -1421,10 +1486,14 @@ class MainActivity : Activity() {
                     displayResult(it)
                 }.onFailure {
                     connectionState = "offline"
-                    connectionMessage = "Sem resposta: ${it.javaClass.simpleName}"
+                    connectionMessage = it.message?.takeIf { txt -> txt.contains("Versões incompatíveis") }
+                        ?: "Sem resposta: ${it.javaClass.simpleName}"
+                    if (lastResultHost == host) {
+                        lastResult?.let { cached -> displayResult(cached, fromCache = true) }
+                    }
                     if (!silent && lastResultHost != host) {
                         resultBox?.removeAllViews()
-                        resultBox?.addView(label("Não foi possível consultar o aparelho. Confira Wi-Fi/VPN, endereço e chave.", 13f, muted = true))
+                        resultBox?.addView(label(connectionMessage ?: "Não foi possível consultar o aparelho. Confira Wi-Fi/VPN, endereço e chave.", 13f, muted = true))
                     }
                 }
                 updateConnectionLabels()
@@ -1460,13 +1529,18 @@ class MainActivity : Activity() {
         addMetricGrid(panel, metricCards)
         sectionGap(panel, 10)
 
-        val networkRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        networkRow.addView(infoChip("${networkIcon(host)} ${connectionKind(host)}"))
-        networkRow.addView(View(this), LinearLayout.LayoutParams(dp(6), 1))
-        networkRow.addView(infoChip("🌐 ${if (host.isBlank()) "Sem IP" else host}"))
-        networkRow.addView(View(this), LinearLayout.LayoutParams(dp(6), 1))
-        networkRow.addView(infoChip("⏱ ${if (lastSuccessfulMs > 0L) formatDate(lastSuccessfulMs) else "agora"}"))
-        panel.addView(networkRow)
+        val remoteNetwork = root.optJSONObject("network")?.optString("type").orEmpty()
+        val quickStates = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+        quickStates.addView(infoChip("🔋 $charging").apply {
+            maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
+        }, LinearLayout.LayoutParams(0, -2, 1f))
+        if (remoteNetwork.isNotBlank()) {
+            quickStates.addView(View(this), LinearLayout.LayoutParams(dp(8), 1))
+            quickStates.addView(infoChip("📶 Rede: $remoteNetwork").apply {
+                maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
+            }, LinearLayout.LayoutParams(0, -2, 1f))
+        }
+        panel.addView(quickStates)
         sectionGap(panel, 10)
 
         panel.addView(label("Funções remotas", 15f, strong = true).apply { setPadding(0, 0, 0, dp(2)) })
@@ -1481,43 +1555,32 @@ class MainActivity : Activity() {
         )
         addActionGrid(panel, tiles)
 
-        if (fromCache && connectionState == "offline") {
+        if (fromCache && connectionState != "connected") {
             sectionGap(panel, 8)
-            panel.addView(label("Mostrando a última leitura disponível porque o aparelho não respondeu agora.", 11.5f, muted = true))
+            panel.addView(label("Leitura anterior: aguarde confirmação de uma nova consulta antes de considerar estes dados atuais.", 11.5f, muted = true))
         }
 
-        sectionGap(panel, 10)
-        panel.addView(label(if (eventCount > 0) "Último evento" else "Eventos", 14f, strong = true))
-        if (eventCount == 0) {
-            panel.addView(label("Nenhuma notificação autorizada capturada.", 12f, muted = true))
-        } else {
-            val event = events?.optJSONObject(eventCount - 1)
-            if (event != null) {
-                val item = panel(12)
-                item.addView(label("${event.optString("type").uppercase(Locale.getDefault())} · ${event.optString("app")}", 11f, muted = true))
-                item.addView(label(event.optString("title"), 14f, strong = true))
-                if (event.optString("preview").isNotBlank()) item.addView(label(event.optString("preview"), 12f))
-                item.addView(label(formatDate(event.optLong("whenMs")), 11f, muted = true))
-                panel.addView(item)
-            }
-        }
     }
 
     private fun compactMetricCard(icon: String, title: String, value: String, subtitle: String = "", accent: Boolean = false): LinearLayout =
-        panel(12).apply {
-            background = shape(if (accent) highlight else fieldColor, 16, !accent)
-            addView(label(icon, 15f).apply { setPadding(0, 0, 0, 0) })
-            addView(label(title, 11f, muted = !accent).apply {
+        panel(8).apply {
+            background = shape(if (accent) highlight else fieldColor, 15, !accent)
+            val caption = LinearLayout(this@MainActivity).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+            }
+            caption.addView(label(icon, 13f).apply { setPadding(0, 0, dp(4), 0) })
+            caption.addView(label(title, 10f, muted = !accent).apply {
                 setTextColor(if (accent) highlightText else dim)
+                maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
                 setPadding(0, 0, 0, 0)
             })
-            addView(label(value, 17f, strong = true).apply {
+            addView(caption)
+            addView(label(value, 16f, strong = true).apply {
                 setTextColor(if (accent) highlightText else ink)
-                setPadding(0, 0, 0, 0)
-            })
-            if (subtitle.isNotBlank()) addView(label(subtitle, 10.5f, muted = !accent).apply {
-                setTextColor(if (accent) Color.argb(205, 255, 255, 255) else dim)
-                setPadding(0, 0, 0, 0)
+                setPadding(0, dp(4), 0, 0)
+                maxLines = 1
+                ellipsize = android.text.TextUtils.TruncateAt.END
             })
         }
 
@@ -1543,19 +1606,30 @@ class MainActivity : Activity() {
     private fun actionTile(icon: String, title: String, subtitle: String, emphasis: Boolean = false, onClick: () -> Unit): LinearLayout =
         LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
             background = shape(if (emphasis) highlight else fieldColor, 16, !emphasis)
-            setPadding(dp(12), dp(11), dp(12), dp(11))
+            setPadding(dp(7), dp(13), dp(7), dp(13))
+            minimumHeight = dp(98)
             isClickable = true
             isFocusable = true
+            contentDescription = "$title: $subtitle"
             setOnClickListener { onClick() }
-            addView(label("$icon  $title", 13f, strong = true).apply {
+            addView(label(icon, 22f).apply {
+                gravity = Gravity.CENTER
+                setPadding(0, 0, 0, dp(4))
+            })
+            addView(label(title, 12f, strong = true).apply {
+                gravity = Gravity.CENTER
                 setTextColor(if (emphasis) highlightText else ink)
                 setPadding(0, 0, 0, 0)
+                maxLines = 1
+                ellipsize = android.text.TextUtils.TruncateAt.END
             })
-            addView(label(subtitle, 10.5f, muted = !emphasis).apply {
-                setTextColor(if (emphasis) Color.argb(205, 255, 255, 255) else dim)
-                setPadding(0, dp(2), 0, 0)
-                maxLines = 2
+            addView(label(subtitle, 10f, muted = !emphasis).apply {
+                gravity = Gravity.CENTER
+                setTextColor(if (emphasis) Color.argb(216, 255, 255, 255) else dim)
+                setPadding(0, dp(3), 0, 0)
+                maxLines = 1
                 ellipsize = android.text.TextUtils.TruncateAt.END
             })
         }
@@ -1618,7 +1692,8 @@ class MainActivity : Activity() {
         val summary = buildString {
             append(currentDeviceTitle?.text ?: "Monitor Remoto")
             append("\nIP: ").append(host)
-            append("\nRede: ").append(connectionKind(host))
+            append("\nAcesso: ").append(connectionKind(host))
+            append("\nRede remota: ").append(root.optJSONObject("network")?.optString("type") ?: "Não informada")
             append("\nMétodo: ").append(selectedConnectionMethod)
             append("\nAtualizado: ").append(if (lastSuccessfulMs > 0L) formatDate(lastSuccessfulMs) else "agora")
             append("\n\n").append(batterySummary(battery))
@@ -1640,7 +1715,8 @@ class MainActivity : Activity() {
         dialogIntro(layout, "Resumo técnico do aparelho remoto.")
         val card = panel(14)
         card.addView(dialogMetricRow("Aparelho", currentDeviceTitle?.text?.toString() ?: host))
-        card.addView(dialogMetricRow("Rede", connectionKind(host)))
+        card.addView(dialogMetricRow("Acesso", connectionKind(host)))
+        card.addView(dialogMetricRow("Rede do celular", root.optJSONObject("network")?.optString("type") ?: "Não informada"))
         card.addView(dialogMetricRow("IP", host.ifBlank { "—" }))
         card.addView(dialogMetricRow("Método", selectedConnectionMethod))
         card.addView(dialogMetricRow("Atualização", if (lastSuccessfulMs > 0L) formatDate(lastSuccessfulMs) else "Sem leitura recente"))

@@ -223,3 +223,23 @@
 - [x] Grade de funções remotas e pop-ups para notificações, cópia de resumo e detalhes técnicos.
 - [ ] Compilação Android/Gradle completa e testes físicos de layout, rotação e densidades.
 - [ ] Validação visual em aparelhos menores e confirmação de contraste/legibilidade em tema claro/escuro.
+
+## alpha.20: versões, acesso recebido e UX (13/10/2026)
+
+- [x] Adicionado protocolo de versão do aplicativo separadamente da versão `WireProtocol.VERSION`.
+- [x] Requisições de pareamento/snapshot/desconexão exigem mesma versão; testes de compatibilidade e desconexão adicionados.
+- [x] `IncomingAccessActivity` desenhada com cartões, ícones e ações; aviso imediato enquanto a Activity está visível.
+- [x] Notificação Android para acesso autenticado com o aplicativo em segundo plano, sem iniciar Activity automaticamente.
+- [x] Serviço permanece ativo ao desconectar controlador; registro removido por mensagem autenticada, com expiração de 45s se o aviso não chegar.
+- [x] Grade de Configurações e ajustes compactos do painel remoto; medições antigas marcadas.
+- [ ] Compilação Android completa e testes unitários via Gradle/GitHub Actions.
+- [ ] Testes em dois aparelhos alpha.20, QR, manual, bloqueio alpha.19↔alpha.20 e acesso/saída com configurações abertas.
+- [ ] Verificação física de layouts em diferentes densidades, temas e escala de fonte.
+
+### Execuções locais da alpha.20
+
+- [x] `python3 tools/check_distribution.py`: 12 blocos de verificações aprovados.
+- [x] Parser Kotlin PSI: sem erros sintáticos em arquivos de produção e testes Kotlin.
+- [x] Teste JVM isolado: versão exata, rejeição da alpha.19, duas conexões, desconexão de uma, nova conexão e expiração de 45s.
+- [x] Todos os 14 XML (Manifest e vetores) analisados com parser XML.
+- [ ] Compilação Android completa: indisponível no ambiente sem Android SDK/Gradle configurados. Validar no GitHub Actions.

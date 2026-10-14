@@ -1,18 +1,18 @@
-# Monitor Remoto v0.1.0-alpha.19
+# Monitor Remoto v0.1.0-alpha.20
 
-## Novidades da alpha.19
+## Novidades da alpha.20
 
-- Painel do aparelho conectado reorganizado em um **dashboard compacto**, com botões de conexão e atualização à direita do cabeçalho.
-- Cartões rápidos com ícones exibem bateria, temperatura, corrente atual, corrente média, tensão e eventos.
-- A seção **Funções remotas** traz atalhos lado a lado para Notificações, Copiar, Detalhes, Mensagens, Ver tela e Localização.
-- Notificações e detalhes agora abrem pop-ups dedicados; copiar gera um resumo sensível do aparelho remoto.
-- Recursos futuros continuam explícitos como “Em breve”, sem fingir que já estão implementados.
+- Tela dedicada de aviso de acesso recebido, com identidade declarada do controlador, IP de origem, método informado e horário da última consulta.
+- Quem está? e Parar acesso. Encerramento explícito retira o registro do controlador sem interromper o monitoramento; falta de comunicação expira após 45 segundos.
+- Acesso detectado com o app visível mostra a tela imediatamente. Em segundo plano, apenas notificação do Android.
+- Exigência de mesma versão exata nos dois aparelhos para pareamento QR e consultas remotas.
+- Interface de Configurações redesenhada com grade 2×3 e ícones vetoriais; resumo da bateria mais baixo e atalhos de funções maiores.
+- Tipo real de rede ativa do celular monitorado disponibilizado sem SSID. Indicação clara de dados anteriores quando não há resposta recente.
 
-## Histórico alpha.17
+## Atenção
 
-- Nova Home independente do serviço, seleção de aparelhos recentes e atalhos compactos.
-- Monitorado separado, retorno por Home/Voltar e estado do Controle preservado.
+**Atualize os dois celulares para a alpha.20 antes de conectar.** Esta é uma versão prévia. Funções de mensagens diretas, espelhamento de tela e localização ainda não estão implementadas. O nome recebido do controlador não constitui identificação independente. A parada do serviço revoga acesso enquanto estiver desligado, mas não substitui rotação de chave.
 
-## Ainda pendente
+## Validação pendente
 
-Compilação Gradle Android na CI e testes físicos em dois aparelhos, inclusive rotação de chaves e timing de atualização. Código-fonte ZIP não contém APK.
+Compilação Gradle Android e teste físico de conexão/QR/desconexão em dois aparelhos. O ZIP distribuído contém somente código-fonte, não APK.

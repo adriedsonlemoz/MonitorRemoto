@@ -47,6 +47,14 @@ object AuthenticatedAccess {
         listeners.forEach { runCatching { it.invoke() } }
     }
 
+    /** Encerramento explícito pelo controlador autenticado; não desliga o serviço. */
+    fun disconnected(address: String, id: String) {
+        val safeId = id.take(64).takeIf { it.matches(Regex("[a-zA-Z0-9-]{8,64}")) }
+        val key = if (safeId == null) "legacy:$address" else "$safeId:$address"
+        synchronized(this) { peers.remove(key) }
+        listeners.forEach { runCatching { it.invoke() } }
+    }
+
     fun clear() {
         synchronized(this) { peers.clear() }
         listeners.forEach { runCatching { it.invoke() } }

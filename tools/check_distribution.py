@@ -12,8 +12,10 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.19" and code.group(1) == "19", "Versões incompatíveis"
-assert version in ui, "Tela de versão desatualizada"
+assert version == "0.1.0-alpha.20" and code.group(1) == "20", "Versões incompatíveis"
+appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
+assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
+assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
 assert f"versionCode={code.group(1)}" in (root / 'docs/ARCHITECTURE.md').read_text(), "Arquitetura com versionCode desatualizado"
 # alpha.9 remove a Activity antiga do ZXing Embedded; Camera2 + ZXing Core offline.
 assert 'IntentIntegrator' not in ui and 'BarcodeEncoder' not in ui
@@ -117,7 +119,7 @@ print('PASSOU: fluxo alpha.15, confirmação QR, botões de ação, scanner pop-
 assert 'savedInstanceState?.getInt("active_mode", 2)' in ui
 assert 'private fun navigateHome()' in ui and 'private fun renderHome()' in ui
 assert 'private fun showMyConnectionInfo()' in ui and 'private fun preferredLocalAddress()' in ui
-assert 'OptionItem("Sobre o aplicativo"' in ui and 'showMainMenu()' not in ui
+assert 'showAboutDialog()' in ui and 'showMainMenu()' not in ui
 assert 'showMyConnectionInfo()' in ui and 'getOrCreateMonitorKey(this)' in ui
 assert 'WindowManager.LayoutParams.FLAG_SECURE' in ui
 assert 'ClipDescription.EXTRA_IS_SENSITIVE' in ui and 'Intent.ACTION_SEND' in ui
@@ -166,3 +168,26 @@ assert 'private fun copyRemoteSnapshot(root: JSONObject)' in ui
 assert 'private fun showRemoteDetailsDialog(root: JSONObject)' in ui
 assert 'Funções remotas' in ui and 'Mensagens' in ui and 'Ver tela' in ui and 'Localização' in ui
 print('PASSOU: alpha.19, painel remoto compacto, atalhos e detalhes dedicados')
+
+# alpha.20: compatibilidade EXATA, disconnect autenticado, aviso em tela dedicada.
+incoming = (root / 'app/src/main/java/br/dev/monitorremoto/ui/IncomingAccessActivity.kt').read_text()
+service = (root / 'app/src/main/java/br/dev/monitorremoto/service/MonitorService.kt').read_text()
+network = (root / 'app/src/main/java/br/dev/monitorremoto/core/NetworkReader.kt').read_text()
+assert 'AppVersion.compatible(' in qr and 'app=${AppVersion.NAME}' in qr
+assert '.put("appVersion", AppVersion.NAME)' in client and 'fun disconnect(' in client
+assert 'AppVersion.compatible(regular.optString("appVersion"))' in server
+assert 'AppVersion.compatible(pairing.optString("appVersion"))' in server
+assert 'AuthenticatedAccess.disconnected(' in server and 'fun disconnected(' in tracker
+assert 'NetworkReader.snapshot(context)' in server and 'TRANSPORT_WIFI' in network
+assert 'private fun showIncomingAccessIfNeeded()' in ui and 'IncomingAccessActivity::class.java' in ui
+assert 'class IncomingAccessActivity : Activity()' in incoming
+assert 'Acesso remoto detectado' in incoming and 'Quem está?' in incoming and 'Parar acesso' in incoming
+assert 'android:name=".ui.IncomingAccessActivity"' in manifest and 'android:exported="false"' in manifest
+assert 'ACCESS_CHANNEL' in service and 'IMPORTANCE_DEFAULT' in service
+assert 'SettingsStore.isMonitorEnabled(this) && !MonitorService.isRunning' in ui
+assert 'private fun recoverAuthorizedServiceIfStopped()' in ui
+assert 'options.chunked(2)' in ui and 'settingsIcon(' in ui
+assert 'private fun compactMetricCard(' in ui and 'minimumHeight = dp(98)' in ui
+assert (root / 'app/src/test/java/br/dev/monitorremoto/transport/AppVersionTest.kt').is_file()
+assert len(list((root / 'app/src/main/res/drawable').glob('ic_*.xml'))) >= 10
+print('PASSOU: alpha.20, versão exata, disconnect, notificação, Activity de acesso e UI vetorial')

@@ -1,5 +1,16 @@
 # Histórico de versões
 
+## 0.1.0-alpha.20 (13/10/2026)
+
+- Tela de acesso autenticado dedicada em Activity própria (aberta apenas com o aplicativo em primeiro plano), atualizada por evento e encerrada quando o controlador se desconecta explicitamente ou quando o registro expira.
+- Botões **Quem está?** (dados informados/observados e horários) e **Parar acesso** (parada global confirmada). Serviço foreground sinaliza acesso novo por notificação sem invadir outros aplicativos.
+- Rejeição de pareamento/consultas entre versões diferentes. `AppVersion.NAME` exigido no QR, nos snapshots e no pedido de encerramento; a versão do servidor é verificada também nas respostas.
+- `RemoteClient.disconnect` envia aviso autenticado de saída; `AuthenticatedAccess.disconnected` remove apenas a entrada correspondente. Serviço permanece ativo e a tela retorna ao modo Monitorado pronta para gerar QR.
+- Recuperação conservadora do serviço autorizado quando o usuário traz o app para o primeiro plano; parada intencional não reinicia automaticamente.
+- Novo diálogo de Configurações com grade compacta e ícones vetoriais; componentes de métricas menores, ações remotas de toque ampliado e dados da rede realmente informados pelo Android (sem SSID presumido).
+- Informações de cache indicadas como antigas após erro de conexão; sem aumento de permissões ou acesso oculto.
+- Necessários testes Android no GitHub Actions e físicos entre dois celulares. Sem APK compilado localmente.
+
 ## 0.1.0-alpha.19 (13/10/2026)
 
 - Painel do aparelho conectado redesenhado com cabeçalho compacto, status visível, IP, método de conexão e botões **Desconectar/Reconectar** e **↻ Atualizar** no topo à direita.

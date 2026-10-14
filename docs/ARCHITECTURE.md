@@ -1,4 +1,4 @@
-# Arquitetura (0.1.0-alpha.19)
+# Arquitetura (0.1.0-alpha.20)
 
 ```text
 MONITORADO                                      CONTROLE
@@ -19,9 +19,9 @@ O FGS `connectedDevice` mantém o socket de escuta durante monitoramento ativo. 
 
 ## Distribuição e assinatura
 
-O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.19` e `versionCode=19`.
+O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.20` e `versionCode=20`.
 
-- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.19.apk`.
+- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.20.apk`.
 - `upload-artifact` sempre distribui um ZIP; GitHub Releases recebe o **arquivo APK direto**.
 - Com quatro Secrets, Gradle gera APK Release assinado e AAB. Sem Secrets, o arquivo é Debug de teste e não preserva necessariamente a assinatura entre execuções.
 - Releases são prévias, não substituem a futura revisão da Google Play e nem os ensaios reais.
@@ -72,3 +72,13 @@ Na alpha.16, a tela inicial volta a ser Monitorado, com retorno por Home. Contro
 `RemoteClient.snapshot()` transmite metadados não secretos (`clientId` aleatório local, nome Android informado e método informado) dentro do envelope AES-GCM autenticado já existente. `MonitorServer` aceita campos opcionais para compatibilidade com alpha.17 e versões anteriores. Após resposta autenticada enviada, `AuthenticatedAccess` registra no processo somente IP de origem, valores declarados e instante do acesso; até 12 entradas, tempo de vida 45 segundos. Atualiza UI local por callbacks em memória, sem notificação externa ou servidor push.
 
 Autenticação prova **posse da chave compartilhada**, não identidade do dispositivo. Portanto nome e método são exibidos como *informados pelo cliente*, não certificados; controladores antigos não os transmitem. Não há conexão permanente nem encerramento seletivo de cliente sem redesenhar credenciais por controlador. O botão Ações permite ver detalhes, parar serviço ou trocar a chave global com confirmação. Registro volátil é apagado ao parar serviço ou trocar chave.
+
+## Compatibilidade e interrupção de acesso (alpha.20)
+
+- `transport/AppVersion.kt` é a versão exata do aplicativo; permanece distinta de `WireProtocol.VERSION`, que identifica o formato básico da mensagem. `tools/check_distribution.py` verifica alinhamento com Gradle.
+- O conteúdo QR inclui `app=<versão>`; o pareamento temporário também envia `appVersion` cifrado e exige resposta com versão correspondente. QR antigo não é aceito por design.
+- Snapshots incluem `appVersion` em requisição e resposta. O servidor recusa pedidos de versões distintas antes de transmitir dados ou registrar o acesso; o cliente recusa respostas de versão ausente ou diferente.
+- O pedido autenticado `op=disconnect` usa a chave por host, nonce e timestamp do protocolo, indica que o controlador encerrou a consulta e remove sua entrada do registro volátil. Não finaliza o serviço local. Se a rede cair, expiração de 45s continua como fallback.
+- `IncomingAccessActivity` representa **consultas recentes autenticadas**, sem conexão TCP permanente. É acionada pela `MainActivity` quando foreground, incluindo diálogo de Configurações; retorna ao modo Monitorado depois que o registro desaparece. Fora do aplicativo, o `MonitorService` publica notificação padrão com conteúdo não sensível e sem disparar Activity por trás das regras do Android.
+- A parada explícita (inclusive no aviso) persiste `monitorEnabled=false` e impede tentativas automáticas de reativação. A recuperação conservadora só ocorre ao trazer o app ao primeiro plano quando ainda está autorizado.
+- `NetworkReader` informa tipo de transporte da rede ativa do **aparelho monitorado**. SSID e mesma rede Wi-Fi não são inferidos. Os endereços e rotas da VPN não são comprovação de identidade.

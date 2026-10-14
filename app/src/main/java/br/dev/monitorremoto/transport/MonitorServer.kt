@@ -2,6 +2,7 @@ package br.dev.monitorremoto.transport
 
 import android.content.Context
 import br.dev.monitorremoto.core.BatteryReader
+import br.dev.monitorremoto.core.NetworkReader
 import br.dev.monitorremoto.core.EventJournal
 import br.dev.monitorremoto.core.SettingsStore
 import br.dev.monitorremoto.security.CryptoBox
@@ -64,6 +65,7 @@ class MonitorServer(private val context: Context) {
     private fun handle(peer: Socket) {
         peer.use { socket ->
             try {
+                if (!SettingsStore.isMonitorEnabled(context)) return
                 socket.soTimeout = 4500
                 val permanentKey = SecretVault.load(context, SecretVault.MONITOR_KEY) ?: return
                 val encrypted = WireProtocol.receive(socket.getInputStream(), 16 * 1024)
@@ -74,16 +76,30 @@ class MonitorServer(private val context: Context) {
                 // Clientes já pareados usam somente a chave permanente.
                 val regular = runCatching { WireProtocol.decode(permanentKey, encrypted) }.getOrNull()
                 if (regular != null) {
-                    if (regular.optInt("v") != WireProtocol.VERSION || regular.optString("op") != "snapshot") return
+                    if (regular.optInt("v") != WireProtocol.VERSION ||
+                        regular.optString("op") !in setOf("snapshot", "disconnect")) return
                     if (abs(now - regular.optLong("ts")) > 5 * 60 * 1000L) return
                     synchronized(seenNonces) {
                         if (!seenNonces.add(nonce)) return
                         while (seenNonces.size > 1024) seenNonces.remove(seenNonces.first())
                     }
+                    // A chave válida não dispensa a exigência da mesma versão do app.
+                    if (!AppVersion.compatible(regular.optString("appVersion"))) return
+                    if (regular.optString("op") == "disconnect") {
+                        val reply = JSONObject()
+                            .put("v", WireProtocol.VERSION)
+                            .put("op", "disconnectOk")
+                            .put("appVersion", AppVersion.NAME)
+                        WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(permanentKey, reply))
+                        AuthenticatedAccess.disconnected(socket.inetAddress?.hostAddress.orEmpty(), regular.optString("clientId"))
+                        return
+                    }
                     val response = JSONObject().apply {
                         put("v", WireProtocol.VERSION)
+                        put("appVersion", AppVersion.NAME)
                         put("serverMs", now)
                         put("battery", BatteryReader.snapshot(context))
+                        put("network", NetworkReader.snapshot(context))
                         put("events", if (SettingsStore.isMonitorEnabled(context))
                             EventJournal.latestJson(SettingsStore.notificationAllowlist(context))
                             else org.json.JSONArray())
@@ -106,10 +122,17 @@ class MonitorServer(private val context: Context) {
                 if (pairing.optInt("v") != WireProtocol.VERSION || pairing.optString("op") != "pair") return
                 if (pairing.optString("session") != id) return
                 if (abs(now - pairing.optLong("ts")) > 120_000L) return
+                if (!AppVersion.compatible(pairing.optString("appVersion"))) {
+                    val mismatch = JSONObject().put("v", WireProtocol.VERSION)
+                        .put("appVersion", AppVersion.NAME).put("op", "versionMismatch")
+                    WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(temporaryKey, mismatch))
+                    return
+                }
                 if (!PairingSession.consume(id, temporaryKey)) return
                 val response = JSONObject().apply {
                     put("v", WireProtocol.VERSION)
                     put("op", "pairOk")
+                    put("appVersion", AppVersion.NAME)
                     put("session", id)
                     put("key", CryptoBox.encode(permanentKey))
                 }

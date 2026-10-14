@@ -45,4 +45,21 @@ class AuthenticatedAccessTest {
             assertEquals(1, calls)
         } finally { AuthenticatedAccess.unsubscribe(observer) }
     }
+    @Test fun explicitDisconnectRemovesOnlyTheMatchingDevice() {
+        AuthenticatedAccess.clear()
+        AuthenticatedAccess.authenticated("192.168.1.20", "alpha-client-1234", "A", "Manual", 1000)
+        AuthenticatedAccess.authenticated("192.168.1.21", "beta-client-5678", "B", "QR Code", 1100)
+        AuthenticatedAccess.disconnected("192.168.1.20", "alpha-client-1234")
+        val peers = AuthenticatedAccess.recent(1200)
+        assertEquals(1, peers.size)
+        assertEquals("192.168.1.21", peers[0].address)
+    }
+
+    @Test fun unknownDisconnectDoesNotEraseAnotherDevice() {
+        AuthenticatedAccess.clear()
+        AuthenticatedAccess.authenticated("192.168.1.20", "alpha-client-1234", "A", "Manual", 1000)
+        AuthenticatedAccess.disconnected("192.168.1.20", "wrong-id-5678")
+        assertEquals(1, AuthenticatedAccess.recent(1200).size)
+    }
+
 }

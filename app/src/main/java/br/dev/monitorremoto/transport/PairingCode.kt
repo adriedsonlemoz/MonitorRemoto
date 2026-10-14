@@ -15,7 +15,7 @@ object PairingCode {
         require(isPrivateIpv4(offer.host)) { "O QR exige um IPv4 privado local." }
         require(sessionPattern.matches(offer.session)) { "Identificador de sessão inválido." }
         require(offer.ephemeralKey.size == 32)
-        return "$SCHEME://$URI_HOST?v=1&host=${offer.host}&port=${WireProtocol.PORT}" +
+        return "$SCHEME://$URI_HOST?v=1&app=${AppVersion.NAME}&host=${offer.host}&port=${WireProtocol.PORT}" +
             "&sid=${offer.session}&secret=${CryptoBox.encode(offer.ephemeralKey)}"
     }
 
@@ -32,10 +32,12 @@ object PairingCode {
         } ?: error("QR sem parâmetros")
         require(tokens.map { it.first }.toSet().size == tokens.size) { "Campos repetidos." }
         val params = tokens.toMap()
-        require(params.keys == setOf("v", "host", "port", "sid", "secret")) { "Campos de QR inesperados." }
+        require(params.containsKey("app")) { AppVersion.incompatibility(null) }
+        require(params.keys == setOf("v", "app", "host", "port", "sid", "secret")) { "Campos de QR inesperados." }
         require(params["v"] == "1" && params["port"] == WireProtocol.PORT.toString()) {
             "Protocolo ou porta não suportado."
         }
+        require(AppVersion.compatible(params["app"])) { AppVersion.incompatibility(params["app"]) }
         val host = params.getValue("host")
         require(isPrivateIpv4(host)) { "QR não contém IPv4 privado local." }
         val session = params.getValue("sid")
