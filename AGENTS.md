@@ -1,4 +1,4 @@
-# Monitor Remoto 0.1.0-alpha.39
+# Monitor Remoto 0.1.0-alpha.40
 # Convenções permanentes do projeto Monitor Remoto
 
 - Toda alteração de código incrementa sequencialmente `versionCode` e `versionName` (ex.: `0.1.0-alpha.8` -> `0.1.0-alpha.9`). Sincronizar tela, README, CHANGELOG, RELEASE_NOTES e documentação.
@@ -21,7 +21,7 @@
 - Alpha.10: manter tema **claro padrão**, as opções da engrenagem, janela Conectar, botão de atualização compacto, lista de até 5 aparelhos recentes e os dados do Controle no topo. Não reintroduzir formulário longo na tela principal.
 - Credenciais por dispositivo usam `RecentDevices` + `SecretVault.profileKeyName`, com migração única da alpha.9. Não reaproveitar `CONTROLLER_KEY` antigo para IPs novos nem gravar segredo em preferências sem criptografia. Esquecer apaga o segredo correspondente.
 - Respostas HTTP/TCP não são conexão persistente. Exibir "Conectado" apenas após consulta autenticada bem-sucedida e "Sem resposta" após erro. Não inventar tempos de atualização.
-- Próxima versão sequencial: `0.1.0-alpha.40`, `versionCode 40`.
+- Próxima versão sequencial: `0.1.0-alpha.41`, `versionCode 41`.
 
 - Alpha.15: preservar a seleção Conectar → QR/Manual/Salvos, confirmação do QR antes de parear, cartões salvos com três ações e o scanner em Activity com tema Dialog.
 
@@ -78,3 +78,5 @@
 - Alpha.38: preservar a recuperação agendada SOMENTE após habilitação explícita no monitorado; parada deve cancelar o Job. JobScheduler não isenta do bloqueio Android 12+ para iniciar FGS em segundo plano. Evitar relançar MediaProjection, áudio ou acessibilidade automaticamente; sem promessas de reinício após force-stop.
 
 - Alpha.39: botões Voltar/Início/Recentes/Notificações disparam ações globais independentes do toggle de toque na imagem; exigem projeção consentida e AccessibilityService autorizado no monitorado. Sempre validar no servidor e não contornar bloqueio seguro. A tela Ver tela aplica WindowInsets systemBars/displayCutout fora da tela cheia e imersão restaurável quando fullscreen. Preencher usa CENTER_CROP com transformação inversa das coordenadas; ajustar usa FIT_CENTER. Prévia JPEG com alvo 330 ms (700 ms no battery saver), consultas sem fila e diagnóstico do tempo; não declarar H.264 nem garantia de FPS. Preservar concessão MediaProjection por sessão, chaves AES-GCM, print manual e ausência de captura oculta.
+
+- Alpha.40: AVC via MediaCodec somente após sessão MediaProjection visível e autorizada. Ring de no máximo 30 quadros AVC em RAM, pacotes máximos de 128 KiB, alvo 10 FPS sem promessa de desempenho ou transporte persistente, retorno a JPEG em codecs incompatíveis. Uma única VirtualDisplay por projeção; imagens HD sob demanda e áudio mantidos. `wakeScreen` somente com chave AES-GCM pareada, opção `allowRemoteWake` local OFF, 12 s entre tentativas e wake lock 1,5 s; nunca remover Keyguard, PIN, biometria ou consentimento. Build Android/ensaio físico pendentes.

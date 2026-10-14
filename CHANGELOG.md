@@ -1,3 +1,11 @@
+## 0.1.0-alpha.40 (14/10/2026)
+
+- Implementado streaming experimental AVC/H.264 via MediaCodec com decoder no controlador, fila curta de quadros voláteis (até 30), controle de sincronização IDR e fallback JPEG. Target de até 10 FPS, desempenho real ainda desconhecido.
+- MediaProjection continua consentida apenas no celular monitorado, notificação e parada local. Sem salvar vídeo, sem desbloquear tela e sem capturar fora da sessão.
+- Comando remoto Acender tela com autorização local OFF por padrão, WakeLock temporário e cooldown para poupar bateria; funciona independentemente da projeção em vigor, mas não ignora PIN/biometria nem garante despertar em todas as versões do Android.
+- Mantidos prints, foto HD, áudio, navegação, configurações e recuperação agendada.
+- Testes estáticos e unitários locais; Gradle Android e aparelho físico pendentes.
+
 # Histórico de versões
 
 ## 0.1.0-alpha.39 (14/10/2026)

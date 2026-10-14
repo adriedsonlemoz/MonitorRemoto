@@ -33,6 +33,9 @@ import android.view.WindowManager
 import br.dev.monitorremoto.core.SettingsStore
 import br.dev.monitorremoto.ui.MainActivity
 import java.io.ByteArrayOutputStream
+import br.dev.monitorremoto.video.AvcEncoder
+import br.dev.monitorremoto.video.VideoFrameStore
+import br.dev.monitorremoto.video.VideoStreamPolicy
 
 /** Projeção autorizada: a mesma sessão continua ativa durante reconexões TCP; sem reutilizar token. */
 class ScreenShareService : Service() {
@@ -58,6 +61,9 @@ class ScreenShareService : Service() {
     private var workerThread: HandlerThread? = null
     private var worker: Handler? = null
     private var lastFrameAt = 0L
+    private var lastAvcAt = 0L
+    private var encoder: AvcEncoder? = null
+    private var codecDimensions: Pair<Int, Int>? = null
     private var stopped = false
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -123,6 +129,7 @@ class ScreenShareService : Service() {
             check(width > 0 && height > 0)
             reader = makeReader(width, height)
             ScreenFrameStore.begin()
+            VideoFrameStore.reset()
             display = acquired.createVirtualDisplay("Monitor Remoto - tela autorizada", width, height,
                 density, DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR, reader!!.surface, null, worker)
             startInternalAudio(acquired)
@@ -193,11 +200,15 @@ class ScreenShareService : Service() {
                     if (!ScreenFrameStore.sharing) return@setOnImageAvailableListener
                     val stillId = ScreenFrameStore.pendingStill()
                     val powerSave = getSystemService(PowerManager::class.java).isPowerSaveMode
-                    val interval = if (powerSave) 700L else FRAME_INTERVAL_MS
-                    val needPreview = ScreenFrameStore.viewerActive() &&
-                        SystemClock.elapsedRealtime() - lastFrameAt >= interval
-                    if (!needPreview && stillId == 0L) return@setOnImageAvailableListener
-                    if (needPreview) lastFrameAt = SystemClock.elapsedRealtime()
+                    val interval = if (powerSave) 700L else
+                        if (VideoFrameStore.supported) 1_500L else FRAME_INTERVAL_MS
+                    val viewer = ScreenFrameStore.viewerActive()
+                    val now = SystemClock.elapsedRealtime()
+                    val needVideo = viewer && !powerSave && now - lastAvcAt >= 100L
+                    val needPreview = viewer && now - lastFrameAt >= interval
+                    if (!needPreview && !needVideo && stillId == 0L) return@setOnImageAvailableListener
+                    if (needPreview) lastFrameAt = now
+                    if (needVideo) lastAvcAt = now
                     val plane = image.planes.firstOrNull() ?: return@setOnImageAvailableListener
                     val w = image.width
                     val h = image.height
@@ -220,6 +231,7 @@ class ScreenShareService : Service() {
                         val cropped = Bitmap.createBitmap(full, 0, 0, w, h)
                         try {
                             if (stillId != 0L) encodeStill(cropped, stillId)
+                            if (needVideo) encodeVideo(cropped)
                             if (needPreview) {
                             val targetW = w.coerceAtMost(540)
                             val targetH = (h.toDouble() * targetW / w).toInt().coerceAtLeast(1)
@@ -241,6 +253,33 @@ class ScreenShareService : Service() {
                 } finally { image.close() }
             }, worker)
         }
+
+    /** Codec opcional. Mantém uma única VirtualDisplay por autorização Android; fallback JPEG. */
+    private fun encodeVideo(full: Bitmap) {
+        try {
+            val (w, h) = VideoStreamPolicy.dimensions(full.width, full.height)
+                ?: return
+            if (encoder == null || codecDimensions != (w to h)) {
+                encoder?.close()
+                VideoFrameStore.reset()
+                encoder = AvcEncoder(w, h)
+                codecDimensions = w to h
+                VideoFrameStore.enable()
+                VideoFrameStore.requestKeyFrame()
+            }
+            val small = Bitmap.createScaledBitmap(full, w, h, true)
+            try { encoder?.encode(small) } finally { if (small !== full) small.recycle() }
+        } catch (e: Exception) {
+            Log.w(TAG, "Codec AVC indisponível: mantendo prévia JPEG", e)
+            runCatching { encoder?.close() }
+            encoder = null
+            codecDimensions = null
+            VideoFrameStore.disable()
+            lastFrameAt = 0L
+            // Evita reconfiguração contínua em aparelhos sem codec compatível.
+            lastAvcAt = SystemClock.elapsedRealtime() + 30_000L
+        }
+    }
 
     /** Executado apenas sob solicitação autenticada e com MediaProjection local ainda autorizada. */
     private fun encodeStill(full: Bitmap, requestId: Long) {
@@ -274,6 +313,8 @@ class ScreenShareService : Service() {
             previous?.setOnImageAvailableListener(null, null)
             previous?.close()
             lastFrameAt = 0L
+            runCatching { encoder?.close() }; encoder = null; codecDimensions = null
+            VideoFrameStore.reset()
         } catch (e: Exception) { Log.w(TAG, "Não foi possível redimensionar a projeção", e) }
     }
 
@@ -281,6 +322,9 @@ class ScreenShareService : Service() {
         stopped = true
         stopInternalAudio()
         ScreenFrameStore.stop()
+        VideoFrameStore.reset()
+        runCatching { encoder?.close() }
+        encoder = null
         runCatching { display?.release() }
         display = null
         runCatching { reader?.setOnImageAvailableListener(null, null); reader?.close() }

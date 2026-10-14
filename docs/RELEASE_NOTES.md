@@ -1,4 +1,12 @@
-# Monitor Remoto v0.1.0-alpha.39
+# Monitor Remoto v0.1.0-alpha.40
+
+## AVC/H.264 experimental, JPEG reserva e comando Acender tela (alpha.40)
+
+- MediaCodec no monitorado e controlador, ring limitado de amostras H.264, alvo 10 FPS não garantido; JPEG continua quando codec for indisponível.
+- Acender tela após permissão local explícita no monitorado, com limitação temporal. Não desbloqueia PIN nem contorna o Android; talvez não funcione em toda ROM.
+- Captura única MediaProjection aprovada e notificação visível permanecem obrigatórias. Nenhum áudio do microfone ou gravação de vídeo.
+- Compilação Android real e desempenho físico não verificados nesta entrega.
+- Código-fonte versionado 0.1.0-alpha.40, versionCode 40; instalar a mesma versão nos dois celulares.
 
 ## Interface, comandos de navegação e prévia mais responsiva (alpha.39)
 

@@ -16,7 +16,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.39" and code.group(1) == "39", "Versões incompatíveis"
+assert version == "0.1.0-alpha.40" and code.group(1) == "40", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -534,8 +534,33 @@ assert 'KeyguardManager::class.java).isDeviceLocked' in server and 'KeyguardMana
 assert 'WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout()' in viewer
 assert 'fun applyImmersiveMode(' in viewer and 'override fun onWindowFocusChanged(' in viewer
 assert 'ImageView.ScaleType.CENTER_CROP' in viewer and 'centerCropPoint(' in gesture
-assert 'FRAME_INTERVAL_MS = 330L' in screen and 'if (powerSave) 700L else FRAME_INTERVAL_MS' in screen
-assert 'REFRESH_MS = 300L' in viewer and 'frameAgeMs' in server and 'networkRoundTrip' in viewer
+assert 'FRAME_INTERVAL_MS = 330L' in screen and 'if (powerSave) 700L else' in screen
+assert 'REFRESH_MS = 85L' in viewer and 'frameAgeMs' in server and 'networkRoundTrip' in viewer
 assert 'MediaProjectionManager' not in viewer and 'setOnApplyWindowInsetsListener' in viewer
 assert (root / 'app/src/test/java/br/dev/monitorremoto/core/RemoteGesturePolicyTest.kt').exists()
 print('PASSOU: alpha.39, gestos globais, barras seguras, fullscreen, recorte coordenado e latência experimental')
+
+# alpha.40: AVC opcional com MediaCodec e acesso da tela somente após consentimento.
+video_path = root / 'app/src/main/java/br/dev/monitorremoto/video'
+enc = (video_path / 'AvcEncoder.kt').read_text()
+dec = (video_path / 'AvcDecoder.kt').read_text()
+store = (video_path / 'VideoFrameStore.kt').read_text()
+policy = (video_path / 'VideoStreamPolicy.kt').read_text()
+server = (root / 'app/src/main/java/br/dev/monitorremoto/transport/MonitorServer.kt').read_text()
+client = (root / 'app/src/main/java/br/dev/monitorremoto/transport/RemoteClient.kt').read_text()
+viewer = (root / 'app/src/main/java/br/dev/monitorremoto/ui/RemoteScreenActivity.kt').read_text()
+service = (root / 'app/src/main/java/br/dev/monitorremoto/capture/ScreenShareService.kt').read_text()
+settings = (root / 'app/src/main/java/br/dev/monitorremoto/core/SettingsStore.kt').read_text()
+assert 'MediaCodec.createEncoderByType' in enc and 'COLOR_FormatYUV420Flexible' in enc
+assert 'MediaCodec.createDecoderByType' in dec and 'getOutputImage' in dec
+assert 'MAX_QUEUE = 30' in store and 'MAX_FRAME_BYTES = VideoStreamPolicy.MAX_FRAME_BYTES' in store
+assert 'TARGET_FPS = 10' in policy and 'WAKE_COOLDOWN_MS' in policy
+assert 'LinkedHashMap<String, Long>' in server and '60_000' in server
+assert 'videoFrame' in client and 'videoFrame' in server and 'VideoFrameStore.next(after)' in server
+assert 'AvcDecoder' in viewer and 'codecAvailable' in viewer and 'videoFailUntil' in viewer
+assert 'ScreenFrameStore.viewerActive()' in service and 'MediaProjectionManager' in service
+assert 'allowRemoteWake' in settings and 'getBoolean("remote_wake", false)' in settings
+assert 'wakeScreen' in server and 'VideoStreamPolicy.allowWake' in server and 'WAKE_LOCK' in manifest
+assert 'wakeRemoteScreen' in viewer and 'ic_remote_wake' in viewer
+assert (root / 'app/src/test/java/br/dev/monitorremoto/video/VideoStreamPolicyTest.kt').exists()
+print('PASSOU: alpha.40 AVC/fallback JPEG, limite de quadros, permissão local de acordar tela')

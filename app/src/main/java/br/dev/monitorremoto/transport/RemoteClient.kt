@@ -120,6 +120,32 @@ object RemoteClient {
         }
     }
 
+    /** AVC autenticado, sequencial e limitado em tamanho, sem nova porta nem token. */
+    fun videoFrame(host: String, key: ByteArray, context: Context, method: String, after: Long): JSONObject {
+        require(after >= 0L)
+        val request = JSONObject().put("v", WireProtocol.VERSION)
+            .put("op", "videoFrame").put("after", after)
+            .put("appVersion", AppVersion.NAME).put("ts", System.currentTimeMillis())
+            .put("clientId", SettingsStore.controllerId(context))
+            .put("clientName", listOf(Build.MANUFACTURER, Build.MODEL).joinToString(" ").take(72))
+            .put("accessMethod", method)
+        return Socket().use { socket ->
+            socket.connect(InetSocketAddress(host, WireProtocol.PORT), 4500)
+            socket.soTimeout = 6000
+            WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(key, request))
+            val response = WireProtocol.decode(key, WireProtocol.receive(socket.getInputStream(), 430_000))
+            if (response.optString("op") == "versionMismatch") error(AppVersion.incompatibility(response.optString("appVersion")))
+            check(response.optString("op") == "videoFrame" && response.optInt("v") == WireProtocol.VERSION &&
+                AppVersion.compatible(response.optString("appVersion"))) { "Resposta AVC inválida" }
+            response
+        }
+    }
+
+    /** Solicita somente acender tela com prévia consentida e opt-in local, nunca desbloquear. */
+    fun wakeScreen(host: String, key: ByteArray, context: Context, method: String): String =
+        remoteScreenCommand(host, key, context, method, "wakeScreen") { }
+            .optString("message", "Sem confirmação do Android")
+
     /** Foto única, mais nítida que a prévia. Somente com projeção local autorizada. */
     fun screenCapture(host: String, key: ByteArray, context: Context, method: String): ByteArray {
         require(host.isNotBlank() && host.length <= 253 && !host.contains('/') &&

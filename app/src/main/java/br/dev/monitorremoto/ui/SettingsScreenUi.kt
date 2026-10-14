@@ -259,6 +259,31 @@ private fun MainActivity.fillScreenSettings(layout: LinearLayout) {
         }
     })
     sectionGap(layout, 9)
+    val wake = SettingsStore.allowRemoteWake(this)
+    layout.addView(iconMenuRow(R.drawable.ic_remote_wake, "Permitir acender tela remotamente",
+        if (wake) "Autorizado · não remove senha ou biometria" else "Desativado (ativar)") {
+        if (SettingsStore.allowRemoteWake(this)) {
+            SettingsStore.setAllowRemoteWake(this, false)
+            message("Ativação remota da tela desativada neste aparelho.")
+        } else showAppConfirm("Permitir acender a tela?",
+            "Um controlador já pareado poderá solicitar que a tela deste aparelho acenda mesmo se a projeção terminou. " +
+                "Não desbloqueia PIN, senha ou biometria. O Android pode recusar a tentativa. " +
+                "O monitoramento precisa permanecer ativado.",
+            R.drawable.ic_remote_wake, "Permitir") {
+            SettingsStore.setAllowRemoteWake(this, true)
+            message("Autorizado: acender tela sob comando do controlador. Pode depender do Android.")
+        }
+    })
+    sectionGap(layout, 9)
+    val automatic = SettingsStore.autoWakeOnView(this)
+    layout.addView(iconMenuRow(R.drawable.ic_remote_wake, "Acender automaticamente ao abrir Ver tela",
+        if (automatic) "Ativado neste controlador" else "Desativado (ativar)") {
+        val next = !SettingsStore.autoWakeOnView(this)
+        SettingsStore.setAutoWakeOnView(this, next)
+        message(if (!next) "Ativação ao abrir desabilitada neste aparelho."
+            else "Ao abrir Ver tela, será enviada uma única solicitação. O monitorado também precisa autorizar.")
+    })
+    sectionGap(layout, 9)
     val audio = SettingsStore.captureInternalAudio(this)
     layout.addView(iconMenuRow(R.drawable.ic_bell, "Capturar áudio interno",
         if (audio) "Habilitado · sessão nova necessária se já compartilhar" else "Desativado (ativar)") {

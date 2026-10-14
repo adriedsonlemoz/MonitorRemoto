@@ -1,6 +1,14 @@
 # Monitor Remoto
 
-**v0.1.0-alpha.39 / versionCode 39** · Android 8.0+ · Kotlin 2.2.21 · AGP 8.13.2 · Gradle 8.13
+**v0.1.0-alpha.40 / versionCode 40** · Android 8.0+ · Kotlin 2.2.21 · AGP 8.13.2 · Gradle 8.13
+
+## H.264 experimental e acender tela (alpha.40)
+
+- **Fluxo H.264 experimental:** `MediaCodec` no monitorado codifica amostras YUV_420_888 de quadros autorizados em AVC e o controlador decodifica com `MediaCodec`. Alvo máximo de ~10 FPS, não garantia; resolução limitada a 432x896, bitrate de 1 Mbps e fila em RAM de 30 amostras. A consulta TCP autenticada continua sendo uma por quadro: é uma primeira etapa rumo a transporte de vídeo persistente e pode não melhorar a latência em todos os aparelhos.
+- **Fallback JPEG:** quando codec AVC não funciona ou a decodificação falha, retorna ao JPEG; a fotografia HD permanece baseada na mesma sessão autorizada pelo Android e não grava vídeo.
+- **Acender tela:** opção explícita em Configurações > Tela e controle remoto (desligada por padrão), botão Acender tela no controlador, opção adicional de solicitar ao abrir Ver tela (OFF por padrão), wake lock temporário de até 1,5 s com limite de tentativas de 12 s. Só tenta ativar o display com comando autenticado; **não remove PIN, senha, biometria ou proteção `FLAG_SECURE`**, não reinicia MediaProjection encerrada. Pode ser bloqueado pelo Android/ROM, inclusive segundo plano.
+- **Permissões:** `WAKE_LOCK` e `TURN_SCREEN_ON` no Manifest, com autenticação AES-GCM e chave pareada. Sem novos serviços exportados, captura oculta, gravação ou abertura de porta pública.
+- **Validação:** testes locais de estrutura/sintaxe e limite de buffer não substituem compilação Android nem ensaio de codec no hardware. Benchmark de FPS, delay, temperatura e bateria pendente.
 
 ## Controle e visualização corrigidos (alpha.39)
 
@@ -118,7 +126,7 @@ A Home, o Modo Monitorado, a escolha de conexão, os submenus de Configurações
 
 ## Como utilizar
 
-1. Execute GitHub Actions > **Gerar APK e Release** > Run workflow. Para baixar **APK sem ZIP**, use Releases > `v0.1.0-alpha.39` > Assets > **`MonitorRemoto-v0.1.0-alpha.39.apk`**. Em Actions > Artifacts, um APK de contingência (quando presente) continua vindo em ZIP por comportamento padrão do GitHub. Instale o mesmo APK nos dois aparelhos.
+1. Execute GitHub Actions > **Gerar APK e Release** > Run workflow. Para baixar **APK sem ZIP**, use Releases > `v0.1.0-alpha.40` > Assets > **`MonitorRemoto-v0.1.0-alpha.40.apk`**. Em Actions > Artifacts, um APK de contingência (quando presente) continua vindo em ZIP por comportamento padrão do GitHub. Instale o mesmo APK nos dois aparelhos.
 2. No telefone secundário: na nova **Home**, toque em **Monitorar este aparelho**; autorize a notificação de serviço e ative o monitoramento. Em Configurações, conceda apenas as permissões necessárias e selecione os aplicativos cujas notificações deseja compartilhar.
 3. Na página Monitorado, toque no cartão **Gerar QR**. Escolha o IP privado acessível. O QR expira em 2 minutos e é válido para um único pareamento.
 4. No telefone principal: na **Home**, toque em **Conectar novo aparelho > QR Code**, aponte a câmera na janela compacta e confirme os dados do aparelho antes do pareamento. Para um aparelho salvo, use **Aparelhos anteriores > Conectar**. A digitação manual de IP e chave continua disponível.
@@ -145,7 +153,7 @@ Requer Android SDK API 36, Java 17, Gradle 8.13. O repositório ainda não inclu
 gradle :app:testDebugUnitTest :app:assembleDebug
 ```
 
-APK local de teste: `app/build/outputs/apk/debug/app-debug.apk`. O workflow copia esse arquivo ou o Release assinado como **`MonitorRemoto-v0.1.0-alpha.39.apk`**. Baixe diretamente na aba GitHub **Releases**. **O APK não está incluído neste ZIP de código-fonte.** Veja `docs/PAIRING_QR.md` para segurança do QR.
+APK local de teste: `app/build/outputs/apk/debug/app-debug.apk`. O workflow copia esse arquivo ou o Release assinado como **`MonitorRemoto-v0.1.0-alpha.40.apk`**. Baixe diretamente na aba GitHub **Releases**. **O APK não está incluído neste ZIP de código-fonte.** Veja `docs/PAIRING_QR.md` para segurança do QR.
 
 Opcional: configure os quatro Secrets de assinatura para gerar APK Release assinado e AAB. Ver `docs/APK_DOWNLOAD.md`. Preservar a mesma keystore entre builds é essencial para atualizações sem reinstalação.
 

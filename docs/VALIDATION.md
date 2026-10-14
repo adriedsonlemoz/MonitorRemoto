@@ -414,3 +414,10 @@
 - Acrescentados testes de navegação global, mapeamento CENTER_CROP, flags de bloqueio e verificação do fluxo consentido.
 - Alteração da cadência da prévia JPEG condicionada à presença de visualizador e modo economia; métricas de tempo são estimativas por consulta, não latência ponta a ponta.
 - Build Android via Gradle / validação visual nos celulares ainda pendentes. Não substituir por teste PSI.
+
+## alpha.40 (14/10/2026)
+
+- Implementadas codificação/decodificação AVC com MediaCodec (YUV 420), anel limitado em RAM e fallback automático JPEG; nenhuma sessão nova MediaProjection.
+- Novo comando WakeScreen com autorização local explícita, proteção contra repetição, cooldown e wake lock limitado; estado de bloqueio seguro continua intacto.
+- Verificar no GitHub Actions `:app:testDebugUnitTest :app:assembleDebug :app:lintDebug` e ensaiar codecs de dois modelos reais, falha do codec, reconexão, orientação, latência, áudio, bateria, aquecimento e permissões.
+- Nenhuma latência real/FPS foi medida nesta sessão de desenvolvimento.

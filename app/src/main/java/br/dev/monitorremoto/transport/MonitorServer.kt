@@ -18,6 +18,8 @@ import br.dev.monitorremoto.capture.ScreenFrameStore
 import br.dev.monitorremoto.capture.AudioChunkStore
 import br.dev.monitorremoto.capture.ScreenShareRequest
 import br.dev.monitorremoto.capture.RemoteTouchService
+import br.dev.monitorremoto.video.VideoFrameStore
+import br.dev.monitorremoto.video.VideoStreamPolicy
 import android.util.Base64
 import android.app.KeyguardManager
 import android.os.PowerManager
@@ -28,7 +30,7 @@ import org.json.JSONObject
 import java.net.ServerSocket
 import java.net.Socket
 import java.net.SocketException
-import java.util.LinkedHashSet
+import java.util.LinkedHashMap
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
@@ -46,7 +48,8 @@ class MonitorServer(private val context: Context) {
     )
     // Compartilhado entre instâncias: reiniciar o listener não reabre a janela de replay.
     private companion object {
-        val seenNonces = LinkedHashSet<String>()
+        val seenNonces = LinkedHashMap<String, Long>()
+        var lastWakeAt = 0L
     }
 
     @Synchronized fun start() {
@@ -105,11 +108,20 @@ class MonitorServer(private val context: Context) {
                 val regular = runCatching { WireProtocol.decode(permanentKey, encrypted) }.getOrNull()
                 if (regular != null) {
                     if (regular.optInt("v") != WireProtocol.VERSION ||
-                        regular.optString("op") !in setOf("snapshot", "disconnect", "notificationReply", "smsReply", "screenFrame", "screenCapture", "remoteTouch", "audioChunk", "requestScreen")) return
+                        regular.optString("op") !in setOf("snapshot", "disconnect", "notificationReply", "smsReply", "screenFrame", "screenCapture", "remoteTouch", "audioChunk", "requestScreen", "videoFrame", "wakeScreen")) return
                     if (abs(now - regular.optLong("ts")) > 5 * 60 * 1000L) return
                     synchronized(seenNonces) {
-                        if (!seenNonces.add(nonce)) return
-                        while (seenNonces.size > 1024) seenNonces.remove(seenNonces.first())
+                        // Retenção compatível com ±5 minutos de validade do envelope.
+                        // Polling H.264 não deve antecipar a expulsão de nonces ainda válidos.
+                        val expiresAt = now - 5 * 60 * 1000L
+                        val iterator = seenNonces.entries.iterator()
+                        while (iterator.hasNext()) {
+                            val entry = iterator.next()
+                            if (entry.value < expiresAt) iterator.remove() else break
+                        }
+                        if (seenNonces.containsKey(nonce)) return
+                        seenNonces[nonce] = now
+                        while (seenNonces.size > 60_000) seenNonces.remove(seenNonces.keys.first())
                     }
                     // A chave válida não dispensa a exigência da mesma versão do app.
                     if (!AppVersion.compatible(regular.optString("appVersion"))) {
@@ -127,6 +139,76 @@ class MonitorServer(private val context: Context) {
                             .put("op", "requestScreen").put("appVersion", AppVersion.NAME)
                             .put("ok", alerted).put("sharing", ScreenFrameStore.sharing)
                         WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(permanentKey, reply))
+                        AuthenticatedAccess.authenticated(socket.inetAddress?.hostAddress.orEmpty(),
+                            regular.optString("clientId"), regular.optString("clientName"), regular.optString("accessMethod"))
+                        return
+                    }
+                    if (regular.optString("op") == "wakeScreen") {
+                        // Nunca ignora bloqueio por senha. Opção separada local e controle de frequência.
+                        val allowed = SettingsStore.allowRemoteWake(context) && SettingsStore.isMonitorEnabled(context)
+                        val power = context.getSystemService(PowerManager::class.java)
+                        var accepted = false
+                        val message = when {
+                            !allowed -> "Acender tela não está autorizado nas Configurações do monitorado."
+                            power.isInteractive -> { accepted = true; "Tela já está acesa." }
+                            else -> {
+                                val nowWake = android.os.SystemClock.elapsedRealtime()
+                                val canWake = synchronized(seenNonces) {
+                                    if (VideoStreamPolicy.allowWake(nowWake, lastWakeAt)) {
+                                        lastWakeAt = nowWake
+                                        true
+                                    } else false
+                                }
+                                if (!canWake) "Aguarde alguns segundos antes de tentar novamente."
+                                else runCatching {
+                                    @Suppress("DEPRECATION")
+                                    val lock = power.newWakeLock(PowerManager.SCREEN_BRIGHT_WAKE_LOCK or
+                                        PowerManager.ACQUIRE_CAUSES_WAKEUP, "MonitorRemoto:AcenderTela")
+                                    lock.acquire(1_500L)
+                                    accepted = true
+                                    "Solicitação enviada. O Android pode não acender a tela; não desbloqueia."
+                                }.getOrElse { "Android recusou ativação: ${it.javaClass.simpleName}" }
+                            }
+                        }
+                        val response = JSONObject().put("v", WireProtocol.VERSION)
+                            .put("op", "wakeScreen").put("appVersion", AppVersion.NAME)
+                            .put("ok", accepted).put("message", message)
+                            .put("interactive", power.isInteractive)
+                            .put("deviceLocked", context.getSystemService(KeyguardManager::class.java).isDeviceLocked)
+                        WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(permanentKey, response))
+                        AuthenticatedAccess.authenticated(socket.inetAddress?.hostAddress.orEmpty(),
+                            regular.optString("clientId"), regular.optString("clientName"), regular.optString("accessMethod"))
+                        return
+                    }
+                    if (regular.optString("op") == "videoFrame") {
+                        // Somente sessão MediaProjection já consentida: nenhuma captura remota oculta.
+                        ScreenFrameStore.viewerPing()
+                        val after = regular.optLong("after", 0L).coerceAtLeast(0L)
+                        if (after == 0L) VideoFrameStore.requestKeyFrame()
+                        val frame = if (ScreenFrameStore.sharing) VideoFrameStore.next(after) else null
+                        val locked = context.getSystemService(KeyguardManager::class.java).isDeviceLocked
+                        val interactive = context.getSystemService(PowerManager::class.java).isInteractive
+                        val response = JSONObject().put("v", WireProtocol.VERSION)
+                            .put("op", "videoFrame").put("appVersion", AppVersion.NAME)
+                            .put("sharing", ScreenFrameStore.sharing)
+                            .put("supported", VideoFrameStore.supported)
+                            .put("deviceLocked", locked).put("screenInteractive", interactive)
+                            .put("touchReady", ScreenFrameStore.sharing && !locked &&
+                                SettingsStore.allowRemoteTouch(context) && RemoteTouchService.isReady())
+                            .put("audioReady", ScreenFrameStore.sharing && SettingsStore.captureInternalAudio(context) &&
+                                AudioChunkStore.enabled)
+                            .put("frameAgeMs", VideoFrameStore.latestAgeMs())
+                        if (frame != null) {
+                            response.put("sequence", frame.seq).put("width", frame.width)
+                                .put("height", frame.height).put("pts", frame.timestampUs)
+                                .put("keyFrame", frame.keyFrame)
+                                .put("avc", Base64.encodeToString(frame.data, Base64.NO_WRAP))
+                            if (frame.keyFrame) {
+                                frame.sps?.let { response.put("sps", Base64.encodeToString(it, Base64.NO_WRAP)) }
+                                frame.pps?.let { response.put("pps", Base64.encodeToString(it, Base64.NO_WRAP)) }
+                            }
+                        }
+                        WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(permanentKey, response))
                         AuthenticatedAccess.authenticated(socket.inetAddress?.hostAddress.orEmpty(),
                             regular.optString("clientId"), regular.optString("clientName"), regular.optString("accessMethod"))
                         return

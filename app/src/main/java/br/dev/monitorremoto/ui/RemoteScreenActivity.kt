@@ -35,6 +35,7 @@ import br.dev.monitorremoto.core.RemoteGesturePolicy
 import br.dev.monitorremoto.core.SettingsStore
 import br.dev.monitorremoto.core.ScreenCapturePolicy
 import br.dev.monitorremoto.transport.RemoteClient
+import br.dev.monitorremoto.video.AvcDecoder
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.abs
 
@@ -43,7 +44,7 @@ class RemoteScreenActivity : Activity() {
     companion object {
         const val EXTRA_HOST = "host"
         const val EXTRA_METHOD = "method"
-        private const val REFRESH_MS = 300L // solicita próximo frame após resposta; sem filas de quadros
+        private const val REFRESH_MS = 85L // solicita próximo frame após resposta; sem filas de quadros
         private const val DOCUMENT_SAVE_REQUEST = 9036
     }
     private val main = Handler(Looper.getMainLooper())
@@ -87,6 +88,15 @@ class RemoteScreenActivity : Activity() {
     private var host = ""
     private var method = "Chave salva"
     private var lastSequence = -1L
+    private val videoLock = Any()
+    private var videoSeq = 0L
+    private var videoDecoder: AvcDecoder? = null
+    private var videoSize: Pair<Int, Int>? = null
+    private var videoFailUntil = 0L
+    private var videoMode = false
+    private var videoWaitingSince = 0L
+    private var videoFirstPictureAt = 0L
+    private var wakeRequestedOnOpen = false
     private var audioThread: Thread? = null
     @Volatile private var audioPlayer: AudioTrack? = null
     private var gestureStart: Pair<Float, Float>? = null
@@ -174,6 +184,24 @@ class RemoteScreenActivity : Activity() {
             image.width, image.height)
     }
 
+    private fun closeVideo() = synchronized(videoLock) {
+        runCatching { videoDecoder?.close() }
+        videoDecoder = null; videoSize = null; videoSeq = 0L; videoMode = false
+        videoWaitingSince = 0L; videoFirstPictureAt = 0L
+        lastSequence = -1L
+    }
+
+    private fun wakeRemoteScreen() {
+        if (!active) { toast("Conexão indisponível"); return }
+        Thread({
+            val result = runCatching {
+                val key = RecentDevices.key(applicationContext, host) ?: error("Pareamento ausente")
+                RemoteClient.wakeScreen(host, key, applicationContext, method)
+            }
+            main.post { if (active) toast(result.getOrNull() ?: result.exceptionOrNull()?.message.orEmpty()) }
+        }, "MonitorRemoto-screen-wake").start()
+    }
+
     private fun clearFrame() {
         picture.setImageDrawable(null)
         bitmap?.recycle(); bitmap = null
@@ -193,69 +221,120 @@ class RemoteScreenActivity : Activity() {
                 var canTouch = false
                 var canAudio = false
                 var sharing = false
+                var codecAvailable = false
+                var retryDelay = REFRESH_MS
                 try {
                     val key = RecentDevices.key(applicationContext, host)
                         ?: error("Chave não encontrada. Conecte novamente.")
                     val queryStart = SystemClock.elapsedRealtime()
-                    val result = RemoteClient.screenFrame(host, key, applicationContext, method)
+                    val tryVideo = SystemClock.elapsedRealtime() >= videoFailUntil
+                    val result = if (tryVideo) RemoteClient.videoFrame(host, key, applicationContext,
+                        method, videoSeq) else RemoteClient.screenFrame(host, key, applicationContext, method)
                     val networkRoundTrip = SystemClock.elapsedRealtime() - queryStart
-                    val deviceLocked = result.optBoolean("deviceLocked")
+                    val locked = result.optBoolean("deviceLocked")
                     val interactive = result.optBoolean("screenInteractive", true)
-                    val sourceFrameAge = result.optLong("frameAgeMs", -1L)
+                    val frameAge = result.optLong("frameAgeMs", -1L)
                     sharing = result.optBoolean("sharing")
                     canTouch = result.optBoolean("touchReady")
                     canAudio = result.optBoolean("audioReady")
-                    val encoded = result.optString("jpeg")
+                    codecAvailable = tryVideo && result.optBoolean("supported")
                     if (!sharing && !requestedThisVisit) {
                         requestedThisVisit = true
                         runCatching { RemoteClient.requestScreen(host, key, applicationContext, method) }
                     }
                     if (!sharing) {
                         nextStatus = when {
-                            deviceLocked -> "Tela bloqueada · desbloqueie no monitorado e autorize nova captura"
-                            !interactive -> "Tela apagada · acenda no monitorado e confira a projeção"
-                            else -> "Aguardando autorização de compartilhamento no monitorado"
+                            locked -> "Tela bloqueada · acenda a tela; uma nova captura precisa de autorização local"
+                            !interactive -> "Tela apagada · use Acender tela; captura pode ter sido encerrada"
+                            else -> "Aguardando autorização do monitorado para compartilhar a tela"
                         }
+                        closeVideo()
                         clear = true
-                    } else if (encoded.isBlank()) {
-                        nextStatus = when {
-                            deviceLocked -> "Bloqueio seguro ativo · toque suspenso"
-                            !interactive -> "Tela apagada · aguardando quadro ou reativação local"
-                            else -> "Sessão autorizada · aguardando nova imagem"
+                        retryDelay = 450L
+                    } else if (codecAvailable) {
+                        val encoded = result.optString("avc")
+                        if (encoded.isBlank()) {
+                            if (videoWaitingSince == 0L) videoWaitingSince = SystemClock.elapsedRealtime()
+                            if (SystemClock.elapsedRealtime() - videoWaitingSince > 4_000L) {
+                                throw IllegalStateException("Codec sem quadros; alternando para JPEG")
+                            }
+                        } else videoWaitingSince = 0L
+                        if (encoded.isNotBlank()) {
+                            require(encoded.length <= 175_000) { "Quadro AVC acima do limite" }
+                            val nextSeq = result.optLong("sequence", -1L)
+                            val keyFrame = result.optBoolean("keyFrame")
+                            val w = result.optInt("width"); val h = result.optInt("height")
+                            if (!keyFrame && (videoDecoder == null || nextSeq != videoSeq + 1L)) {
+                                closeVideo() // GOP incompleto: solicitar novo IDR
+                            } else {
+                                if (keyFrame && (videoDecoder == null || videoSize != w to h ||
+                                        nextSeq != videoSeq + 1L)) {
+                                    closeVideo()
+                                    val sps = result.optString("sps").takeIf { it.isNotEmpty() }
+                                        ?.let { Base64.decode(it, Base64.NO_WRAP) }
+                                    val pps = result.optString("pps").takeIf { it.isNotEmpty() }
+                                        ?.let { Base64.decode(it, Base64.NO_WRAP) }
+                                    videoDecoder = AvcDecoder(w, h, sps, pps)
+                                    videoSize = w to h
+                                }
+                                val data = Base64.decode(encoded, Base64.NO_WRAP)
+                                require(data.size <= 128_000)
+                                nextBitmap = synchronized(videoLock) {
+                                    videoDecoder?.decode(data, result.optLong("pts", 0L))
+                                }
+                                videoSeq = nextSeq
+                                videoMode = true
+                                if (nextBitmap != null) videoFirstPictureAt = 0L
+                                else {
+                                    if (videoFirstPictureAt == 0L) videoFirstPictureAt = SystemClock.elapsedRealtime()
+                                    if (SystemClock.elapsedRealtime() - videoFirstPictureAt > 4_000L)
+                                        throw IllegalStateException("Decoder sem imagem; alternando para JPEG")
+                                }
+                            }
                         }
-                        clear = true
-                    } else {
-                        require(encoded.length <= 150_000)
-                        nextSequence = result.optLong("sequence", -1L)
-                        if (nextSequence != lastSequence) {
-                            val bytes = Base64.decode(encoded, Base64.NO_WRAP)
-                            require(bytes.size <= 110_000)
-                            nextBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                                ?: error("Imagem JPEG inválida")
-                            if (RemoteImageSaver.validJpeg(bytes)) nextJpeg = bytes
-                        }
                         nextStatus = when {
-                            deviceLocked -> "Tela bloqueada · comando remoto suspenso"
-                            !interactive -> "Tela apagada · visualização pode ser interrompida"
-                            else -> "Tela ao vivo · alvo ~3 quadros/s · rede ${networkRoundTrip} ms" +
-                                (if (sourceFrameAge >= 0) " · imagem ${sourceFrameAge} ms" else "") +
+                            locked -> "Tela bloqueada · controle protegido"
+                            !interactive -> "Tela apagada · a projeção pode terminar"
+                            else -> "H.264 · rede ${networkRoundTrip} ms" +
+                                (if (frameAge >= 0) " · quadro ${frameAge} ms" else "") +
                                 (if (!canTouch) " · habilite toque no monitorado" else "")
+                        }
+                        retryDelay = if (encoded.isNotBlank()) 35L else 95L
+                    } else {
+                        closeVideo()
+                        val encoded = result.optString("jpeg")
+                        if (encoded.isBlank()) {
+                            nextStatus = "Sessão autorizada · aguardando imagem JPEG"
+                            retryDelay = 230L
+                        } else {
+                            require(encoded.length <= 150_000)
+                            nextSequence = result.optLong("sequence", -1L)
+                            if (nextSequence != lastSequence) {
+                                val bytes = Base64.decode(encoded, Base64.NO_WRAP)
+                                require(bytes.size <= 110_000)
+                                nextBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                                    ?: error("Imagem JPEG inválida")
+                                if (RemoteImageSaver.validJpeg(bytes)) nextJpeg = bytes
+                            }
+                            nextStatus = "JPEG (compatibilidade) · rede ${networkRoundTrip} ms" +
+                                (if (frameAge >= 0) " · imagem ${frameAge} ms" else "")
+                            retryDelay = 300L
                         }
                     }
                 } catch (e: Exception) {
-                    nextStatus = "Sem imagem: ${e.message?.take(90) ?: "rede indisponível"}"
-                    clear = true
+                    nextStatus = "Visualização: ${e.message?.take(80) ?: "rede indisponível"}"
+                    // Decodificador falhou: recuperar com JPEG por 30 s.
+                    videoFailUntil = SystemClock.elapsedRealtime() + 30_000L
+                    closeVideo()
+                    retryDelay = 500L
                 }
                 main.post {
                     fetching.set(false)
                     if (!active || isFinishing || isDestroyed) { nextBitmap?.recycle(); return@post }
-                    if (nextStatus != previousStatus) {
-                        status.text = nextStatus
-                        previousStatus = nextStatus
-                    }
-                    sharingReady = sharing && !clear
-                    touchReady = canTouch && sharing && !clear
-                    audioReady = canAudio && !clear
+                    if (nextStatus != previousStatus) { status.text = nextStatus; previousStatus = nextStatus }
+                    sharingReady = sharing
+                    touchReady = canTouch && sharing
+                    audioReady = canAudio && sharing
                     if (!touchReady) touchMode = false
                     if (!audioReady && audioWanted) stopAudio()
                     if (nextBitmap != null) {
@@ -264,12 +343,11 @@ class RemoteScreenActivity : Activity() {
                         bitmap = nextBitmap
                         lastPreviewJpeg = nextJpeg
                         lastFrameAt = SystemClock.elapsedRealtime()
-                        lastSequence = nextSequence
+                        if (nextSequence >= 0) lastSequence = nextSequence
                     } else if (clear) clearFrame()
                     placeholder.visibility = if (bitmap == null) View.VISIBLE else View.GONE
                     updateControls()
-                    // Nunca acumular pedidos: um único poll em voo e descarte de resposta obsoleta.
-                    main.postDelayed(this, REFRESH_MS)
+                    main.postDelayed(this, retryDelay)
                 }
             }, "MonitorRemoto-screen-poll").start()
         }
@@ -417,7 +495,9 @@ class RemoteScreenActivity : Activity() {
         tools.addView(touchAction, LinearLayout.LayoutParams(0, dp(64), 1f).apply { rightMargin = dp(7) })
         val highQuality = rowAction(R.drawable.ic_remote_save, "Foto HD", { saveHighQuality() })
         highQualityAction = highQuality.first
-        tools.addView(highQualityAction, LinearLayout.LayoutParams(0, dp(64), 1f))
+        tools.addView(highQualityAction, LinearLayout.LayoutParams(0, dp(64), 1f).apply { rightMargin = dp(7) })
+        val wake = rowAction(R.drawable.ic_remote_wake, "Acender tela", { wakeRemoteScreen() })
+        tools.addView(wake.first, LinearLayout.LayoutParams(0, dp(64), 1f))
         normal.addView(tools, LinearLayout.LayoutParams(-1, dp(64)).apply { topMargin = dp(8) })
         normal.addView(text(
             "Toque em 📷 para salvar a prévia. Use Alta qualidade para solicitar uma captura mais nítida. " +
@@ -464,7 +544,7 @@ class RemoteScreenActivity : Activity() {
         touchIcon.imageTintList = ColorStateList.valueOf(if (touchMode) accent else ink)
         val fresh = lastPreviewJpeg != null && sharingReady &&
             ScreenCapturePolicy.freshPreview(SystemClock.elapsedRealtime() - lastFrameAt)
-        cameraButton.isEnabled = fresh && !saving.get()
+        cameraButton.isEnabled = (fresh || (videoMode && sharingReady)) && !saving.get()
         cameraButton.alpha = if (cameraButton.isEnabled) 1f else 0.42f
         highQualityAction.isEnabled = sharingReady && !saving.get()
         highQualityAction.alpha = if (highQualityAction.isEnabled) 1f else 0.42f
@@ -527,6 +607,7 @@ class RemoteScreenActivity : Activity() {
 
     private fun saveQuickFrame() {
         val image = lastPreviewJpeg
+        if (active && sharingReady && videoMode && image == null) { saveHighQuality(); return }
         if (!active || !sharingReady || image == null ||
             !ScreenCapturePolicy.freshPreview(SystemClock.elapsedRealtime() - lastFrameAt)) {
             toast("Aguarde um quadro recente da tela remota")
@@ -657,17 +738,22 @@ class RemoteScreenActivity : Activity() {
         active = host.isNotBlank() && ::picture.isInitialized
         if (isFullscreen) applyImmersiveMode(true)
         main.removeCallbacks(poll); main.post(poll)
+        if (!wakeRequestedOnOpen && SettingsStore.autoWakeOnView(this)) {
+            wakeRequestedOnOpen = true
+            wakeRemoteScreen()
+        }
     }
     override fun onPause() {
         active = false; sharingReady = false; touchMode = false; touchReady = false; audioReady = false
         stopAudio()
         main.removeCallbacks(poll)
+        closeVideo()
         if (::picture.isInitialized) clearFrame()
         if (::placeholder.isInitialized) placeholder.visibility = View.VISIBLE
         super.onPause()
     }
     override fun onDestroy() {
-        main.removeCallbacks(poll); stopAudio()
+        main.removeCallbacks(poll); stopAudio(); closeVideo()
         if (::picture.isInitialized) clearFrame()
         super.onDestroy()
     }

@@ -70,6 +70,16 @@ object SettingsStore {
     fun setAllowRemoteTouch(context: Context, enabled: Boolean) =
         prefs(context).edit().putBoolean("remote_touch", enabled).apply()
 
+    /** Autoriza SOMENTE acender a tela; não remove bloqueio seguro. Desligado por padrão. */
+    fun allowRemoteWake(context: Context) = prefs(context).getBoolean("remote_wake", false)
+    fun setAllowRemoteWake(context: Context, enabled: Boolean) =
+        prefs(context).edit().putBoolean("remote_wake", enabled).apply()
+
+    /** No controlador: solicitar acordar uma vez ao abrir Ver tela. OFF por padrão. */
+    fun autoWakeOnView(context: Context) = prefs(context).getBoolean("auto_wake_view", false)
+    fun setAutoWakeOnView(context: Context, enabled: Boolean) =
+        prefs(context).edit().putBoolean("auto_wake_view", enabled).apply()
+
     fun captureInternalAudio(context: Context) = prefs(context).getBoolean("internal_audio", false)
     fun setCaptureInternalAudio(context: Context, enabled: Boolean) =
         prefs(context).edit().putBoolean("internal_audio", enabled).apply()
