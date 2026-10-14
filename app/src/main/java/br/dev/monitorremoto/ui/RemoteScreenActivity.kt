@@ -43,7 +43,7 @@ class RemoteScreenActivity : Activity() {
     companion object {
         const val EXTRA_HOST = "host"
         const val EXTRA_METHOD = "method"
-        private const val REFRESH_MS = 720L
+        private const val REFRESH_MS = 300L // solicita próximo frame após resposta; sem filas de quadros
         private const val DOCUMENT_SAVE_REQUEST = 9036
     }
     private val main = Handler(Looper.getMainLooper())
@@ -61,6 +61,8 @@ class RemoteScreenActivity : Activity() {
     private lateinit var stage: FrameLayout
     private lateinit var placeholder: LinearLayout
     private lateinit var fullscreenExit: ImageButton
+    private lateinit var fullscreenFit: TextView
+    private var fillFullscreen = false
     private lateinit var cameraButton: ImageButton
     private lateinit var audioButton: ImageButton
     private lateinit var fullscreenButton: ImageButton
@@ -68,6 +70,10 @@ class RemoteScreenActivity : Activity() {
     private lateinit var touchAction: LinearLayout
     private lateinit var touchLabel: TextView
     private lateinit var touchIcon: ImageView
+    private lateinit var backAction: LinearLayout
+    private lateinit var homeAction: LinearLayout
+    private lateinit var recentsAction: LinearLayout
+    private lateinit var notificationsAction: LinearLayout
     private lateinit var highQualityAction: LinearLayout
     private lateinit var normal: LinearLayout
     private lateinit var normalScroll: ScrollView
@@ -86,6 +92,7 @@ class RemoteScreenActivity : Activity() {
     private var gestureStart: Pair<Float, Float>? = null
     private var gestureAt = 0L
     private var requestedThisVisit = false
+    private var previousStatus = ""
 
     private val dark: Boolean get() = when (SettingsStore.theme(this)) {
         "dark" -> true
@@ -144,21 +151,26 @@ class RemoteScreenActivity : Activity() {
 
     private fun remoteCommand(action: String, x: Float = 0.5f, y: Float = 0.5f,
         ex: Float = x, ey: Float = y, duration: Long = 240L) {
-        if (!active || !touchReady || !touchMode) return
+        if (!active) { toast("Controle remoto desconectado"); return }
+        val global = RemoteGesturePolicy.isGlobalAction(action)
+        if (!touchReady) { toast("Controle indisponível: confira captura, desbloqueio e Acessibilidade"); return }
+        if (!global && !touchMode) { toast("Ative Toque para interagir com a imagem"); return }
         Thread({
-            val accepted = runCatching {
+            val result = runCatching {
                 val key = RecentDevices.key(applicationContext, host) ?: error("Pareamento ausente")
                 RemoteClient.touch(host, key, applicationContext, method, action, x, y, ex, ey, duration)
-            }.getOrDefault(false)
-            if (!accepted) main.post {
-                if (active) Toast.makeText(this, "Toque recusado ou acessibilidade desativada", Toast.LENGTH_SHORT).show()
+            }
+            if (result.getOrNull() != true) main.post {
+                if (active) toast("Ação não executada: ${result.exceptionOrNull()?.message?.take(80) ?: "Acessibilidade ou sessão indisponível"}")
             }
         }, "MonitorRemoto-remote-gesture").start()
     }
 
     private fun hitPoint(x: Float, y: Float): Pair<Float, Float>? {
         val image = bitmap ?: return null
-        return RemoteGesturePolicy.fitCenterPoint(x, y, picture.width, picture.height,
+        return if (picture.scaleType == ImageView.ScaleType.CENTER_CROP)
+            RemoteGesturePolicy.centerCropPoint(x, y, picture.width, picture.height, image.width, image.height)
+        else RemoteGesturePolicy.fitCenterPoint(x, y, picture.width, picture.height,
             image.width, image.height)
     }
 
@@ -184,7 +196,12 @@ class RemoteScreenActivity : Activity() {
                 try {
                     val key = RecentDevices.key(applicationContext, host)
                         ?: error("Chave não encontrada. Conecte novamente.")
+                    val queryStart = SystemClock.elapsedRealtime()
                     val result = RemoteClient.screenFrame(host, key, applicationContext, method)
+                    val networkRoundTrip = SystemClock.elapsedRealtime() - queryStart
+                    val deviceLocked = result.optBoolean("deviceLocked")
+                    val interactive = result.optBoolean("screenInteractive", true)
+                    val sourceFrameAge = result.optLong("frameAgeMs", -1L)
                     sharing = result.optBoolean("sharing")
                     canTouch = result.optBoolean("touchReady")
                     canAudio = result.optBoolean("audioReady")
@@ -194,10 +211,18 @@ class RemoteScreenActivity : Activity() {
                         runCatching { RemoteClient.requestScreen(host, key, applicationContext, method) }
                     }
                     if (!sharing) {
-                        nextStatus = "Aguardando autorização no monitorado"
+                        nextStatus = when {
+                            deviceLocked -> "Tela bloqueada · desbloqueie no monitorado e autorize nova captura"
+                            !interactive -> "Tela apagada · acenda no monitorado e confira a projeção"
+                            else -> "Aguardando autorização de compartilhamento no monitorado"
+                        }
                         clear = true
                     } else if (encoded.isBlank()) {
-                        nextStatus = "Sessão autorizada · aguardando imagem"
+                        nextStatus = when {
+                            deviceLocked -> "Bloqueio seguro ativo · toque suspenso"
+                            !interactive -> "Tela apagada · aguardando quadro ou reativação local"
+                            else -> "Sessão autorizada · aguardando nova imagem"
+                        }
                         clear = true
                     } else {
                         require(encoded.length <= 150_000)
@@ -209,9 +234,13 @@ class RemoteScreenActivity : Activity() {
                                 ?: error("Imagem JPEG inválida")
                             if (RemoteImageSaver.validJpeg(bytes)) nextJpeg = bytes
                         }
-                        nextStatus = "Tela ao vivo · ~1–2 quadros/s" +
-                            (if (canTouch) " · toque disponível" else "") +
-                            (if (canAudio) " · áudio disponível" else "")
+                        nextStatus = when {
+                            deviceLocked -> "Tela bloqueada · comando remoto suspenso"
+                            !interactive -> "Tela apagada · visualização pode ser interrompida"
+                            else -> "Tela ao vivo · alvo ~3 quadros/s · rede ${networkRoundTrip} ms" +
+                                (if (sourceFrameAge >= 0) " · imagem ${sourceFrameAge} ms" else "") +
+                                (if (!canTouch) " · habilite toque no monitorado" else "")
+                        }
                     }
                 } catch (e: Exception) {
                     nextStatus = "Sem imagem: ${e.message?.take(90) ?: "rede indisponível"}"
@@ -220,9 +249,12 @@ class RemoteScreenActivity : Activity() {
                 main.post {
                     fetching.set(false)
                     if (!active || isFinishing || isDestroyed) { nextBitmap?.recycle(); return@post }
-                    status.text = nextStatus
+                    if (nextStatus != previousStatus) {
+                        status.text = nextStatus
+                        previousStatus = nextStatus
+                    }
                     sharingReady = sharing && !clear
-                    touchReady = canTouch && !clear
+                    touchReady = canTouch && sharing && !clear
                     audioReady = canAudio && !clear
                     if (!touchReady) touchMode = false
                     if (!audioReady && audioWanted) stopAudio()
@@ -236,6 +268,7 @@ class RemoteScreenActivity : Activity() {
                     } else if (clear) clearFrame()
                     placeholder.visibility = if (bitmap == null) View.VISIBLE else View.GONE
                     updateControls()
+                    // Nunca acumular pedidos: um único poll em voo e descarte de resposta obsoleta.
                     main.postDelayed(this, REFRESH_MS)
                 }
             }, "MonitorRemoto-screen-poll").start()
@@ -342,41 +375,91 @@ class RemoteScreenActivity : Activity() {
             setOnClickListener { toggleFullscreen() }
         }
         stage.addView(fullscreenExit, FrameLayout.LayoutParams(dp(48), dp(48),
-            Gravity.TOP or Gravity.END).apply { setMargins(0, dp(18), dp(18), 0) })
+            Gravity.TOP or Gravity.END).apply { setMargins(0, dp(18), dp(12), 0) })
+        fullscreenFit = text("Preencher", 12f, Color.BLACK, true).apply {
+            gravity = Gravity.CENTER
+            background = shape(Color.rgb(243, 246, 248), 12)
+            visibility = View.GONE
+            isClickable = true; isFocusable = true
+            contentDescription = "Alternar entre ajustar imagem e preencher tela"
+            setOnClickListener {
+                fillFullscreen = !fillFullscreen
+                picture.scaleType = if (fillFullscreen) ImageView.ScaleType.CENTER_CROP
+                    else ImageView.ScaleType.FIT_CENTER
+                text = if (fillFullscreen) "Ajustar" else "Preencher"
+            }
+        }
+        stage.addView(fullscreenFit, FrameLayout.LayoutParams(dp(100), dp(48),
+            Gravity.TOP or Gravity.END).apply { setMargins(0, dp(18), dp(68), 0) })
         normalStageHeight = minOf((resources.displayMetrics.heightPixels * 0.59f).toInt(),
             (resources.displayMetrics.widthPixels * 1.44f).toInt())
         stageSlot.addView(stage, LinearLayout.LayoutParams(-1, normalStageHeight))
         normal.addView(stageSlot)
 
-        val actions = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
-        val touch = rowAction(R.drawable.ic_remote_hand, "Toque", {
-            if (!touchReady) return@rowAction
+        val nav = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
+        fun navItem(drawable: Int, title: String, gesture: String): LinearLayout =
+            rowAction(drawable, title) { remoteCommand(gesture) }.first.also {
+                nav.addView(it, LinearLayout.LayoutParams(0, dp(66), 1f).apply { rightMargin = dp(5) })
+            }
+        backAction = navItem(R.drawable.ic_remote_back, "Voltar", "back")
+        homeAction = navItem(R.drawable.ic_remote_home, "Início", "home")
+        recentsAction = navItem(android.R.drawable.ic_menu_recent_history, "Recentes", "recents")
+        notificationsAction = navItem(R.drawable.ic_bell, "Notificações", "notifications")
+        normal.addView(nav, LinearLayout.LayoutParams(-1, dp(66)).apply { topMargin = dp(12) })
+
+        val tools = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
+        val touch = rowAction(R.drawable.ic_remote_hand, "Toque na imagem", {
+            if (!touchReady) { toast("Ative Acessibilidade e mantenha a captura autorizada"); return@rowAction }
             touchMode = !touchMode
             updateControls()
         })
         touchAction = touch.first; touchIcon = touch.second; touchLabel = touch.third
-        actions.addView(touchAction, LinearLayout.LayoutParams(0, dp(77), 1f).apply { rightMargin = dp(6) })
-        val backAction = rowAction(R.drawable.ic_remote_back, "Voltar", { remoteCommand("back") })
-        actions.addView(backAction.first, LinearLayout.LayoutParams(0, dp(77), 1f).apply { rightMargin = dp(6) })
-        val homeAction = rowAction(R.drawable.ic_remote_home, "Início", { remoteCommand("home") })
-        actions.addView(homeAction.first, LinearLayout.LayoutParams(0, dp(77), 1f).apply { rightMargin = dp(6) })
+        tools.addView(touchAction, LinearLayout.LayoutParams(0, dp(64), 1f).apply { rightMargin = dp(7) })
         val highQuality = rowAction(R.drawable.ic_remote_save, "Foto HD", { saveHighQuality() })
         highQualityAction = highQuality.first
-        actions.addView(highQualityAction, LinearLayout.LayoutParams(0, dp(77), 1f))
-        normal.addView(actions, LinearLayout.LayoutParams(-1, dp(77)).apply { topMargin = dp(12) })
+        tools.addView(highQualityAction, LinearLayout.LayoutParams(0, dp(64), 1f))
+        normal.addView(tools, LinearLayout.LayoutParams(-1, dp(64)).apply { topMargin = dp(8) })
         normal.addView(text(
             "Toque em 📷 para salvar a prévia. Use Alta qualidade para solicitar uma captura mais nítida. " +
                 "A sessão deve estar autorizada no outro aparelho.", 11.5f, muted).apply {
                 setPadding(dp(3), dp(12), dp(3), dp(3)); maxLines = 4
             })
         setContentView(screenRoot)
+        // Android 15/16 impõe edge-to-edge: não deixar toolbar ou rodapé sob as barras.
+        if (Build.VERSION.SDK_INT >= 30) {
+            screenRoot.setOnApplyWindowInsetsListener { _, insets ->
+                val safe = insets.getInsets(WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout())
+                normalScroll.setPadding(0, if (isFullscreen) 0 else safe.top,
+                    0, if (isFullscreen) 0 else safe.bottom)
+                if (::fullscreenExit.isInitialized) {
+                    (fullscreenExit.layoutParams as? FrameLayout.LayoutParams)?.let { params ->
+                        params.topMargin = safe.top + dp(12)
+                        fullscreenExit.layoutParams = params
+                    }
+                }
+                if (::fullscreenFit.isInitialized) {
+                    (fullscreenFit.layoutParams as? FrameLayout.LayoutParams)?.let { params ->
+                        params.topMargin = safe.top + dp(12)
+                        fullscreenFit.layoutParams = params
+                    }
+                }
+                insets
+            }
+            screenRoot.requestApplyInsets()
+        }
         updateControls()
     }
 
     private fun updateControls() {
         if (!::touchAction.isInitialized) return
-        touchAction.isEnabled = touchReady
-        touchAction.alpha = if (touchReady) 1f else 0.48f
+        // Os botões continuam clicáveis para explicar quando falta permissão;
+        // desabilitá-los deixava o usuário sem qualquer resposta.
+        touchAction.isEnabled = true
+        touchAction.alpha = if (touchReady) 1f else 0.55f
+        for (action in listOf(backAction, homeAction, recentsAction, notificationsAction)) {
+            action.isEnabled = true
+            action.alpha = if (touchReady) 1f else 0.55f
+        }
         touchLabel.text = if (touchMode) "Toque ligado" else "Toque"
         touchIcon.imageTintList = ColorStateList.valueOf(if (touchMode) accent else ink)
         val fresh = lastPreviewJpeg != null && sharingReady &&
@@ -400,31 +483,46 @@ class RemoteScreenActivity : Activity() {
             stage.clipToOutline = false
             screenRoot.addView(stage, FrameLayout.LayoutParams(-1, -1))
             fullscreenExit.visibility = View.VISIBLE
-            if (Build.VERSION.SDK_INT >= 30) {
-                window.insetsController?.apply {
-                    systemBarsBehavior = android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-                    hide(WindowInsets.Type.systemBars())
-                }
-            } else {
-                @Suppress("DEPRECATION")
-                window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_FULLSCREEN or
-                    View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or
-                    View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-            }
+            fullscreenFit.visibility = View.VISIBLE
+            applyImmersiveMode(true)
+
         } else {
             screenRoot.removeView(stage)
             stage.background = shape(Color.rgb(9, 16, 24), 22)
             stage.clipToOutline = true
             fullscreenExit.visibility = View.GONE
+            fullscreenFit.visibility = View.GONE
+            picture.scaleType = ImageView.ScaleType.FIT_CENTER
+            fillFullscreen = false
+            fullscreenFit.text = "Preencher"
+            applyImmersiveMode(false)
             stageSlot.addView(stage, LinearLayout.LayoutParams(-1, normalStageHeight))
             normalScroll.visibility = View.VISIBLE
-            if (Build.VERSION.SDK_INT >= 30) window.insetsController?.show(WindowInsets.Type.systemBars())
-            else {
-                @Suppress("DEPRECATION")
-                window.decorView.systemUiVisibility = if (dark) 0 else
-                    View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
-            }
+
         }
+    }
+
+    /** Persistir o modo em mudanças de foco (ex.: painel do Android recolhido). */
+    private fun applyImmersiveMode(enabled: Boolean) {
+        @Suppress("DEPRECATION")
+        window.decorView.systemUiVisibility = if (enabled) (
+            View.SYSTEM_UI_FLAG_FULLSCREEN or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+            View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
+            View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+        ) else if (dark) 0 else (View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or
+            View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR)
+        if (Build.VERSION.SDK_INT >= 30) window.insetsController?.let { controller ->
+            if (enabled) {
+                controller.systemBarsBehavior = android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                controller.hide(WindowInsets.Type.systemBars())
+            } else controller.show(WindowInsets.Type.systemBars())
+        }
+        if (::screenRoot.isInitialized && Build.VERSION.SDK_INT >= 30) screenRoot.requestApplyInsets()
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus && isFullscreen) applyImmersiveMode(true)
     }
 
     private fun saveQuickFrame() {
@@ -557,8 +655,7 @@ class RemoteScreenActivity : Activity() {
     override fun onResume() {
         super.onResume()
         active = host.isNotBlank() && ::picture.isInitialized
-        if (isFullscreen && Build.VERSION.SDK_INT >= 30)
-            window.insetsController?.hide(WindowInsets.Type.systemBars())
+        if (isFullscreen) applyImmersiveMode(true)
         main.removeCallbacks(poll); main.post(poll)
     }
     override fun onPause() {

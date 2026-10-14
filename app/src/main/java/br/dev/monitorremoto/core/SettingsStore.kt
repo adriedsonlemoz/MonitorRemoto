@@ -13,6 +13,9 @@ object SettingsStore {
         val preferences = prefs(context)
         val wasEnabled = preferences.getBoolean("monitor_enabled", false)
         preferences.edit().putBoolean("monitor_enabled", enabled).apply()
+        // Um comando Parar cancela inclusive as futuras verificações agendadas.
+        br.dev.monitorremoto.service.RecoveryScheduler.refresh(context)
+        if (!enabled) recordRecoveryEvent(context, "Monitoramento interrompido localmente")
         // Nunca reutilizar eventos da sessão anterior, mesmo com uma captura em trânsito.
         if (!enabled || !wasEnabled) {
             EventJournal.clear()
@@ -92,6 +95,22 @@ object SettingsStore {
     fun serverHealthState(context: Context) = prefs(context).getString("server_health_state", "não verificado").orEmpty()
     fun serverFailureCount(context: Context) = prefs(context).getInt("server_failure_count", 0)
     fun serverLastCheck(context: Context) = prefs(context).getLong("server_last_check_ms", 0L)
+
+    /** Opt-in adicional, sem tentar burlar force-stop ou reiniciar projeção de tela. */
+    fun recoveryJobsEnabled(context: Context) = prefs(context).getBoolean("recovery_jobs", false)
+    fun setRecoveryJobs(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean("recovery_jobs", enabled).apply()
+        br.dev.monitorremoto.service.RecoveryScheduler.refresh(context)
+        recordRecoveryEvent(context, if (enabled) "Verificação periódica autorizada" else "Verificação periódica desativada")
+    }
+    fun recordRecoveryEvent(context: Context, description: String) {
+        prefs(context).edit()
+            .putString("recovery_last_event", description.take(110))
+            .putLong("recovery_last_event_ms", System.currentTimeMillis())
+            .apply()
+    }
+    fun recoveryLastEvent(context: Context) = prefs(context).getString("recovery_last_event", "Nenhum evento registrado").orEmpty()
+    fun recoveryLastEventMs(context: Context) = prefs(context).getLong("recovery_last_event_ms", 0L)
 
     fun autoStartEnabled(context: Context) = prefs(context).getBoolean("autostart", false)
     fun setAutoStart(context: Context, enabled: Boolean) = prefs(context).edit().putBoolean("autostart", enabled).apply()

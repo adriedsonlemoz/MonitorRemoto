@@ -179,8 +179,9 @@ object RemoteClient {
             .put("clientName", listOf(Build.MANUFACTURER, Build.MODEL).joinToString(" ").take(72))
             .put("accessMethod", method).apply(extras)
         return Socket().use { socket ->
-            socket.connect(InetSocketAddress(host, WireProtocol.PORT), 4500)
-            socket.soTimeout = 6500
+            // Navegação não deve ficar segundos esperando um TCP perdido.
+            socket.connect(InetSocketAddress(host, WireProtocol.PORT), if (op == "remoteTouch") 2200 else 4500)
+            socket.soTimeout = if (op == "remoteTouch") 3200 else 6500
             WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(key, request))
             val response = WireProtocol.decode(key, WireProtocol.receive(socket.getInputStream(), 64 * 1024))
             if (response.optString("op") == "versionMismatch")

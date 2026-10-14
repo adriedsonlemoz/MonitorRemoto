@@ -36,6 +36,9 @@ class MonitorService : Service() {
         const val ACTION_STOP = "br.dev.monitorremoto.STOP"
         @Volatile var isRunning = false
             private set
+        /** Não confundir listener TCP fora do ar com serviço Android encerrado. */
+        @Volatile var isServiceActive = false
+            private set
 
         fun start(context: Context) {
             val intent = Intent(context, MonitorService::class.java)
@@ -45,6 +48,7 @@ class MonitorService : Service() {
     }
 
     private var server: MonitorServer? = null
+    private var stoppedExplicitly = false
     @Volatile private var serviceActive = false
     private var consecutiveFailures = 0
     private var nextRecoveryMs = 0L
@@ -90,7 +94,9 @@ class MonitorService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP || !SettingsStore.isMonitorEnabled(this)) {
+            stoppedExplicitly = true
             serviceActive = false
+            isServiceActive = false
             SettingsStore.setMonitorEnabled(this, false)
             stopSelf()
             return START_NOT_STICKY
@@ -115,6 +121,11 @@ class MonitorService : Service() {
             startForeground(42, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
         } else startForeground(42, notification)
         serviceActive = true
+        isServiceActive = true
+        stoppedExplicitly = false
+        RecoveryScheduler.refresh(this)
+        SettingsStore.recordRecoveryEvent(this, "Serviço iniciado ou restaurado")
+        getSystemService(NotificationManager::class.java)?.cancel(98)
         registerConnectivityWatch()
         // Serviço ativo não significa porta disponível; o supervisor valida ambos.
         ensureServerReady()
@@ -175,6 +186,7 @@ class MonitorService : Service() {
     override fun onTaskRemoved(rootIntent: Intent?) {
         // Remover a tarefa visual não equivale ao usuário tocar em Parar.
         // START_STICKY mantém a possibilidade de recriação pelo sistema.
+        SettingsStore.recordRecoveryEvent(this, "Janela do app removida; serviço deve continuar")
         super.onTaskRemoved(rootIntent)
     }
 
@@ -206,6 +218,11 @@ class MonitorService : Service() {
 
     override fun onDestroy() {
         serviceActive = false
+        isServiceActive = false
+        if (!stoppedExplicitly && SettingsStore.isMonitorEnabled(this)) {
+            SettingsStore.recordRecoveryEvent(this, "Serviço Android encerrado; aguardando retomada")
+            RecoveryScheduler.refresh(this)
+        }
         br.dev.monitorremoto.capture.ScreenShareService.stop(this)
         mainHandler.removeCallbacks(serverWatchdog)
         if (networkCallbackRegistered) {

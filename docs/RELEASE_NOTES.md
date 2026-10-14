@@ -1,10 +1,24 @@
-# Monitor Remoto v0.1.0-alpha.37
+# Monitor Remoto v0.1.0-alpha.39
+
+## Interface, comandos de navegação e prévia mais responsiva (alpha.39)
+
+- Voltar, Início, Recentes e Notificações funcionam independentemente do modo de toque na imagem (sempre com Acessibilidade autorizada).
+- Corrigido topo sob status bar pelo tratamento de WindowInsets; aprimorado fullscreen imersivo, com opções Ajustar/Preencher e preservação das coordenadas.
+- Prévia JPEG com alvo aproximado de 3 FPS e RTT de rede / idade do quadro expostos; modo de economia reduz cadência. Nenhum H.264 ou FPS garantido.
+- Estados de tela apagada e bloqueada informados; nenhuma tentativa de desbloquear ou ocultar autorização. Testes Android/visual em aparelhos físicos pendentes.
+- Versão 0.1.0-alpha.39, versionCode 39; usar em ambos os aparelhos.
+
+## Recuperação de serviço (alpha.38)
+
+- `JobScheduler` opcional como segunda camada de recuperação do serviço no monitorado, checagem inexata a cada >= 15 minutos e ação de notificação se o Android bloquear a retomada no plano de fundo.
+- Tela Monitorado também reavalia periodicamente serviço Android ausente e registra diagnóstico local de recuperações. Portas TCP continuam sob supervisor de 15 segundos.
+- Parada explícita cancela o agendamento e nenhum Job reinicia captura de tela/áudio; exige consentimento local para novas sessões.
 
 ## Correção de compilação (alpha.37)
 
 - Corrigidas duas referências que impediram `:app:compileDebugKotlin` no workflow #37: importação ausente de `android.util.Base64` em `RemoteClient.kt` e propriedade `fillViewport` renomeada para `isFillViewport` em `RemoteScreenActivity.kt`.
 - Funções de Print, Foto HD, Tela cheia, áudio e toque remoto preservadas, com seus controles e consentimentos.
-- `versionCode 37` e compatibilidade exata da versão mantida entre controlador e monitorado. Build Android completo e teste físico continuam pendentes.
+- `versionCode 38` e compatibilidade exata da versão mantida entre controlador e monitorado. Build Android completo e teste físico continuam pendentes.
 
 
 ## Novidades: Print, Foto HD e Tela cheia (alpha.36)

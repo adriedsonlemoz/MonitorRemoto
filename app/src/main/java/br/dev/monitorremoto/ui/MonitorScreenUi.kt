@@ -36,6 +36,7 @@ internal fun MainActivity.renderMonitor() {
     val state = when {
         !enabled -> "● Monitoramento inativo"
         running -> "● Monitoramento ativo"
+        MonitorService.isServiceActive -> "● Serviço ativo · rede em recuperação"
         else -> "● Serviço sem execução"
     }
     headerText.addView(label(state, 12.5f, strong = true).apply {

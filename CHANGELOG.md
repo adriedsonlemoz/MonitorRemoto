@@ -1,5 +1,22 @@
 # Histórico de versões
 
+## 0.1.0-alpha.39 (14/10/2026)
+
+- Corrigidos Voltar e Início: não dependem de "Toque" ligado. Adicionados Recentes e Notificações com ações globais oficiais de Acessibilidade autorizada.
+- Interface Ver tela respeita WindowInsets e display cutout; modo imersivo recupera ocultação das barras e oferece Ajustar/Preencher com mapeamento adequado dos gestos.
+- Prévia JPEG ajustada para ~3 fps como alvo sob demanda (330 ms no monitorado e consulta seguinte após 300 ms); em economia de bateria, 700 ms. Indicadores de RTT/idade do quadro permitem medir atrasos sem assumir números irreais.
+- Diagnóstico diferencia tela apagada, bloqueio seguro e fim de projeção. Não desbloqueia aparelho, não reinicia MediaProjection após o Android encerrá-la e não contorna consentimento.
+- Testes de mapeamento CENTER_CROP e ações globais; verificador reforçado. Compilação Android completa e testes físicos permanecem pendentes.
+
+## 0.1.0-alpha.38 (14/10/2026)
+
+- Implementada verificação de contingência opcional via `JobScheduler` (intervalo mínimo 15 minutos), acionada somente quando monitoramento e recuperação agendada tiverem sido ativados no próprio aparelho; parada local cancela o Job.
+- Se o serviço Android ainda existir, o supervisor TCP de 15 segundos continua responsável por recuperar a porta, sem reiniciar todo o processo nem descartar autorizações.
+- Quando o serviço Android está ausente, a tela Monitorado tenta recuperá-lo enquanto estiver aberta (tentativas limitadas), e o Job pode solicitar a retomada. Caso o Android negue iniciar um foreground service em segundo plano, exibe notificação para retorno manual.
+- Diagnóstico agora diferencia serviço Android e listener TCP, exibindo último evento e data. Não reativa após Parar, force-stop ou reinício sem início automático explicitamente habilitado.
+- Captura de tela e áudio interno não são reativados pelo Job, pois exigem sessão `MediaProjection` autorizada.
+- A compilação Android e testes em aparelhos físicos ainda precisam ser realizados no CI.
+
 ## 0.1.0-alpha.37 (14/10/2026)
 
 - Corrigidos erros de compilação observados no workflow **Gerar APK e Release #37** (`:app:compileDebugKotlin`): `Unresolved reference Base64` em `RemoteClient.kt:144` e `Unresolved reference fillViewport` em `RemoteScreenActivity.kt:263`.

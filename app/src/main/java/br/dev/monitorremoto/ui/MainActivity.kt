@@ -109,6 +109,7 @@ class MainActivity : Activity() {
     private val monitorStatusPoll = object : Runnable {
         override fun run() {
             if (active && mode == 0) {
+                if (SettingsStore.isMonitorEnabled(this@MainActivity) && !MonitorService.isServiceActive) recoverAuthorizedServiceIfStopped()
                 render()
                 handler.postDelayed(this, 5_000L) // Time out stale activity on screen.
             }
@@ -186,7 +187,6 @@ class MainActivity : Activity() {
         outState.putInt("settings_return_mode", settingsReturnMode)
         super.onSaveInstanceState(outState)
     }
-
     override fun onResume() {
         super.onResume()
         active = true
@@ -199,22 +199,22 @@ class MainActivity : Activity() {
         handler.removeCallbacks(poller)
         handler.postDelayed(poller, 15_000L)
     }
-
     /** Recuperação conservadora somente com o app visível; nunca após parada explícita. */
     private fun recoverAuthorizedServiceIfStopped() {
-        if (!SettingsStore.isMonitorEnabled(this) || MonitorService.isRunning) return
+        if (!SettingsStore.isMonitorEnabled(this) || MonitorService.isServiceActive) return
         val now = SystemClock.elapsedRealtime()
         if (lastRecoveryAttemptMs != 0L && now - lastRecoveryAttemptMs < 60_000L) return
         lastRecoveryAttemptMs = now
         handler.postDelayed({
             if (active && !isFinishing && !isDestroyed &&
-                SettingsStore.isMonitorEnabled(this) && !MonitorService.isRunning) {
-                runCatching { MonitorService.start(this) }
+                SettingsStore.isMonitorEnabled(this) && !MonitorService.isServiceActive) {
+                runCatching { MonitorService.start(this) }.onFailure {
+                    SettingsStore.recordRecoveryEvent(this, "Retomada negada pelo sistema")
+                }
                 handler.postDelayed({ if (active && mode == 0) render() }, 1_000L)
             }
         }, 800L)
     }
-
     override fun onPause() {
         active = false
         if (mode == 4) {

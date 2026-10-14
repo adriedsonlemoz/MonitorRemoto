@@ -26,6 +26,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.IBinder
+import android.os.PowerManager
 import android.os.SystemClock
 import android.util.Log
 import android.view.WindowManager
@@ -44,7 +45,7 @@ class ScreenShareService : Service() {
         private const val CHANNEL = "monitor_remoto_tela"
         private const val NOTIFICATION_ID = 58
         private const val TAG = "MonitorRemotoScreen"
-        private const val FRAME_INTERVAL_MS = 700L // ~1-2 fps sob demanda; sem codificar quando ninguém assiste
+        private const val FRAME_INTERVAL_MS = 330L // alvo ~3 FPS em JPEG; limite dinâmico real depende de CPU/rede
         fun stop(context: Context) { context.stopService(Intent(context, ScreenShareService::class.java)) }
     }
 
@@ -191,8 +192,10 @@ class ScreenShareService : Service() {
                 try {
                     if (!ScreenFrameStore.sharing) return@setOnImageAvailableListener
                     val stillId = ScreenFrameStore.pendingStill()
+                    val powerSave = getSystemService(PowerManager::class.java).isPowerSaveMode
+                    val interval = if (powerSave) 700L else FRAME_INTERVAL_MS
                     val needPreview = ScreenFrameStore.viewerActive() &&
-                        SystemClock.elapsedRealtime() - lastFrameAt >= FRAME_INTERVAL_MS
+                        SystemClock.elapsedRealtime() - lastFrameAt >= interval
                     if (!needPreview && stillId == 0L) return@setOnImageAvailableListener
                     if (needPreview) lastFrameAt = SystemClock.elapsedRealtime()
                     val plane = image.planes.firstOrNull() ?: return@setOnImageAvailableListener

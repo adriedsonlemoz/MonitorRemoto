@@ -1,6 +1,22 @@
 # Monitor Remoto
 
-**v0.1.0-alpha.37 / versionCode 37** · Android 8.0+ · Kotlin 2.2.21 · AGP 8.13.2 · Gradle 8.13
+**v0.1.0-alpha.39 / versionCode 39** · Android 8.0+ · Kotlin 2.2.21 · AGP 8.13.2 · Gradle 8.13
+
+## Controle e visualização corrigidos (alpha.39)
+
+- **Navegação remota:** Voltar, Início, Recentes e Notificações agora executam ações globais do Android via Acessibilidade, sem depender do botão "Toque na imagem". Cada comando segue autenticado e sujeito à autorização de Acessibilidade e à sessão de tela vigente. "Toque" habilita apenas gestos na imagem.
+- **Topo protegido:** página Ver tela usa `WindowInsets` da barra de status, recorte de câmera e navegação em Android 15/16. Os botões deixam de competir com relógio e indicadores.
+- **Tela cheia real:** modo imersivo refeito, com saída visível, opção Ajustar (FIT_CENTER) ou Preencher (CENTER_CROP) e ajuste de coordenadas de toque para cada escala. Preencher pode cortar parte da imagem.
+- **Menor atraso em JPEG:** intervalo de captura alvo 330 ms com viewer ativo e consultas a cada 300 ms após resposta; o frame mais recente substitui o anterior, sem enfileirar vídeos. Em economia de energia, intervalo de captura volta a 700 ms. Exibe duração da consulta e idade do frame na origem. NÃO é H.264 e não garante FPS/latência em qualquer rede.
+- **Tela apagada/bloqueada:** diagnóstico distingue tela inativa, bloqueio seguro e projeção encerrada; navegação não tenta contornar PIN, biometria ou novo consentimento do Android. Android 15 QPR1+ encerra projeção após bloqueio.
+- **Validação pendente:** build Android no GitHub Actions, UI com Android 15/16, rotação, toque, bateria e latência em aparelhos reais.
+
+## Recuperação programada do serviço (alpha.38)
+
+- **Configurações → Serviço e recuperação:** ativar **Recuperação agendada (15 min)**, com confirmação de autorização no próprio monitorado.
+- Serviço foreground normal continua com `START_STICKY` e supervisor da porta a cada 15 segundos. JobScheduler opcional pode tentar reabrir o serviço somente se a autorização persistir, sujeito às restrições Android 12+ e Doze. Se o sistema bloquear, notificação orienta retomada manual.
+- A tela Monitorado tenta retomada ao permanecer aberta, mesmo sem novo `onResume`; Diagnóstico mostra serviço Android, listener e último evento.
+- **Parar** cancela o agendador. Não reabre MediaProjection nem burla force-stop; início após reiniciar continua sendo permissão separada.
 
 ## Correção de compilação do workflow #37 (alpha.37)
 
@@ -102,7 +118,7 @@ A Home, o Modo Monitorado, a escolha de conexão, os submenus de Configurações
 
 ## Como utilizar
 
-1. Execute GitHub Actions > **Gerar APK e Release** > Run workflow. Para baixar **APK sem ZIP**, use Releases > `v0.1.0-alpha.37` > Assets > **`MonitorRemoto-v0.1.0-alpha.37.apk`**. Em Actions > Artifacts, um APK de contingência (quando presente) continua vindo em ZIP por comportamento padrão do GitHub. Instale o mesmo APK nos dois aparelhos.
+1. Execute GitHub Actions > **Gerar APK e Release** > Run workflow. Para baixar **APK sem ZIP**, use Releases > `v0.1.0-alpha.39` > Assets > **`MonitorRemoto-v0.1.0-alpha.39.apk`**. Em Actions > Artifacts, um APK de contingência (quando presente) continua vindo em ZIP por comportamento padrão do GitHub. Instale o mesmo APK nos dois aparelhos.
 2. No telefone secundário: na nova **Home**, toque em **Monitorar este aparelho**; autorize a notificação de serviço e ative o monitoramento. Em Configurações, conceda apenas as permissões necessárias e selecione os aplicativos cujas notificações deseja compartilhar.
 3. Na página Monitorado, toque no cartão **Gerar QR**. Escolha o IP privado acessível. O QR expira em 2 minutos e é válido para um único pareamento.
 4. No telefone principal: na **Home**, toque em **Conectar novo aparelho > QR Code**, aponte a câmera na janela compacta e confirme os dados do aparelho antes do pareamento. Para um aparelho salvo, use **Aparelhos anteriores > Conectar**. A digitação manual de IP e chave continua disponível.
@@ -129,7 +145,7 @@ Requer Android SDK API 36, Java 17, Gradle 8.13. O repositório ainda não inclu
 gradle :app:testDebugUnitTest :app:assembleDebug
 ```
 
-APK local de teste: `app/build/outputs/apk/debug/app-debug.apk`. O workflow copia esse arquivo ou o Release assinado como **`MonitorRemoto-v0.1.0-alpha.37.apk`**. Baixe diretamente na aba GitHub **Releases**. **O APK não está incluído neste ZIP de código-fonte.** Veja `docs/PAIRING_QR.md` para segurança do QR.
+APK local de teste: `app/build/outputs/apk/debug/app-debug.apk`. O workflow copia esse arquivo ou o Release assinado como **`MonitorRemoto-v0.1.0-alpha.39.apk`**. Baixe diretamente na aba GitHub **Releases**. **O APK não está incluído neste ZIP de código-fonte.** Veja `docs/PAIRING_QR.md` para segurança do QR.
 
 Opcional: configure os quatro Secrets de assinatura para gerar APK Release assinado e AAB. Ver `docs/APK_DOWNLOAD.md`. Preservar a mesma keystore entre builds é essencial para atualizações sem reinstalação.
 

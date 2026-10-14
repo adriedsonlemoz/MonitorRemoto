@@ -16,7 +16,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.37" and code.group(1) == "37", "Versões incompatíveis"
+assert version == "0.1.0-alpha.39" and code.group(1) == "39", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -189,7 +189,7 @@ assert ('Acesso remoto detectado' in incoming or 'Acesso remoto detectado' in ui
 assert 'Quem está?' not in incoming and 'showWho(' not in incoming
 assert 'android:name=".ui.IncomingAccessActivity"' in manifest and 'android:exported="false"' in manifest
 assert 'ACCESS_CHANNEL' in service and 'IMPORTANCE_DEFAULT' in service
-assert 'SettingsStore.isMonitorEnabled(this) && !MonitorService.isRunning' in ui
+assert 'SettingsStore.isMonitorEnabled(this) && !MonitorService.isServiceActive' in ui
 assert 'private fun recoverAuthorizedServiceIfStopped()' in ui
 assert 'renderSettingsModule()' in ui and 'openSettingsModule()' in ui
 assert 'private fun MainActivity.compactMetricCard(' in ui and 'minimumHeight = dp(115)' in ui
@@ -504,3 +504,38 @@ assert 'Base64.decode(encoded, Base64.NO_WRAP)' in client_source
 assert 'isFillViewport = true' in viewer_source
 assert not re.search(r'(?<!is)\bfillViewport\s*=', viewer_source)
 print('PASSOU: alpha.37, Base64 importado e ScrollView.isFillViewport corrigido')
+
+# alpha.38: recuperação híbrida com opt-in, sem capturas implícitas ou Jobs após parada.
+recovery_scheduler = (root / 'app/src/main/java/br/dev/monitorremoto/service/RecoveryScheduler.kt').read_text()
+recovery_job = (root / 'app/src/main/java/br/dev/monitorremoto/service/RecoveryJobService.kt').read_text()
+assert 'android.permission.BIND_JOB_SERVICE' in manifest and 'RecoveryJobService' in manifest
+assert 'JobInfo.Builder(' in recovery_scheduler and 'setPeriodic(INTERVAL_MS)' in recovery_scheduler
+assert 'setPersisted(false)' in recovery_scheduler and 'scheduler.allPendingJobs.any' in recovery_scheduler
+assert 'recoveryJobsEnabled' in settings and 'RecoveryScheduler.refresh(context)' in settings
+assert 'RecoveryDecision.shouldAttempt(' in recovery_job and 'showManualResumeNotification()' in recovery_job
+assert 'override fun onStopJob' in recovery_job and 'override fun onStartJob' in recovery_job
+assert 'isServiceActive' in monitor_service and 'RecoveryScheduler.refresh(this)' in monitor_service
+assert 'recoverAuthorizedServiceIfStopped()' in main_ui and 'mode == 0' in main_ui
+assert 'Recuperação agendada (15 min)' in settings_ui and 'Último evento de recuperação' in settings_ui
+assert 'br.dev.monitorremoto.capture.ScreenShareService.start' not in recovery_job
+assert (root / 'app/src/test/java/br/dev/monitorremoto/service/RecoveryDecisionTest.kt').exists()
+print('PASSOU: alpha.38, JobScheduler opcional, diagnóstico, parada explícita e retomada conservadora')
+
+# alpha.39: navegação global sem depender de toque no frame; bordas insets e crop; bloqueio seguro.
+gesture = (root / 'app/src/main/java/br/dev/monitorremoto/core/RemoteGesturePolicy.kt').read_text()
+viewer = (root / 'app/src/main/java/br/dev/monitorremoto/ui/RemoteScreenActivity.kt').read_text()
+touch = (root / 'app/src/main/java/br/dev/monitorremoto/capture/RemoteTouchService.kt').read_text()
+server = (root / 'app/src/main/java/br/dev/monitorremoto/transport/MonitorServer.kt').read_text()
+screen = (root / 'app/src/main/java/br/dev/monitorremoto/capture/ScreenShareService.kt').read_text()
+assert 'fun isGlobalAction(' in gesture and '"recents"' in gesture and '"notifications"' in gesture
+assert 'if (!global && !touchMode)' in viewer and 'if (!active || !touchReady || !touchMode) return' not in viewer
+assert 'GLOBAL_ACTION_RECENTS' in touch and 'GLOBAL_ACTION_NOTIFICATIONS' in touch
+assert 'KeyguardManager::class.java).isDeviceLocked' in server and 'KeyguardManager::class.java).isDeviceLocked' in touch
+assert 'WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout()' in viewer
+assert 'fun applyImmersiveMode(' in viewer and 'override fun onWindowFocusChanged(' in viewer
+assert 'ImageView.ScaleType.CENTER_CROP' in viewer and 'centerCropPoint(' in gesture
+assert 'FRAME_INTERVAL_MS = 330L' in screen and 'if (powerSave) 700L else FRAME_INTERVAL_MS' in screen
+assert 'REFRESH_MS = 300L' in viewer and 'frameAgeMs' in server and 'networkRoundTrip' in viewer
+assert 'MediaProjectionManager' not in viewer and 'setOnApplyWindowInsetsListener' in viewer
+assert (root / 'app/src/test/java/br/dev/monitorremoto/core/RemoteGesturePolicyTest.kt').exists()
+print('PASSOU: alpha.39, gestos globais, barras seguras, fullscreen, recorte coordenado e latência experimental')

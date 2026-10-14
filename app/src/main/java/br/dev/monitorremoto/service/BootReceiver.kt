@@ -10,6 +10,7 @@ class BootReceiver : BroadcastReceiver() {
         if (intent.action !in setOf(Intent.ACTION_BOOT_COMPLETED, Intent.ACTION_MY_PACKAGE_REPLACED)) return
         if (!SettingsStore.autoStartEnabled(context) || !SettingsStore.isMonitorEnabled(context)) return
         try {
+            RecoveryScheduler.refresh(context)
             MonitorService.start(context)
         } catch (_: Exception) {
             // Restrições de fabricante/SO: iniciar manualmente se necessário.

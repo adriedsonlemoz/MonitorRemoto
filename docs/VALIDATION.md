@@ -399,3 +399,18 @@
 - [x] `tools/check_distribution.py` aprovado, parser PSI Kotlin com 76 arquivos sem erros sintáticos, 40 XML válidos, YAML do workflow válido e 11 validações Kotlin/JVM de política de captura aprovadas.
 - [x] Integridade do arquivo ZIP verificada antes da entrega.
 - [ ] Confirmar `:app:compileDebugKotlin`, testes Gradle, geração do APK e funcionalidade em aparelhos reais após publicar código da alpha.37.
+
+## alpha.38 (14/10/2026)
+
+- [x] Política pura de recuperação apenas quando monitoramento e Jobs estão habilitados e serviço Android ausente, com 17 asserções Kotlin/JVM aprovadas no ambiente local.
+- [x] `JobService` declarado com `BIND_JOB_SERVICE`, agendamento não persistente após reboot, cancelamento em Parar.
+- [x] Verificação na tela aberta, separação entre estado de serviço e porta TCP, diagnóstico de última recuperação. Parser PSI: 80 arquivos Kotlin/zero erros sintáticos; 40 XML válidos, YAML parseado e `tools/check_distribution.py` aprovado.
+- [ ] Build Android em GitHub Actions e confirmação do comportamento do agendador em Android 12–16 e MIUI/HyperOS.
+- [ ] Confirmar que Doze/force-stop e bloqueio da retomada mantêm as garantias de consentimento.
+
+## alpha.39 (14/10/2026)
+
+- Corrigidas navegação remota e tratamento de WindowInsets conforme falhas observadas nas capturas do usuário.
+- Acrescentados testes de navegação global, mapeamento CENTER_CROP, flags de bloqueio e verificação do fluxo consentido.
+- Alteração da cadência da prévia JPEG condicionada à presença de visualizador e modo economia; métricas de tempo são estimativas por consulta, não latência ponta a ponta.
+- Build Android via Gradle / validação visual nos celulares ainda pendentes. Não substituir por teste PSI.

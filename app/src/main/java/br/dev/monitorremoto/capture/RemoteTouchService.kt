@@ -5,6 +5,7 @@ import android.accessibilityservice.GestureDescription
 import android.graphics.Path
 import android.os.Build
 import android.os.SystemClock
+import android.app.KeyguardManager
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
 import br.dev.monitorremoto.core.SettingsStore
@@ -24,12 +25,22 @@ class RemoteTouchService : AccessibilityService() {
             val service = current ?: return false
             if (!SettingsStore.isMonitorEnabled(service) || !SettingsStore.allowRemoteTouch(service) ||
                 !ScreenFrameStore.sharing) return false
+            // Não tentar desbloquear o aparelho nem interagir por trás do bloqueio seguro.
+            if (service.getSystemService(KeyguardManager::class.java).isDeviceLocked) return false
             if (!RemoteGesturePolicy.valid(action, x, y, endX, endY, duration)) return false
             val now = SystemClock.elapsedRealtime()
             if (now - lastTouchMs < 125) return false
-            if (action in setOf("back", "home")) {
-                lastTouchMs = now
-                return service.performGlobalAction(if (action == "back") AccessibilityService.GLOBAL_ACTION_BACK else AccessibilityService.GLOBAL_ACTION_HOME)
+            if (RemoteGesturePolicy.isGlobalAction(action)) {
+                val globalAction = when (action) {
+                    "back" -> AccessibilityService.GLOBAL_ACTION_BACK
+                    "home" -> AccessibilityService.GLOBAL_ACTION_HOME
+                    "recents" -> AccessibilityService.GLOBAL_ACTION_RECENTS
+                    "notifications" -> AccessibilityService.GLOBAL_ACTION_NOTIFICATIONS
+                    else -> return false
+                }
+                val ok = service.performGlobalAction(globalAction)
+                if (ok) lastTouchMs = now
+                return ok // aceito pelo serviço, não confirma mudança de tela
             }
             val metrics = service.resources.displayMetrics
             val bounds = if (Build.VERSION.SDK_INT >= 30)

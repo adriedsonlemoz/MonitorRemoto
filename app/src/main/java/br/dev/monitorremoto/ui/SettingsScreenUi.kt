@@ -346,10 +346,17 @@ private fun MainActivity.fillServiceSettings(layout: LinearLayout) {
         render()
     })
     sectionGap(layout, 9)
+    val jobsEnabled = SettingsStore.recoveryJobsEnabled(this)
+    layout.addView(iconMenuRow(R.drawable.ic_refresh, "Recuperação agendada (15 min)",
+        if (jobsEnabled) "Autorizada · Android pode atrasar ou bloquear" else "Desativada · toque para autorizar") {
+        SettingsStore.setRecoveryJobs(this, !jobsEnabled)
+        render()
+    })
+    sectionGap(layout, 9)
     layout.addView(iconMenuRow(R.drawable.ic_activity, "Consultar diagnóstico",
         "Estado do servidor, falhas e última verificação") { openSettingsSection("diagnostics") })
     sectionGap(layout, 13)
-    layout.addView(label("O supervisor examina o listener TCP sem tráfego de rede a cada 15 segundos e tenta reabrir a porta, com pausas progressivas em caso de falha. A retomada após o sistema encerrar o processo depende de START_STICKY e das regras do fabricante.", 12.5f, muted = true))
+    layout.addView(label("O supervisor TCP verifica a porta a cada 15 s enquanto o serviço existe. O agendador é um plano B, em intervalos de pelo menos 15 min, sujeitos ao Android e ao Doze. Se a retomada em segundo plano for proibida, será oferecida uma notificação para reativar. Parar desativa ambos.", 12.5f, muted = true))
     sectionGap(layout, 12)
     layout.addView(iconMenuRow(R.drawable.ic_phone, "Ajustar bateria no Android",
         "Permitir atividade em segundo plano quando disponível") {
@@ -399,6 +406,11 @@ private fun MainActivity.fillDiagnosticsSettings(layout: LinearLayout) {
     val last = SettingsStore.serverLastCheck(this)
     card.addView(dialogMetricRow("Última verificação", if (last == 0L) "Ainda não realizada" else formatDate(last)))
     card.addView(dialogMetricRow("Reiniciar após boot", if (SettingsStore.autoStartEnabled(this)) "Autorizado" else "Desativado"))
+    card.addView(dialogMetricRow("Serviço Android", if (MonitorService.isServiceActive) "Em execução" else "Não está ativo"))
+    card.addView(dialogMetricRow("Recuperação agendada", if (SettingsStore.recoveryJobsEnabled(this)) "Autorizada" else "Desativada"))
+    card.addView(dialogMetricRow("Último evento de recuperação", SettingsStore.recoveryLastEvent(this)))
+    val eventMs = SettingsStore.recoveryLastEventMs(this)
+    card.addView(dialogMetricRow("Data do evento", if (eventMs == 0L) "Sem registro" else formatDate(eventMs)))
 }
 
 internal fun MainActivity.showAboutDialog() { openSettingsModule(); openSettingsSection("about") }

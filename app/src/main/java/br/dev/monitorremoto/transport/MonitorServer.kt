@@ -19,6 +19,8 @@ import br.dev.monitorremoto.capture.AudioChunkStore
 import br.dev.monitorremoto.capture.ScreenShareRequest
 import br.dev.monitorremoto.capture.RemoteTouchService
 import android.util.Base64
+import android.app.KeyguardManager
+import android.os.PowerManager
 import br.dev.monitorremoto.core.SettingsStore
 import br.dev.monitorremoto.security.CryptoBox
 import br.dev.monitorremoto.security.SecretVault
@@ -132,6 +134,7 @@ class MonitorServer(private val context: Context) {
                     if (regular.optString("op") == "remoteTouch") {
                         val gesture = regular.optString("gesture")
                         val allowed = SettingsStore.allowRemoteTouch(context) && ScreenFrameStore.sharing &&
+                            !context.getSystemService(KeyguardManager::class.java).isDeviceLocked &&
                             RemoteTouchService.isReady()
                         val ok = allowed && RemoteTouchService.send(
                             regular.optDouble("x", -1.0).toFloat(), regular.optDouble("y", -1.0).toFloat(),
@@ -140,6 +143,8 @@ class MonitorServer(private val context: Context) {
                         val reply = JSONObject().put("v", WireProtocol.VERSION)
                             .put("op", "remoteTouch").put("appVersion", AppVersion.NAME)
                             .put("ok", ok)
+                            .put("message", if (ok) "Ação aceita pelo Android" else
+                                "Controle indisponível: verifique Acessibilidade, tela desbloqueada e captura ativa")
                         WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(permanentKey, reply))
                         AuthenticatedAccess.authenticated(socket.inetAddress?.hostAddress.orEmpty(),
                             regular.optString("clientId"), regular.optString("clientName"), regular.optString("accessMethod"))
@@ -186,11 +191,16 @@ class MonitorServer(private val context: Context) {
                         // Um quadro temporário por requisição autenticada; nenhum frame antes da aprovação local.
                         ScreenFrameStore.viewerPing()
                         val frame = ScreenFrameStore.snapshot()
+                        val deviceLocked = context.getSystemService(KeyguardManager::class.java).isDeviceLocked
+                        val screenInteractive = context.getSystemService(PowerManager::class.java).isInteractive
                         val response = JSONObject().put("v", WireProtocol.VERSION)
                             .put("op", "screenFrame").put("appVersion", AppVersion.NAME)
                             .put("sharing", ScreenFrameStore.sharing)
-                            .put("touchReady", ScreenFrameStore.sharing && SettingsStore.allowRemoteTouch(context) &&
-                                RemoteTouchService.isReady())
+                            .put("deviceLocked", deviceLocked)
+                            .put("screenInteractive", screenInteractive)
+                            .put("frameAgeMs", ScreenFrameStore.frameAgeMs())
+                            .put("touchReady", ScreenFrameStore.sharing && !deviceLocked &&
+                                SettingsStore.allowRemoteTouch(context) && RemoteTouchService.isReady())
                             .put("audioReady", ScreenFrameStore.sharing && SettingsStore.captureInternalAudio(context) &&
                                 AudioChunkStore.enabled)
                         if (frame != null) {

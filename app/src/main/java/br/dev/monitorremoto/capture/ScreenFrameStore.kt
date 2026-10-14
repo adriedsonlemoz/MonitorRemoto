@@ -68,6 +68,11 @@ object ScreenFrameStore {
         current = Frame(sequence, width, height, bytes.copyOf())
         savedAtMs = android.os.SystemClock.elapsedRealtime()
     }
+    /** Idade do quadro na origem, para diagnóstico sem sincronizar relógios entre celulares. */
+    @Synchronized fun frameAgeMs(): Long =
+        if (!sharing || current == null || savedAtMs == 0L) -1L
+        else (android.os.SystemClock.elapsedRealtime() - savedAtMs).coerceAtLeast(0L)
+
     @Synchronized fun snapshot(): Frame? {
         if (!sharing || android.os.SystemClock.elapsedRealtime() - savedAtMs > STALE_MS) return null
         return current?.let { it.copy(jpeg = it.jpeg.copyOf()) }
