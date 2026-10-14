@@ -308,3 +308,15 @@
 - [ ] Compilação Gradle Android completa no GitHub Actions.
 - [ ] Testar alpha.28 x alpha.28, alpha.28 x versão antiga, chave alterada e Wi-Fi indisponível em dois aparelhos.
 - [ ] Confirmar visual e rolagem de todos os diálogos em telas menores.
+
+## alpha.29 (14/10/2026)
+
+- [x] Analisado workflow 29: falha em `:app:compileDebugKotlin`, `MonitorScreenUi.kt:143–145` (`Expecting a top level declaration`).
+- [x] Removido `.create()` extra da tela Acesso autenticado, mantendo única chamada gerenciada de exibição.
+- [x] Acrescentada regressão ao `tools/check_distribution.py` e sincronizados versionCode, versão textual e testes.
+- [ ] Executar novo workflow GitHub Actions e confirmar `:app:testDebugUnitTest :app:assembleDebug`.
+- [ ] Validar visualmente o diálogo de acesso e ações de troca de chave/parada no aparelho.
+- [x] Parser Kotlin PSI local (Kotlin 1.9) passou em 51 arquivos `.kt` de produção/testes, sem erros gramaticais.
+- [x] Smoke Kotlin/JVM local passou em 6 asserções (AppVersion e classificação de erros).
+- [x] `python3 tools/check_distribution.py` passou com as invariantes da alpha.29.
+- [ ] Build Android/AGP completo indisponível neste ambiente (sem SDK/Gradle); verificar em CI.

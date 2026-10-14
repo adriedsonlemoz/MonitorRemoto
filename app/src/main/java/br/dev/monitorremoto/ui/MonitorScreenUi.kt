@@ -139,7 +139,6 @@ private fun MainActivity.showIncomingAccessActions(peer: AuthenticatedAccess.Pee
                 stopService(Intent(this, MonitorService::class.java))
                 render()
             }
-        }.create().let { showManagedDialog(it) }
         }.create()
     showManagedDialog(dialog)
 }

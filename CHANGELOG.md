@@ -1,5 +1,13 @@
 # Histórico de versões
 
+## 0.1.0-alpha.29 (14/10/2026)
+
+- Corrigido erro de sintaxe de `MonitorScreenUi.kt` (linhas 143–145) apontado no workflow “Gerar APK e Release 29”: a criação/abertura do diálogo de acesso autenticado tinha uma terminação `}.create()` duplicada após o refactor da alpha.28.
+- `showIncomingAccessActions` volta a instanciar o diálogo uma vez e exibi-lo uma vez por `showManagedDialog(dialog)`, preservando as ações Trocar chave, Fechar e Parar serviço.
+- Adicionada verificação de regressão no `tools/check_distribution.py` para impedir a duplicação do construtor/exibição do diálogo.
+- `versionCode 29`, `versionName/AppVersion.NAME 0.1.0-alpha.29`, metadados, testes de compatibilidade e documentos sincronizados. Sem alterações de permissões ou protocolo além da exigência de igualdade exata da versão.
+- Compilação Android completa e testes físicos dependem de nova execução do GitHub Actions; não há APK nesta entrega de fonte.
+
 ## 0.1.0-alpha.28 (14/10/2026)
 
 - Falhas de conexão diferenciadas por causa provável (EOF, timeout, conexão recusada, endereço inválido, autenticação e versão), sem exibir exceções duplicadas no painel.

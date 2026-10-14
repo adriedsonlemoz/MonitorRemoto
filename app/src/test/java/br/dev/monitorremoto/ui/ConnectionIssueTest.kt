@@ -10,7 +10,7 @@ import org.junit.Test
 class ConnectionIssueTest {
     @Test fun exactVersionIsExtractedOnlyWhenConfirmed() {
         val issue = ConnectionIssue.from(IllegalStateException(
-            "Versões incompatíveis. Ambos os celulares precisam executar 0.1.0-alpha.28. Versão recebida: 0.1.0-alpha.27."
+            "Versões incompatíveis. Ambos os celulares precisam executar 0.1.0-alpha.29. Versão recebida: 0.1.0-alpha.27."
         ))
         assertEquals(ConnectionIssue.Code.VERSION, issue.code)
         assertEquals("0.1.0-alpha.27", issue.remoteVersion)

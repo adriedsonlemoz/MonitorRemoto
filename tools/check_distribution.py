@@ -16,7 +16,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.28" and code.group(1) == "28", "Versões incompatíveis"
+assert version == "0.1.0-alpha.29" and code.group(1) == "29", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -341,5 +341,20 @@ assert 'fun refreshList(filter: String)' in settings_ui and 'getApplicationIcon(
 assert 'Nenhum aplicativo elegível' in settings_ui and 'CheckBox(this)' in settings_ui
 assert 'showAppConfirm(' in settings_ui and 'showAppConfirm(' in credentials_ui
 assert 'assertFalse(AppVersion.compatible("0.1.0-alpha.27"))' in app_version_test
+assert 'assertFalse(AppVersion.compatible("0.1.0-alpha.28"))' in app_version_test
 assert (root / 'app/src/test/java/br/dev/monitorremoto/ui/ConnectionIssueTest.kt').exists()
 print('PASSOU: alpha.28, incompatibilidade cifrada, erros classificados, diálogo único e seleção de apps')
+
+# Regressão alpha.29: o workflow 29 falhou com duas terminações `.create()`
+# em showIncomingAccessActions, causando erro de sintaxe Kotlin a partir da linha 143.
+# Não regressar para .let { showManagedDialog(it) } seguido de novo .create(),
+# nem invocar a apresentação do mesmo diálogo duas vezes.
+access_actions = monitor.split('private fun MainActivity.showIncomingAccessActions(', 1)
+assert len(access_actions) == 2, 'Ações de acesso recebido não encontradas'
+access_actions = access_actions[1]
+assert access_actions.count('val dialog = AlertDialog.Builder(this)') == 1, 'Construtor do diálogo deve ser único'
+assert access_actions.count('.create()') == 1, 'O diálogo deve ser criado apenas uma vez'
+assert access_actions.count('showManagedDialog(dialog)') == 1, 'O diálogo deve ser apresentado uma única vez'
+assert '.create().let { showManagedDialog(it) }' not in access_actions, 'Terminação antiga duplicada'
+assert 'showAppConfirm(' in access_actions and 'confirmRotateMonitorKey()' in access_actions
+print('PASSOU: alpha.29, construtor e exibição únicos no diálogo de acesso autenticado')

@@ -1,4 +1,4 @@
-# Monitor Remoto 0.1.0-alpha.28
+# Monitor Remoto 0.1.0-alpha.29
 # Convenções permanentes do projeto Monitor Remoto
 
 - Toda alteração de código incrementa sequencialmente `versionCode` e `versionName` (ex.: `0.1.0-alpha.8` -> `0.1.0-alpha.9`). Sincronizar tela, README, CHANGELOG, RELEASE_NOTES e documentação.
@@ -21,7 +21,7 @@
 - Alpha.10: manter tema **claro padrão**, as opções da engrenagem, janela Conectar, botão de atualização compacto, lista de até 5 aparelhos recentes e os dados do Controle no topo. Não reintroduzir formulário longo na tela principal.
 - Credenciais por dispositivo usam `RecentDevices` + `SecretVault.profileKeyName`, com migração única da alpha.9. Não reaproveitar `CONTROLLER_KEY` antigo para IPs novos nem gravar segredo em preferências sem criptografia. Esquecer apaga o segredo correspondente.
 - Respostas HTTP/TCP não são conexão persistente. Exibir "Conectado" apenas após consulta autenticada bem-sucedida e "Sem resposta" após erro. Não inventar tempos de atualização.
-- Próxima versão sequencial: `0.1.0-alpha.29`, `versionCode 29`.
+- Próxima versão sequencial: `0.1.0-alpha.30`, `versionCode 30`.
 
 - Alpha.15: preservar a seleção Conectar → QR/Manual/Salvos, confirmação do QR antes de parear, cartões salvos com três ações e o scanner em Activity com tema Dialog.
 
@@ -56,3 +56,5 @@
 
 - Alpha.28: usar `showManagedDialog` ou `showAppNotice`/`showAppConfirm` para diálogos de `MainActivity`, nunca abrir dois diálogos internos simultaneamente. Erro em campo manual deve ser exibido inline sem descartar campos.
 - Mensagem de versão incompatível autenticada do servidor deve permanecer cifrada com a chave já validada. Nunca revelar versão a clientes sem chave válida; não afirmar que EOF prova incompatibilidade. `ConnectionIssue` descreve hipóteses e o diagnóstico copiado não inclui segredo.
+
+- Alpha.29: `MonitorScreenUi.showIncomingAccessActions` cria o `AlertDialog` uma única vez e chama `showManagedDialog(dialog)` uma única vez. Evitar a terminação `.create().let { showManagedDialog(it) }` em conjunto com novo `.create()`. O validador exige essa invariável após o erro `:app:compileDebugKotlin` no workflow 29.

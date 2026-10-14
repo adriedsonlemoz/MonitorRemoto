@@ -1,18 +1,18 @@
-# Monitor Remoto v0.1.0-alpha.28
+# Monitor Remoto v0.1.0-alpha.29
 
-## Novidades
+## Correção de compilação
 
-- Avisos e confirmações no padrão de cartões e ícones, com fechamento do diálogo anterior ao abrir a próxima ação.
-- Escolha de apps de notificação com lista visual, pesquisa e seleção explícita; sem conteúdo vazio ou pop-ups empilhados.
-- Painel **Sem resposta** redesenhado com diagnóstico classificado, ações para tentar novamente, editar endereço/chave e copiar informações técnicas sem segredos.
-- **Versões incompatíveis**: resposta criptografada explícita a um cliente previamente autenticado, com a versão do aparelho remoto quando conhecida. Versões antigas podem encerrar a conexão sem se identificar; nesse caso será exibida a informação como não confirmada.
-- Mensagens de conexão manual permanecem na própria janela sem perder o texto informado.
-- Nenhuma permissão nova ou mudança no acesso às credenciais.
+- Corrigida a duplicação de `.create()` no final de `showIncomingAccessActions`, em `MonitorScreenUi.kt`, que impedia `:app:compileDebugKotlin` no workflow 29.
+- As ações do diálogo **Acesso autenticado** foram preservadas: Trocar chave, Fechar e Parar serviço com confirmação.
+- Novo teste de regressão no validador do projeto verifica uma única criação e uma única exibição do diálogo.
 
-## Segurança e compatibilidade
+## Recursos mantidos da alpha.28
 
-Instale alpha.28 nos dois aparelhos. O servidor só divulga sua versão a clientes autenticados com uma chave válida. Conexões sem chave e pacotes inválidos não recebem diagnóstico.
+- Diálogos gerenciados para evitar sobreposição; confirmação visível de ações sensíveis.
+- Diagnóstico de conexão, inclusive resposta de versão incompatível criptografada somente após autenticação.
+- Seleção explícita de aplicativos de notificação, QR temporário e credenciais Android Keystore.
+- Não houve novas permissões Android. O protocolo exige **versões idênticas** nos dois aparelhos.
 
-## Validação
+## Validação e distribuição
 
-Executar workflow GitHub Actions e testar conexão com alpha.28 nos dois celulares, incompatibilidade e erros de rede. ZIP contém apenas o código-fonte.
+Execute novamente o GitHub Actions para compilar/testar e, se bem-sucedido, publicar o APK em Releases. Instale a alpha.29 em **ambos** os celulares. Este ZIP contém somente código-fonte, não um APK.
