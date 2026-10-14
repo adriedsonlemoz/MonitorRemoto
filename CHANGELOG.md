@@ -1,5 +1,15 @@
 # Histórico de versões
 
+## 0.1.0-alpha.24 (13/10/2026)
+
+- Segunda etapa da refatoração modular, preservando layouts, permissões, endpoint e criptografia.
+- `MainActivity.kt` reduzida de 1.000 para ~322 linhas; removidos controles de rede, geração de QR, conexão manual, diálogos de credenciais e seleção de notificações da Activity principal.
+- Criados `RemoteConnectionManager`, `ConnectionController`, `ConnectionScreenUi`, `PairingController`, `PairingScreenUi`, `PairingQrUi` e `MonitorCredentialsUi`. A seleção de apps autorizados e Sobre passaram para `SettingsScreenUi`.
+- Estado e cache de consulta ficam no `RemoteConnectionManager`, que invalida consultas pendentes ao trocar/desconectar o aparelho e fornece callbacks na thread principal.
+- IP selecionado na conexão manual e no pareamento QR é persistido no fluxo de conexão antes da primeira consulta; a chave permanente segue no Android Keystore.
+- Regra de versões iguais mantida: os dois celulares devem executar a alpha.24.
+- Testes estruturais atualizados; build completo Android e testes físicos ainda pendentes.
+
 ## 0.1.0-alpha.23 (13/10/2026)
 
 - Continuidade da refatoração da interface: a tela de acesso recebido foi separada em um módulo próprio (`IncomingAccessScreenUi.kt`), reduzindo a responsabilidade direta da `IncomingAccessActivity`.

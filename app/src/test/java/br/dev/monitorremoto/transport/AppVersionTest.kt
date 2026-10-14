@@ -10,7 +10,8 @@ class AppVersionTest {
         assertFalse(AppVersion.compatible("0.1.0-alpha.20"))
         assertFalse(AppVersion.compatible("0.1.0-alpha.21"))
         assertFalse(AppVersion.compatible("0.1.0-alpha.22"))
+        assertFalse(AppVersion.compatible("0.1.0-alpha.23"))
         assertFalse(AppVersion.compatible(null))
-        assertTrue(AppVersion.incompatibility("0.1.0-alpha.22").contains("Versões incompatíveis"))
+        assertTrue(AppVersion.incompatibility("0.1.0-alpha.23").contains("Versões incompatíveis"))
     }
 }

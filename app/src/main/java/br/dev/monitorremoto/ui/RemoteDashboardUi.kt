@@ -71,7 +71,7 @@ internal fun MainActivity.displayResult(root: JSONObject, fromCache: Boolean = f
     )
     addActionGrid(panel, tiles)
 
-    if (fromCache && connectionState != "connected") {
+    if (fromCache && remoteConnection.state != "connected") {
         sectionGap(panel, 8)
         panel.addView(label("Leitura anterior: aguarde confirmação de uma nova consulta antes de considerar estes dados atuais.", 11.5f, muted = true))
     }
@@ -210,8 +210,8 @@ private fun MainActivity.copyRemoteSnapshot(root: JSONObject) {
         append("\nIP: ").append(host)
         append("\nAcesso: ").append(connectionKind(host))
         append("\nRede remota: ").append(root.optJSONObject("network")?.optString("type") ?: "Não informada")
-        append("\nMétodo: ").append(selectedConnectionMethod)
-        append("\nAtualizado: ").append(if (lastSuccessfulMs > 0L) formatDate(lastSuccessfulMs) else "agora")
+        append("\nMétodo: ").append(remoteConnection.method)
+        append("\nAtualizado: ").append(if (remoteConnection.lastSuccessMs > 0L) formatDate(remoteConnection.lastSuccessMs) else "agora")
         append("\n\n").append(batterySummary(battery))
     }
     val clip = ClipData.newPlainText("Monitor Remoto: resumo do aparelho", summary)
@@ -234,8 +234,8 @@ private fun MainActivity.showRemoteDetailsDialog(root: JSONObject) {
     card.addView(dialogMetricRow("Acesso", connectionKind(host)))
     card.addView(dialogMetricRow("Rede do celular", root.optJSONObject("network")?.optString("type") ?: "Não informada"))
     card.addView(dialogMetricRow("IP", host.ifBlank { "—" }))
-    card.addView(dialogMetricRow("Método", selectedConnectionMethod))
-    card.addView(dialogMetricRow("Atualização", if (lastSuccessfulMs > 0L) formatDate(lastSuccessfulMs) else "Sem leitura recente"))
+    card.addView(dialogMetricRow("Método", remoteConnection.method))
+    card.addView(dialogMetricRow("Atualização", if (remoteConnection.lastSuccessMs > 0L) formatDate(remoteConnection.lastSuccessMs) else "Sem leitura recente"))
     card.addView(dialogMetricRow("Bateria", if (battery.isNull("levelPercent")) "—" else "${battery.optDouble("levelPercent").toInt()}%"))
     card.addView(dialogMetricRow("Estado", if (battery.optBoolean("charging")) "Carregando" else "Descarregando"))
     card.addView(dialogMetricRow("Temperatura", if (battery.isNull("temperatureC")) "—" else String.format(Locale.getDefault(), "%.1f °C", battery.optDouble("temperatureC"))))

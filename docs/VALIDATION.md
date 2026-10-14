@@ -261,3 +261,13 @@
 - [x] Validação de sintaxe Kotlin por parser PSI e testes de distribuição de todos os módulos.
 - [ ] Build Android completo com Gradle e SDK; dependências não disponíveis localmente.
 - [ ] Testes físicos em ambos aparelhos, temas, escala de fonte, QR, credenciais e ciclo de vida.
+
+## alpha.24: controle de conexão e pareamento desacoplados (13/10/2026)
+
+- [x] MainActivity reduzida para ~322 linhas, mantendo callbacks Android e navegação.
+- [x] Transferência de estados/cache/I-O da conexão para `RemoteConnectionManager`.
+- [x] Separação de renderização do Controle, diálogos manual/QR, credenciais e seleção de apps.
+- [x] Ajuste de host selecionado antes da primeira consulta por QR ou manual.
+- [x] Kotlin do gerenciador de conexão e do pareamento compilados isoladamente com stubs; troca de aparelho, cancelamento de resposta antiga e cache testados.
+- [ ] Compilação Gradle/Android completa e testes físicos em dois aparelhos.
+- [ ] Confirmar visual e interações em Android com modos claro/escuro, escala de fonte, QR e navegação.

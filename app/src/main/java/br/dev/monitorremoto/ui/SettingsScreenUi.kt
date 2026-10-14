@@ -1,6 +1,7 @@
 package br.dev.monitorremoto.ui
 
 import android.app.AlertDialog
+import br.dev.monitorremoto.core.SensitiveContent
 import android.content.res.ColorStateList
 import android.content.Intent
 import android.widget.ImageView
@@ -16,6 +17,7 @@ import br.dev.monitorremoto.transport.AppVersion
 import br.dev.monitorremoto.transport.AuthenticatedAccess
 import br.dev.monitorremoto.transport.PairingSession
 import br.dev.monitorremoto.transport.WireProtocol
+import java.util.Locale
 
 /** Alpha.22: módulo de interface extraído de MainActivity. Sem estado de conexão próprio. */
 
@@ -207,3 +209,50 @@ private fun MainActivity.showDiagnostics() {
         .show()
 }
 
+
+/** Settings-owned dialogs formerly hosted by MainActivity. */
+internal fun MainActivity.showAboutDialog() {
+    val (wrapper, layout) = dialogWrapper()
+    dialogIntro(layout, "Resumo rápido do foco atual do projeto.")
+    val card = panel(14)
+    card.addView(dialogMetricRow("Versão", AppVersion.NAME))
+    card.addView(dialogMetricRow("Tela inicial", "Home com escolha de aparelhos"))
+    card.addView(dialogMetricRow("Modo monitorado", "No mesmo APK"))
+    card.addView(dialogMetricRow("Segurança", "Pareamento local e Android Keystore"))
+    layout.addView(card)
+    layout.addView(label("O aplicativo prioriza uso local, privacidade, baixo consumo e preparação para futura publicação na Google Play.", 12f, muted = true))
+    AlertDialog.Builder(this)
+        .setTitle("Sobre o Monitor Remoto")
+        .setView(wrapper)
+        .setPositiveButton("OK", null)
+        .show()
+}
+
+/** Prefere a interface Wi-Fi no instante de abertura, evitando IP antigo em cache. */
+
+internal fun MainActivity.selectNotificationApps() {
+    val apps = packageManager.getInstalledApplications(0)
+        .filter {
+            it.packageName != packageName &&
+                packageManager.getLaunchIntentForPackage(it.packageName) != null &&
+                !SensitiveContent.isBlockedFinancialApp(
+                    it.packageName, packageManager.getApplicationLabel(it).toString()
+                )
+        }
+        .sortedBy { packageManager.getApplicationLabel(it).toString().lowercase(Locale.getDefault()) }
+    val names = apps.map { "${packageManager.getApplicationLabel(it)} (${it.packageName})" }.toTypedArray()
+    val selected = SettingsStore.notificationAllowlist(this).toMutableSet()
+    val checked = apps.map { it.packageName in selected }.toBooleanArray()
+    AlertDialog.Builder(this).setTitle("Autorizar apps não financeiros")
+        .setMessage("Somente os apps marcados podem ter notificações transmitidas. " +
+            "Aplicativos bancários conhecidos são ocultados. O filtro não cobre todos os bancos. " +
+            "SMS, quando disponível, pode aparecer pela notificação do aplicativo de mensagens, não pela caixa SMS.")
+        .setMultiChoiceItems(names, checked) { _, index, enabled ->
+            if (enabled) selected.add(apps[index].packageName) else selected.remove(apps[index].packageName)
+        }
+        .setNegativeButton("Cancelar", null)
+        .setPositiveButton("Salvar") { _, _ ->
+            SettingsStore.setNotificationAllowlist(this, selected)
+            render()
+        }.show()
+}

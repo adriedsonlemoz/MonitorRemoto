@@ -1,4 +1,4 @@
-# Arquitetura (0.1.0-alpha.23)
+# Arquitetura (0.1.0-alpha.24)
 
 ```text
 MONITORADO                                      CONTROLE
@@ -19,9 +19,9 @@ O FGS `connectedDevice` mantém o socket de escuta durante monitoramento ativo. 
 
 ## Distribuição e assinatura
 
-O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.23` e `versionCode=23`.
+O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.24` e `versionCode=24`.
 
-- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.23.apk`.
+- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.24.apk`.
 - `upload-artifact` sempre distribui um ZIP; GitHub Releases recebe o **arquivo APK direto**.
 - Com quatro Secrets, Gradle gera APK Release assinado e AAB. Sem Secrets, o arquivo é Debug de teste e não preserva necessariamente a assinatura entre execuções.
 - Releases são prévias, não substituem a futura revisão da Google Play e nem os ensaios reais.
@@ -106,3 +106,24 @@ no `MonitorServer`, nem alteração de permissões, chaves ou autorização.
 ## Ajuste alpha.23
 
 A tela dedicada de acesso recebido passou a delegar sua composição visual para `IncomingAccessScreenUi.kt`, deixando `IncomingAccessActivity.kt` responsável apenas pelo ciclo de vida, polling, observação dos acessos autenticados e ação de parada do monitoramento.
+
+
+## Extração de estado e pareamento alpha.24
+
+```text
+MainActivity.kt                  Ciclo de vida, navegação e permissões (322 linhas)
+ ├─ RemoteConnectionManager.kt Estado, cache, invalidação e I/O remoto em background
+ ├─ ConnectionController.kt    Liga callbacks do manager à interface
+ ├─ ConnectionScreenUi.kt      Cabeçalho, estado, IP e controles visuais
+ ├─ PairingController.kt       Pareamento QR em worker e retorno à thread principal
+ ├─ PairingScreenUi.kt         Seleção, manual, renomear e esquecer dispositivos
+ ├─ PairingQrUi.kt             Scanner/gerador de QR e confirmação do pareamento
+ ├─ MonitorCredentialsUi.kt    Janela protegida de IP/chave local
+ └─ SettingsScreenUi.kt        Configurações, seleção de notificações e Sobre
+```
+
+O estado de conexão é propriedade de `RemoteConnectionManager` e sua geração lógica
+invalida respostas pendentes quando se troca de dispositivo. A lógica de autenticação,
+comunicação AES-GCM e credenciais por host continua em `transport/` e `security/`.
+A Activity ainda recebe callbacks de permissões e de captura QR; novos módulos
+visuais são extensões internas transitórias, para reduzir o risco da migração.

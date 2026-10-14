@@ -8,7 +8,7 @@ gradle = (root / "app/build.gradle.kts").read_text(encoding="utf-8")
 workflow = (root / ".github/workflows/android.yml").read_text(encoding="utf-8")
 ui_root = root / "app/src/main/java/br/dev/monitorremoto/ui"
 main_ui = (ui_root / "MainActivity.kt").read_text(encoding="utf-8")
-modules = ["UiComponents.kt", "HomeScreenUi.kt", "MonitorScreenUi.kt", "SettingsScreenUi.kt", "RemoteDashboardUi.kt", "IncomingAccessScreenUi.kt"]
+modules = ["UiComponents.kt", "HomeScreenUi.kt", "MonitorScreenUi.kt", "SettingsScreenUi.kt", "RemoteDashboardUi.kt", "IncomingAccessScreenUi.kt", "ConnectionScreenUi.kt", "ConnectionController.kt", "PairingScreenUi.kt", "PairingQrUi.kt", "MonitorCredentialsUi.kt", "PairingController.kt", "RemoteConnectionManager.kt"]
 module_ui = {name: (ui_root / name).read_text(encoding="utf-8") for name in modules}
 ui = main_ui + "\n" + "\n".join(module_ui.values())
 match = re.search(r'\bversionName\s*=\s*"([^"]+)"', gradle)
@@ -16,7 +16,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.23" and code.group(1) == "23", "Versões incompatíveis"
+assert version == "0.1.0-alpha.24" and code.group(1) == "24", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -96,13 +96,13 @@ print('PASSOU: Camera2, YUV, ZXing Core, cancelamento, fallback manual e testes 
 profiles = (root / 'app/src/main/java/br/dev/monitorremoto/core/RecentDevices.kt').read_text()
 secret = (root / 'app/src/main/java/br/dev/monitorremoto/security/SecretVault.kt').read_text()
 ip_suggestion = (root / 'app/src/main/java/br/dev/monitorremoto/core/Ipv4Suggestion.kt').read_text()
-assert 'internal fun showConnectionChooser()' in ui and 'private fun showManualConnectionDialog()' in ui and 'internal fun MainActivity.showSettingsDialog()' in ui
-assert 'private fun renderController()' in ui and 'private fun updateConnectionLabels()' in ui
-assert 'private fun localWifiPrefix()' in ui and 'TRANSPORT_WIFI' in ui
+assert 'internal fun MainActivity.showConnectionChooser()' in ui and 'internal fun MainActivity.showManualConnectionDialog()' in ui and 'internal fun MainActivity.showSettingsDialog()' in ui
+assert 'internal fun MainActivity.renderController()' in ui and 'internal fun MainActivity.updateConnectionLabels()' in ui
+assert 'internal fun MainActivity.localWifiPrefix()' in ui and 'TRANSPORT_WIFI' in ui
 assert 'Ipv4Suggestion.prefix(' in ui and 'prefixLength' in ui
 assert 'RecentDevices.migrateLegacy(this)' in ui and 'RecentDevices.save(' in ui
 assert 'RecentDevices.key(this, host)' in ui and 'RecentDevices.markSuccess(' in ui
-assert 'internal var lastSuccessfulMs' in ui and 'connectionState = "offline"' in ui
+assert 'var lastSuccessMs = 0L' in ui and 'state = "offline"' in ui
 assert 'fun setTheme(' in settings and '"light"' in settings and '"dark"' in settings
 assert 'const val LIMIT = 5' in profiles and 'fun forget(' in profiles and 'fun rename(' in profiles
 assert 'profileKeyName(' in secret and 'MessageDigest.getInstance("SHA-256")' in secret
@@ -111,8 +111,8 @@ assert (root / 'app/src/test/java/br/dev/monitorremoto/core/Ipv4SuggestionTest.k
 print('PASSOU: UI alpha.15, migração única, Keystore por host, tema e sugestão de IP')
 
 # alpha.15: entrada simples, ações explícitas e câmera em janela flutuante.
-assert 'internal fun connectSavedDevice(' in ui and 'internal fun renameSavedDevice(' in ui
-assert 'internal fun forgetSavedDevice(' in ui and 'internal fun showConnectionChooser()' in ui
+assert 'internal fun MainActivity.connectSavedDevice(' in ui and 'internal fun MainActivity.renameSavedDevice(' in ui
+assert 'internal fun MainActivity.forgetSavedDevice(' in ui and 'internal fun MainActivity.showConnectionChooser()' in ui
 assert 'showManualConnectionDialog()' in ui and 'setTitle("Confirmar aparelho")' in ui
 assert 'actionButton("↻ Atualizar")' in ui and 'LinearLayout.LayoutParams(dp(116), dp(42))' in ui
 assert '@android:style/Theme.Material.Light.Dialog.NoActionBar' in manifest
@@ -122,7 +122,7 @@ print('PASSOU: fluxo alpha.15, confirmação QR, botões de ação, scanner pop-
 # alpha.17: Home de escolha, modo Monitorado separado e manual seguro.
 assert 'savedInstanceState?.getInt("active_mode", 2)' in ui
 assert 'private fun navigateHome()' in ui and 'internal fun MainActivity.renderHome()' in ui
-assert 'internal fun showMyConnectionInfo()' in ui and 'internal fun preferredLocalAddress()' in ui
+assert 'internal fun MainActivity.showMyConnectionInfo()' in ui and 'internal fun MainActivity.preferredLocalAddress()' in ui
 assert 'showAboutDialog()' in ui and 'showMainMenu()' not in ui
 assert 'showMyConnectionInfo()' in ui and 'getOrCreateMonitorKey(this)' in ui
 assert 'WindowManager.LayoutParams.FLAG_SECURE' in ui
@@ -153,7 +153,7 @@ assert 'AuthenticatedAccess.authenticated(' in server and 'WireProtocol.send(soc
 assert 'STALE_AFTER_MS = 45_000L' in tracker and 'fun clear()' in tracker
 assert 'AuthenticatedAccess.clear()' in (root / 'app/src/main/java/br/dev/monitorremoto/service/MonitorService.kt').read_text()
 assert 'controllerId' in client and 'clientName' in client and 'accessMethod' in client
-assert 'mode = 2\n        render()' in ui, 'Desconectar não retorna à Home'
+assert 'mode = 2\n    render()' in ui, 'Desconectar não retorna à Home'
 assert 'actionButton("▣ QR Code"' in ui and 'actionButton("⌨ Manual"' in ui
 assert 'addAction("Conectar", true)' in ui and 'addAction("Renomear")' in ui
 assert 'addAction("Esquecer", red = true)' in ui
@@ -164,7 +164,7 @@ assert (root / 'app/src/test/java/br/dev/monitorremoto/transport/AuthenticatedAc
 print('PASSOU: alpha.18, menus compactos, Home após desconexão, alertas autenticados e tempo de expiração')
 
 # alpha.19: painel remoto compacto com grid e atalhos.
-assert 'private fun networkIcon(host: String)' in ui and 'internal fun connectionKind(host: String)' in ui
+assert 'internal fun MainActivity.networkIcon(host: String)' in ui and 'internal fun MainActivity.connectionKind(host: String)' in ui
 assert 'private fun MainActivity.compactMetricCard(' in ui and 'private fun MainActivity.addMetricGrid(' in ui
 assert 'private fun MainActivity.actionTile(' in ui and 'private fun MainActivity.addActionGrid(' in ui
 assert 'private fun MainActivity.showRemoteNotifications(root: JSONObject)' in ui
@@ -216,8 +216,8 @@ assert f'assertFalse(AppVersion.compatible("0.1.0-alpha.22"))' in app_version_te
 print('PASSOU: alpha.21, teste de compatibilidade segue a versão atual')
 
 # alpha.22: a interface cresceu, mas MainActivity não volta a concentrar telas inteiras.
-assert len(main_ui.splitlines()) <= 1100, "MainActivity voltou a concentrar a UI"
-assert all(len(text.splitlines()) >= 40 for text in module_ui.values()), "Módulo UI vazio ou parcial"
+assert len(main_ui.splitlines()) <= 390, "MainActivity voltou a concentrar a UI"
+assert all(len(text.splitlines()) >= 25 for text in module_ui.values()), "Módulo UI vazio ou parcial"
 assert "internal fun MainActivity.renderHome()" in module_ui["HomeScreenUi.kt"]
 assert "internal fun MainActivity.renderMonitor()" in module_ui["MonitorScreenUi.kt"]
 assert "internal fun MainActivity.showSettingsDialog()" in module_ui["SettingsScreenUi.kt"]
@@ -232,4 +232,35 @@ assert "private fun showSettingsDialog(" not in main_ui
 assert "AppVersion.NAME" in main_ui and 'put("appVersion", AppVersion.NAME)' in client
 assert "internal fun IncomingAccessActivity.renderIncomingAccessScreen(" in module_ui["IncomingAccessScreenUi.kt"]
 assert 'Quem está?' not in module_ui["IncomingAccessScreenUi.kt"] and 'Outros acessos recentes' in module_ui["IncomingAccessScreenUi.kt"]
-print(f"PASSOU: alpha.22/23, 6 módulos extraídos, MainActivity={len(main_ui.splitlines())} linhas e funções únicas")
+print(f"PASSOU: alpha.22-24, módulos extraídos, MainActivity={len(main_ui.splitlines())} linhas e funções únicas")
+
+# alpha.24: remote state, selected host and UI extraction must remain independent.
+remote_manager = module_ui['RemoteConnectionManager.kt']
+connection_controller = module_ui['ConnectionController.kt']
+pairing_ui = module_ui['PairingScreenUi.kt']
+pairing_qr = module_ui['PairingQrUi.kt']
+pairing_controller = module_ui['PairingController.kt']
+credentials_ui = module_ui['MonitorCredentialsUi.kt']
+assert 'class RemoteConnectionManager(' in remote_manager and 'fun fetch(' in remote_manager
+assert 'token != generation' in remote_manager and 'generation++' in remote_manager
+assert 'RemoteClient.snapshot(' in remote_manager and 'RemoteClient.disconnect(' in remote_manager
+assert 'Handler(Looper.getMainLooper())' in remote_manager
+assert 'internal fun MainActivity.disconnectCurrent()' in connection_controller
+assert 'internal fun MainActivity.refreshRemote(silent: Boolean)' in connection_controller
+assert 'remoteConnection.fetch(' in connection_controller
+assert 'internal fun MainActivity.renderController()' in module_ui['ConnectionScreenUi.kt']
+assert 'internal fun MainActivity.showConnectionChooser()' in pairing_ui
+assert 'internal fun MainActivity.showManualConnectionDialog()' in pairing_ui
+assert 'RecentDevices.save(this, address, parsedKey)\n                SettingsStore.setRemoteHost(this, address)' in pairing_ui
+assert 'RecentDevices.save(this, code.host, key)\n                SettingsStore.setRemoteHost(this, code.host)' in pairing_qr
+assert 'AtomicBoolean(false)' in pairing_controller and 'RemoteClient.pair(code)' in pairing_controller
+assert 'internal fun MainActivity.showMyConnectionInfo()' in credentials_ui
+assert 'ClipDescription.EXTRA_IS_SENSITIVE' in credentials_ui
+assert 'internal fun MainActivity.selectNotificationApps()' in module_ui['SettingsScreenUi.kt']
+assert 'private var fetching = false' not in main_ui
+assert 'private fun refreshRemote(' not in main_ui and 'private fun showConnectionChooser(' not in main_ui
+assert 'override fun onRequestPermissionsResult(' in main_ui and 'override fun onActivityResult(' in main_ui
+assert 'assertFalse(AppVersion.compatible("0.1.0-alpha.23"))' in app_version_test
+for fname in ['ConnectionController.kt','ConnectionScreenUi.kt','PairingScreenUi.kt','PairingQrUi.kt','MonitorCredentialsUi.kt']:
+    assert len(module_ui[fname].strip()) > 100
+print('PASSOU: alpha.24, controles separados, host selecionado, cancelamento de respostas antigas e credenciais protegidas')
