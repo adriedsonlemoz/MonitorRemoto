@@ -1,4 +1,12 @@
-# Monitor Remoto v0.1.0-alpha.20
+# Monitor Remoto v0.1.0-alpha.21
+
+## Correção alpha.21
+
+- Compilação do workflow 21 parava em `IncomingAccessActivity.kt:93`: `Drawable` recebido por `setBackgroundColor(Int)`.
+- Corrigida a resolução do atributo `background` usando `this@IncomingAccessActivity.background` dentro do `ScrollView`.
+- Interface e recursos da alpha.20 preservados. Os dois aparelhos devem executar a mesma versão exata (alpha.21).
+- Executar a CI para comprovar a compilação Android e a geração do APK.
+
 
 ## Novidades da alpha.20
 
@@ -11,7 +19,7 @@
 
 ## Atenção
 
-**Atualize os dois celulares para a alpha.20 antes de conectar.** Esta é uma versão prévia. Funções de mensagens diretas, espelhamento de tela e localização ainda não estão implementadas. O nome recebido do controlador não constitui identificação independente. A parada do serviço revoga acesso enquanto estiver desligado, mas não substitui rotação de chave.
+**Atualize os dois celulares para a alpha.21 antes de conectar.** Esta é uma versão prévia. Funções de mensagens diretas, espelhamento de tela e localização ainda não estão implementadas. O nome recebido do controlador não constitui identificação independente. A parada do serviço revoga acesso enquanto estiver desligado, mas não substitui rotação de chave.
 
 ## Validação pendente
 

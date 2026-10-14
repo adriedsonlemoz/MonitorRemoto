@@ -243,3 +243,12 @@
 - [x] Teste JVM isolado: versão exata, rejeição da alpha.19, duas conexões, desconexão de uma, nova conexão e expiração de 45s.
 - [x] Todos os 14 XML (Manifest e vetores) analisados com parser XML.
 - [ ] Compilação Android completa: indisponível no ambiente sem Android SDK/Gradle configurados. Validar no GitHub Actions.
+
+## alpha.21: correção Kotlin do build #21 (13/10/2026)
+
+- [x] Identificada nos logs a falha `:app:compileDebugKotlin` em `IncomingAccessActivity.kt:93` (`Drawable!` onde `Int` era esperado).
+- [x] Corrigida a chamada `setBackgroundColor(this@IncomingAccessActivity.background)`.
+- [x] Regressão estática adicionada em `tools/check_distribution.py`.
+- [x] `versionName/versionCode/AppVersion`, `AppVersionTest` e referências de distribuição sincronizados.
+- [ ] Executar `:app:compileDebugKotlin`, `:app:testDebugUnitTest` e `:app:assembleDebug` no GitHub Actions.
+- [ ] Testar exibição da tela de acesso e status em dois Androids com alpha.21.

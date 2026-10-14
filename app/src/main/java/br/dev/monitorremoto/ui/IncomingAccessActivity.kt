@@ -90,7 +90,7 @@ class IncomingAccessActivity : Activity() {
         window.navigationBarColor = background
         window.decorView.systemUiVisibility = if (dark) 0 else
             View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
-        val wrapper = ScrollView(this).apply { isFillViewport = true; setBackgroundColor(background) }
+        val wrapper = ScrollView(this).apply { isFillViewport = true; setBackgroundColor(this@IncomingAccessActivity.background) }
         root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_VERTICAL

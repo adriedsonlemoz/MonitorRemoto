@@ -1,4 +1,4 @@
-# Monitor Remoto 0.1.0-alpha.20
+# Monitor Remoto 0.1.0-alpha.21
 # Convenções permanentes do projeto Monitor Remoto
 
 - Toda alteração de código incrementa sequencialmente `versionCode` e `versionName` (ex.: `0.1.0-alpha.8` -> `0.1.0-alpha.9`). Sincronizar tela, README, CHANGELOG, RELEASE_NOTES e documentação.
@@ -21,7 +21,7 @@
 - Alpha.10: manter tema **claro padrão**, as opções da engrenagem, janela Conectar, botão de atualização compacto, lista de até 5 aparelhos recentes e os dados do Controle no topo. Não reintroduzir formulário longo na tela principal.
 - Credenciais por dispositivo usam `RecentDevices` + `SecretVault.profileKeyName`, com migração única da alpha.9. Não reaproveitar `CONTROLLER_KEY` antigo para IPs novos nem gravar segredo em preferências sem criptografia. Esquecer apaga o segredo correspondente.
 - Respostas HTTP/TCP não são conexão persistente. Exibir "Conectado" apenas após consulta autenticada bem-sucedida e "Sem resposta" após erro. Não inventar tempos de atualização.
-- Próxima versão sequencial: `0.1.0-alpha.21`, `versionCode 21`.
+- Próxima versão sequencial: `0.1.0-alpha.22`, `versionCode 22`.
 
 - Alpha.15: preservar a seleção Conectar → QR/Manual/Salvos, confirmação do QR antes de parear, cartões salvos com três ações e o scanner em Activity com tema Dialog.
 
@@ -37,3 +37,5 @@
 - Alpha.20: `AppVersion.NAME` deve seguir o `versionName` do Gradle rigorosamente. QR, snapshots e `disconnect` autenticado exigem **igualdade exata** de versão em ambos os aparelhos. Não confundir versão do aplicativo com protocolo `v=1`.
 - Alpha.20: `IncomingAccessActivity` em primeiro plano alerta em qualquer área do app e volta ao Monitorado quando o acesso termina; em segundo plano usar apenas notificação Android, sem iniciar tela automaticamente. Identidade/método informados não são verificados; consultas têm expiração de 45s, não conexão permanente. Parada explícita deve permanecer parada.
 - Alpha.20: configurações em grade com ícones vetoriais, bateria compacta e ações remotas com toque adequado; não copiar diálogos antigos em lista simples. Rede remota não pode inventar SSID.
+
+- Alpha.21: correção de compilação do workflow 21: no `ScrollView.apply` de `IncomingAccessActivity`, qualificar `this@IncomingAccessActivity.background` para impedir colisão com `View.background: Drawable`; exigir teste de regressão no validador antes de distribuir. Sem alteração de protocolo além da versão obrigatoriamente sincronizada.

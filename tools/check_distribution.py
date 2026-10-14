@@ -12,7 +12,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.20" and code.group(1) == "20", "Versões incompatíveis"
+assert version == "0.1.0-alpha.21" and code.group(1) == "21", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -191,3 +191,19 @@ assert 'private fun compactMetricCard(' in ui and 'minimumHeight = dp(98)' in ui
 assert (root / 'app/src/test/java/br/dev/monitorremoto/transport/AppVersionTest.kt').is_file()
 assert len(list((root / 'app/src/main/res/drawable').glob('ic_*.xml'))) >= 10
 print('PASSOU: alpha.20, versão exata, disconnect, notificação, Activity de acesso e UI vetorial')
+
+# alpha.21: regressão do conflito entre Activity.background (Int) e View.background (Drawable).
+# O erro de compileDebugKotlin no build #21 ocorreu no apply receiver de ScrollView.
+assert 'setBackgroundColor(this@IncomingAccessActivity.background)' in incoming, (
+    'IncomingAccessActivity deve qualificar o background de cor da Activity (Int)'
+)
+assert 'setBackgroundColor(background)' not in incoming, (
+    'Colisão de nome com ScrollView.background: Drawable reintroduzida'
+)
+print('PASSOU: alpha.21, cor do ScrollView referenciada na Activity; tipo Int preservado')
+
+# A versão exata usada pelo teste JUnit deve acompanhar AppVersion.NAME a cada release.
+app_version_test = (root / 'app/src/test/java/br/dev/monitorremoto/transport/AppVersionTest.kt').read_text()
+assert 'assertTrue(AppVersion.compatible(AppVersion.NAME))' in app_version_test
+assert f'assertFalse(AppVersion.compatible("0.1.0-alpha.20"))' in app_version_test
+print('PASSOU: alpha.21, teste de compatibilidade segue a versão atual')

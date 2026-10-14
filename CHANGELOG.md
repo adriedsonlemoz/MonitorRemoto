@@ -1,5 +1,12 @@
 # Histórico de versões
 
+## 0.1.0-alpha.21 (13/10/2026)
+
+- Corrigido erro Kotlin do workflow **Gerar APK e Release 21**, `IncomingAccessActivity.kt:93`: resolução de `background` como `Drawable` no `ScrollView.apply`, incompatível com o parâmetro `Int` de `setBackgroundColor()`.
+- Referência ao atributo de cor da Activity agora explícita (`this@IncomingAccessActivity.background`), preservando o desenho da tela de acesso recebido.
+- Versionamento `versionCode 21` e `AppVersion.NAME` sincronizados com README, RELEASE_NOTES, AGENTS, arquitetura e validações.
+- Adicionado teste estrutural de regressão da colisão de receiver; build Android e teste em dois celulares pendentes.
+
 ## 0.1.0-alpha.20 (13/10/2026)
 
 - Tela de acesso autenticado dedicada em Activity própria (aberta apenas com o aplicativo em primeiro plano), atualizada por evento e encerrada quando o controlador se desconecta explicitamente ou quando o registro expira.
