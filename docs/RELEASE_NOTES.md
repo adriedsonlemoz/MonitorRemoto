@@ -1,6 +1,13 @@
-# Monitor Remoto v0.1.0-alpha.21
+# Monitor Remoto v0.1.0-alpha.22
 
-## Correção alpha.21
+## Novidades da alpha.22
+
+- Código da interface organizado por tela: Home, Monitorado, Configurações e Painel remoto.
+- Componentes visuais reutilizáveis extraídos para módulo independente.
+- Mesma aparência e mesmas funções da alpha.21, sem novas permissões ou mudanças de rede.
+- Exige alpha.22 nos **dois celulares** para conectar.
+
+## Histórico: correção alpha.21
 
 - Compilação do workflow 21 parava em `IncomingAccessActivity.kt:93`: `Drawable` recebido por `setBackgroundColor(Int)`.
 - Corrigida a resolução do atributo `background` usando `this@IncomingAccessActivity.background` dentro do `ScrollView`.
@@ -19,7 +26,7 @@
 
 ## Atenção
 
-**Atualize os dois celulares para a alpha.21 antes de conectar.** Esta é uma versão prévia. Funções de mensagens diretas, espelhamento de tela e localização ainda não estão implementadas. O nome recebido do controlador não constitui identificação independente. A parada do serviço revoga acesso enquanto estiver desligado, mas não substitui rotação de chave.
+**Atualize os dois celulares para a alpha.22 antes de conectar.** Esta é uma versão prévia. Funções de mensagens diretas, espelhamento de tela e localização ainda não estão implementadas. O nome recebido do controlador não constitui identificação independente. A parada do serviço revoga acesso enquanto estiver desligado, mas não substitui rotação de chave.
 
 ## Validação pendente
 

@@ -1,4 +1,4 @@
-# Arquitetura (0.1.0-alpha.21)
+# Arquitetura (0.1.0-alpha.22)
 
 ```text
 MONITORADO                                      CONTROLE
@@ -19,9 +19,9 @@ O FGS `connectedDevice` mantém o socket de escuta durante monitoramento ativo. 
 
 ## Distribuição e assinatura
 
-O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.21` e `versionCode=21`.
+O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.22` e `versionCode=22`.
 
-- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.21.apk`.
+- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.22.apk`.
 - `upload-artifact` sempre distribui um ZIP; GitHub Releases recebe o **arquivo APK direto**.
 - Com quatro Secrets, Gradle gera APK Release assinado e AAB. Sem Secrets, o arquivo é Debug de teste e não preserva necessariamente a assinatura entre execuções.
 - Releases são prévias, não substituem a futura revisão da Google Play e nem os ensaios reais.
@@ -84,3 +84,20 @@ Autenticação prova **posse da chave compartilhada**, não identidade do dispos
 - `NetworkReader` informa tipo de transporte da rede ativa do **aparelho monitorado**. SSID e mesma rede Wi-Fi não são inferidos. Os endereços e rotas da VPN não são comprovação de identidade.
 
 Na alpha.21 foi corrigida a resolução de `background` no escopo de `ScrollView.apply` da tela `IncomingAccessActivity`, com receptor explícito da propriedade `Int` definida na Activity.
+
+## Extração de interfaces alpha.22
+
+```text
+MainActivity.kt              Activity / eventos / navegação / pareamento
+ ├─ UiComponents.kt          componentes e tema em extensões internas
+ ├─ HomeScreenUi.kt          aparelhos recentes e acesso ao monitorado
+ ├─ MonitorScreenUi.kt       serviço local e acessos autenticados recentes
+ ├─ SettingsScreenUi.kt      opções, diagnósticos e configurações
+ └─ RemoteDashboardUi.kt     cartões remotos, eventos e detalhes
+```
+
+Os módulos de interface utilizam funções de extensão internas de `MainActivity` para
+preservar a interface existente nesta primeira etapa. Essa estratégia é transitória:
+uma refatoração posterior poderá separar estado e efeitos de apresentação em
+controladores dedicados, após build Android e testes físicos. Não há novos endpoints
+no `MonitorServer`, nem alteração de permissões, chaves ou autorização.

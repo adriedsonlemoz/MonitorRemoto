@@ -6,13 +6,17 @@ import re
 root = Path(__file__).resolve().parent.parent
 gradle = (root / "app/build.gradle.kts").read_text(encoding="utf-8")
 workflow = (root / ".github/workflows/android.yml").read_text(encoding="utf-8")
-ui = (root / "app/src/main/java/br/dev/monitorremoto/ui/MainActivity.kt").read_text(encoding="utf-8")
+ui_root = root / "app/src/main/java/br/dev/monitorremoto/ui"
+main_ui = (ui_root / "MainActivity.kt").read_text(encoding="utf-8")
+modules = ["UiComponents.kt", "HomeScreenUi.kt", "MonitorScreenUi.kt", "SettingsScreenUi.kt", "RemoteDashboardUi.kt"]
+module_ui = {name: (ui_root / name).read_text(encoding="utf-8") for name in modules}
+ui = main_ui + "\n" + "\n".join(module_ui.values())
 match = re.search(r'\bversionName\s*=\s*"([^"]+)"', gradle)
 assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.21" and code.group(1) == "21", "Versões incompatíveis"
+assert version == "0.1.0-alpha.22" and code.group(1) == "22", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -92,13 +96,13 @@ print('PASSOU: Camera2, YUV, ZXing Core, cancelamento, fallback manual e testes 
 profiles = (root / 'app/src/main/java/br/dev/monitorremoto/core/RecentDevices.kt').read_text()
 secret = (root / 'app/src/main/java/br/dev/monitorremoto/security/SecretVault.kt').read_text()
 ip_suggestion = (root / 'app/src/main/java/br/dev/monitorremoto/core/Ipv4Suggestion.kt').read_text()
-assert 'private fun showConnectionChooser()' in ui and 'private fun showManualConnectionDialog()' in ui and 'private fun showSettingsDialog()' in ui
+assert 'internal fun showConnectionChooser()' in ui and 'private fun showManualConnectionDialog()' in ui and 'internal fun MainActivity.showSettingsDialog()' in ui
 assert 'private fun renderController()' in ui and 'private fun updateConnectionLabels()' in ui
 assert 'private fun localWifiPrefix()' in ui and 'TRANSPORT_WIFI' in ui
 assert 'Ipv4Suggestion.prefix(' in ui and 'prefixLength' in ui
 assert 'RecentDevices.migrateLegacy(this)' in ui and 'RecentDevices.save(' in ui
 assert 'RecentDevices.key(this, host)' in ui and 'RecentDevices.markSuccess(' in ui
-assert 'private var lastSuccessfulMs' in ui and 'connectionState = "offline"' in ui
+assert 'internal var lastSuccessfulMs' in ui and 'connectionState = "offline"' in ui
 assert 'fun setTheme(' in settings and '"light"' in settings and '"dark"' in settings
 assert 'const val LIMIT = 5' in profiles and 'fun forget(' in profiles and 'fun rename(' in profiles
 assert 'profileKeyName(' in secret and 'MessageDigest.getInstance("SHA-256")' in secret
@@ -107,8 +111,8 @@ assert (root / 'app/src/test/java/br/dev/monitorremoto/core/Ipv4SuggestionTest.k
 print('PASSOU: UI alpha.15, migração única, Keystore por host, tema e sugestão de IP')
 
 # alpha.15: entrada simples, ações explícitas e câmera em janela flutuante.
-assert 'private fun connectSavedDevice(' in ui and 'private fun renameSavedDevice(' in ui
-assert 'private fun forgetSavedDevice(' in ui and 'private fun showConnectionChooser()' in ui
+assert 'internal fun connectSavedDevice(' in ui and 'internal fun renameSavedDevice(' in ui
+assert 'internal fun forgetSavedDevice(' in ui and 'internal fun showConnectionChooser()' in ui
 assert 'showManualConnectionDialog()' in ui and 'setTitle("Confirmar aparelho")' in ui
 assert 'actionButton("↻ Atualizar")' in ui and 'LinearLayout.LayoutParams(dp(116), dp(42))' in ui
 assert '@android:style/Theme.Material.Light.Dialog.NoActionBar' in manifest
@@ -117,8 +121,8 @@ print('PASSOU: fluxo alpha.15, confirmação QR, botões de ação, scanner pop-
 
 # alpha.17: Home de escolha, modo Monitorado separado e manual seguro.
 assert 'savedInstanceState?.getInt("active_mode", 2)' in ui
-assert 'private fun navigateHome()' in ui and 'private fun renderHome()' in ui
-assert 'private fun showMyConnectionInfo()' in ui and 'private fun preferredLocalAddress()' in ui
+assert 'private fun navigateHome()' in ui and 'internal fun MainActivity.renderHome()' in ui
+assert 'internal fun showMyConnectionInfo()' in ui and 'internal fun preferredLocalAddress()' in ui
 assert 'showAboutDialog()' in ui and 'showMainMenu()' not in ui
 assert 'showMyConnectionInfo()' in ui and 'getOrCreateMonitorKey(this)' in ui
 assert 'WindowManager.LayoutParams.FLAG_SECURE' in ui
@@ -129,7 +133,7 @@ assert 'if (mode != 2) { mode = 2; render() }' in ui
 print('PASSOU: alpha.17, Home independente, informações manuais protegidas e recentes')
 
 # alpha.17: não reapresentar Monitorado como Home; atalhos separados e ação de gerenciamento por aparelho.
-assert 'private var mode = 2 // 2: início, 0: monitorado, 1: controle' in ui
+assert 'internal var mode = 2 // 2: início, 0: monitorado, 1: controle' in ui
 assert 'else -> renderHome()' in ui and '0 -> renderMonitor()' in ui and '1 -> {' in ui
 assert '＋  Conectar novo aparelho' in ui and 'Aparelhos anteriores' in ui
 assert 'Última conexão: $lastUsed' in ui and 'item.lastSuccessMs > 0L' in ui
@@ -155,17 +159,17 @@ assert 'addAction("Conectar", true)' in ui and 'addAction("Renomear")' in ui
 assert 'addAction("Esquecer", red = true)' in ui
 assert 'addInfoAction(revealButton)' in ui and 'addInfoAction(actionButton("Copiar"' in ui
 assert 'addInfoAction(actionButton("Compartilhar"' in ui
-assert 'private fun renderIncomingAccess()' in ui and 'private fun showIncomingAccessActions(' in ui
+assert 'private fun MainActivity.renderIncomingAccess()' in ui and 'private fun MainActivity.showIncomingAccessActions(' in ui
 assert (root / 'app/src/test/java/br/dev/monitorremoto/transport/AuthenticatedAccessTest.kt').exists()
 print('PASSOU: alpha.18, menus compactos, Home após desconexão, alertas autenticados e tempo de expiração')
 
 # alpha.19: painel remoto compacto com grid e atalhos.
-assert 'private fun networkIcon(host: String)' in ui and 'private fun connectionKind(host: String)' in ui
-assert 'private fun compactMetricCard(' in ui and 'private fun addMetricGrid(' in ui
-assert 'private fun actionTile(' in ui and 'private fun addActionGrid(' in ui
-assert 'private fun showRemoteNotifications(root: JSONObject)' in ui
-assert 'private fun copyRemoteSnapshot(root: JSONObject)' in ui
-assert 'private fun showRemoteDetailsDialog(root: JSONObject)' in ui
+assert 'private fun networkIcon(host: String)' in ui and 'internal fun connectionKind(host: String)' in ui
+assert 'private fun MainActivity.compactMetricCard(' in ui and 'private fun MainActivity.addMetricGrid(' in ui
+assert 'private fun MainActivity.actionTile(' in ui and 'private fun MainActivity.addActionGrid(' in ui
+assert 'private fun MainActivity.showRemoteNotifications(root: JSONObject)' in ui
+assert 'private fun MainActivity.copyRemoteSnapshot(root: JSONObject)' in ui
+assert 'private fun MainActivity.showRemoteDetailsDialog(root: JSONObject)' in ui
 assert 'Funções remotas' in ui and 'Mensagens' in ui and 'Ver tela' in ui and 'Localização' in ui
 print('PASSOU: alpha.19, painel remoto compacto, atalhos e detalhes dedicados')
 
@@ -187,7 +191,7 @@ assert 'ACCESS_CHANNEL' in service and 'IMPORTANCE_DEFAULT' in service
 assert 'SettingsStore.isMonitorEnabled(this) && !MonitorService.isRunning' in ui
 assert 'private fun recoverAuthorizedServiceIfStopped()' in ui
 assert 'options.chunked(2)' in ui and 'settingsIcon(' in ui
-assert 'private fun compactMetricCard(' in ui and 'minimumHeight = dp(98)' in ui
+assert 'private fun MainActivity.compactMetricCard(' in ui and 'minimumHeight = dp(98)' in ui
 assert (root / 'app/src/test/java/br/dev/monitorremoto/transport/AppVersionTest.kt').is_file()
 assert len(list((root / 'app/src/main/res/drawable').glob('ic_*.xml'))) >= 10
 print('PASSOU: alpha.20, versão exata, disconnect, notificação, Activity de acesso e UI vetorial')
@@ -206,4 +210,22 @@ print('PASSOU: alpha.21, cor do ScrollView referenciada na Activity; tipo Int pr
 app_version_test = (root / 'app/src/test/java/br/dev/monitorremoto/transport/AppVersionTest.kt').read_text()
 assert 'assertTrue(AppVersion.compatible(AppVersion.NAME))' in app_version_test
 assert f'assertFalse(AppVersion.compatible("0.1.0-alpha.20"))' in app_version_test
+assert f'assertFalse(AppVersion.compatible("0.1.0-alpha.21"))' in app_version_test
 print('PASSOU: alpha.21, teste de compatibilidade segue a versão atual')
+
+# alpha.22: a interface cresceu, mas MainActivity não volta a concentrar telas inteiras.
+assert len(main_ui.splitlines()) <= 1100, "MainActivity voltou a concentrar a UI"
+assert all(len(text.splitlines()) >= 50 for text in module_ui.values()), "Módulo UI vazio ou parcial"
+assert "internal fun MainActivity.renderHome()" in module_ui["HomeScreenUi.kt"]
+assert "internal fun MainActivity.renderMonitor()" in module_ui["MonitorScreenUi.kt"]
+assert "internal fun MainActivity.showSettingsDialog()" in module_ui["SettingsScreenUi.kt"]
+assert "internal fun MainActivity.displayResult(" in module_ui["RemoteDashboardUi.kt"]
+assert "internal fun MainActivity.panel(" in module_ui["UiComponents.kt"]
+for entry in ["renderHome", "renderMonitor", "showSettingsDialog", "displayResult", "dialogCardRow"]:
+    found = re.findall(r"\bfun\s+(?:MainActivity\.)?" + entry + r"\s*\(", ui)
+    assert len(found) == 1, f"Função duplicada ou ausente: {entry}: {len(found)}"
+assert "private fun displayResult(" not in main_ui
+assert "private fun renderHome(" not in main_ui
+assert "private fun showSettingsDialog(" not in main_ui
+assert "AppVersion.NAME" in main_ui and 'put("appVersion", AppVersion.NAME)' in client
+print(f"PASSOU: alpha.22, 5 módulos extraídos, MainActivity={len(main_ui.splitlines())} linhas e funções únicas")

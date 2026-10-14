@@ -3,7 +3,6 @@ package br.dev.monitorremoto.ui
 import android.Manifest
 import android.app.Activity
 import android.app.AlertDialog
-import android.content.res.ColorStateList
 import android.os.SystemClock
 import android.content.ClipData
 import android.content.ClipDescription
@@ -17,8 +16,6 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.graphics.Bitmap
 import android.graphics.Color
-import android.graphics.Typeface
-import android.graphics.drawable.GradientDrawable
 import android.view.WindowManager
 import android.widget.ImageView
 import android.os.Build
@@ -31,13 +28,11 @@ import android.text.InputType
 import android.view.Gravity
 import android.view.View
 import android.widget.Button
-import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import br.dev.monitorremoto.R
 import br.dev.monitorremoto.capture.NotificationCaptureService
-import br.dev.monitorremoto.core.BatteryReader
 import br.dev.monitorremoto.core.RecentDevices
 import br.dev.monitorremoto.core.Ipv4Suggestion
 import br.dev.monitorremoto.core.SettingsStore
@@ -68,27 +63,27 @@ class MainActivity : Activity() {
         "system" -> (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
         else -> false
     }
-    private val bg get() = if (darkTheme()) Color.rgb(14, 22, 35) else Color.rgb(247, 249, 252)
-    private val surface get() = if (darkTheme()) Color.rgb(28, 41, 58) else Color.WHITE
-    private val ink get() = if (darkTheme()) Color.rgb(233, 239, 247) else Color.rgb(23, 34, 48)
-    private val dim get() = if (darkTheme()) Color.rgb(167, 184, 203) else Color.rgb(92, 109, 128)
-    private val highlight get() = if (darkTheme()) Color.rgb(90, 214, 188) else Color.rgb(24, 166, 146)
-    private val highlightText get() = if (darkTheme()) Color.rgb(14, 22, 35) else Color.WHITE
-    private val lineColor get() = if (darkTheme()) Color.rgb(47, 64, 83) else Color.rgb(224, 231, 239)
-    private val secondaryAccent get() = if (darkTheme()) Color.rgb(54, 116, 171) else Color.rgb(38, 113, 174)
-    private val fieldColor get() = if (darkTheme()) Color.rgb(22, 34, 50) else Color.rgb(242, 246, 250)
-    private lateinit var content: LinearLayout
+    internal val bg get() = if (darkTheme()) Color.rgb(14, 22, 35) else Color.rgb(247, 249, 252)
+    internal val surface get() = if (darkTheme()) Color.rgb(28, 41, 58) else Color.WHITE
+    internal val ink get() = if (darkTheme()) Color.rgb(233, 239, 247) else Color.rgb(23, 34, 48)
+    internal val dim get() = if (darkTheme()) Color.rgb(167, 184, 203) else Color.rgb(92, 109, 128)
+    internal val highlight get() = if (darkTheme()) Color.rgb(90, 214, 188) else Color.rgb(24, 166, 146)
+    internal val highlightText get() = if (darkTheme()) Color.rgb(14, 22, 35) else Color.WHITE
+    internal val lineColor get() = if (darkTheme()) Color.rgb(47, 64, 83) else Color.rgb(224, 231, 239)
+    internal val secondaryAccent get() = if (darkTheme()) Color.rgb(54, 116, 171) else Color.rgb(38, 113, 174)
+    internal val fieldColor get() = if (darkTheme()) Color.rgb(22, 34, 50) else Color.rgb(242, 246, 250)
+    internal lateinit var content: LinearLayout
     private val handler = Handler(Looper.getMainLooper())
-    private var mode = 2 // 2: início, 0: monitorado, 1: controle
+    internal var mode = 2 // 2: início, 0: monitorado, 1: controle
     private val cameraPermissionRequest = 4317
     private val qrScanRequest = 4318
     private val notificationPermissionRequest = 101
     private var active = false
     private var fetching = false
     private var fetchingHost: String = ""
-    private var resultBox: LinearLayout? = null
+    internal var resultBox: LinearLayout? = null
     private var pairingInProgress = false
-    private var selectedConnectionMethod: String = "Chave salva"
+    internal var selectedConnectionMethod: String = "Chave salva"
     companion object { const val EXTRA_OPEN_MONITOR = "br.dev.monitorremoto.OPEN_MONITOR" }
     private var showingIncoming = false
     private var lastRecoveryAttemptMs = 0L
@@ -122,11 +117,11 @@ class MainActivity : Activity() {
     }
     private var lastResult: JSONObject? = null
     private var lastResultHost: String = ""
-    private var lastSuccessfulMs: Long = 0L
-    private var connectionState: String = "idle" // idle / loading / connected / offline
+    internal var lastSuccessfulMs: Long = 0L
+    internal var connectionState: String = "idle" // idle / loading / connected / offline
     private var connectionMessage: String? = null
     private var currentStatus: TextView? = null
-    private var currentDeviceTitle: TextView? = null
+    internal var currentDeviceTitle: TextView? = null
     private var currentUpdated: TextView? = null
     private var currentConnectButton: Button? = null
     private var systemBackCallback: android.window.OnBackInvokedCallback? = null
@@ -223,136 +218,7 @@ class MainActivity : Activity() {
         super.onPause()
     }
 
-    private fun dp(value: Int) = (resources.displayMetrics.density * value).toInt()
-    private fun shape(color: Int, corner: Int = 13, stroke: Boolean = false) = GradientDrawable().apply {
-        setColor(color); cornerRadius = dp(corner).toFloat()
-        if (stroke) setStroke(dp(1), lineColor)
-    }
-
-    private fun label(value: String, size: Float = 15f, strong: Boolean = false, muted: Boolean = false): TextView =
-        TextView(this).apply {
-            setText(value)
-            textSize = size
-            setTextColor(if (muted) dim else ink)
-            if (strong) setTypeface(null, Typeface.BOLD)
-            setPadding(0, dp(5), 0, dp(5))
-        }
-
-    private fun addText(value: String, size: Float = 15f, strong: Boolean = false, muted: Boolean = false): TextView =
-        label(value, size, strong, muted).also { content.addView(it) }
-
-    private fun gap(px: Int = 10) { content.addView(View(this), LinearLayout.LayoutParams(1, dp(px))) }
-
-    private fun button(title: String, emphasis: Boolean = false, onClick: () -> Unit): Button =
-        Button(this).apply {
-            text = title
-            isAllCaps = false
-            textSize = 14f
-            setTextColor(if (emphasis) highlightText else ink)
-            background = shape(if (emphasis) highlight else surface)
-            setPadding(dp(8), dp(8), dp(8), dp(8))
-            val params = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(52))
-            params.bottomMargin = dp(8)
-            layoutParams = params
-            setOnClickListener { onClick() }
-        }
-
-    private fun field(hintText: String, initial: String = ""): EditText = EditText(this).apply {
-        hint = hintText
-        setText(initial)
-        textSize = 16f
-        setTextColor(ink)
-        setHintTextColor(dim)
-        background = shape(fieldColor, 14, true)
-        setSingleLine(true)
-        minHeight = dp(56)
-        gravity = Gravity.CENTER_VERTICAL
-        setPadding(dp(16), dp(14), dp(16), dp(14))
-        inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
-        val params = LinearLayout.LayoutParams(-1, dp(56))
-        params.bottomMargin = dp(10)
-        layoutParams = params
-    }
-
-    private fun actionButton(title: String, emphasis: Boolean = false, onClick: () -> Unit): Button =
-        Button(this).apply {
-            text = title; isAllCaps = false; textSize = 13f
-            setTextColor(if (emphasis) highlightText else ink)
-            background = shape(if (emphasis) highlight else surface, 12, !emphasis)
-            setPadding(dp(9), 0, dp(9), 0)
-            minHeight = dp(42)
-            setOnClickListener { onClick() }
-        }
-
-    private fun panel(pad: Int = 16): LinearLayout = LinearLayout(this).apply {
-        orientation = LinearLayout.VERTICAL
-        background = shape(surface, 18, true)
-        setPadding(dp(pad), dp(pad), dp(pad), dp(pad))
-    }
-
-    private fun sectionGap(parent: LinearLayout, pixels: Int = 12) {
-        parent.addView(View(this), LinearLayout.LayoutParams(1, dp(pixels)))
-    }
-
-    private fun infoChip(value: String, accent: Boolean = false): TextView = TextView(this).apply {
-        text = value
-        textSize = 12f
-        setTextColor(if (accent) highlightText else ink)
-        background = shape(if (accent) highlight else fieldColor, 999, !accent)
-        setPadding(dp(12), dp(8), dp(12), dp(8))
-    }
-
-    private fun dialogWrapper(): Pair<ScrollView, LinearLayout> {
-        val wrapper = ScrollView(this)
-        val layout = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(18), dp(10), dp(18), dp(10))
-        }
-        wrapper.addView(layout)
-        return wrapper to layout
-    }
-
-    private fun dialogIntro(parent: LinearLayout, text: String) {
-        if (text.isBlank()) return
-        parent.addView(label(text, 12.5f, muted = true).apply { setPadding(0, 0, 0, dp(6)) })
-    }
-
-    private fun dialogCardRow(
-        title: String,
-        subtitle: String = "",
-        trailing: String = "›",
-        accent: Boolean = false,
-        onClick: (() -> Unit)? = null
-    ): LinearLayout = LinearLayout(this).apply {
-        orientation = LinearLayout.HORIZONTAL
-        gravity = Gravity.CENTER_VERTICAL
-        background = shape(fieldColor, 16, true)
-        setPadding(dp(14), dp(13), dp(14), dp(13))
-        val textBlock = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.VERTICAL }
-        textBlock.addView(label(title, 15f, strong = true).apply {
-            setTextColor(if (accent) highlight else ink)
-            setPadding(0, 0, 0, if (subtitle.isBlank()) 0 else dp(2))
-        })
-        if (subtitle.isNotBlank()) textBlock.addView(label(subtitle, 11.5f, muted = true).apply { setPadding(0, 0, 0, 0) })
-        addView(textBlock, LinearLayout.LayoutParams(0, -2, 1f))
-        if (trailing.isNotBlank()) addView(label(trailing, 18f, strong = accent, muted = !accent).apply { gravity = Gravity.CENTER_VERTICAL })
-        if (onClick != null) {
-            isClickable = true
-            isFocusable = true
-            setOnClickListener { onClick() }
-        }
-    }
-
-    private fun dialogMetricRow(name: String, value: String): LinearLayout = LinearLayout(this).apply {
-        orientation = LinearLayout.HORIZONTAL
-        gravity = Gravity.CENTER_VERTICAL
-        setPadding(0, dp(5), 0, dp(5))
-        addView(label(name, 12f, muted = true), LinearLayout.LayoutParams(0, -2, 1f))
-        addView(label(value, 14f, strong = true))
-    }
-
-
-    private fun render() {
+    internal fun render() {
         content.removeAllViews()
         handler.removeCallbacks(monitorStatusPoll)
         if (active && mode == 0) handler.postDelayed(monitorStatusPoll, 5_000L)
@@ -411,7 +277,7 @@ class MainActivity : Activity() {
         if (mode != 2) navigateHome() else super.onBackPressed()
     }
 
-    private fun showAboutDialog() {
+    internal fun showAboutDialog() {
         val (wrapper, layout) = dialogWrapper()
         dialogIntro(layout, "Resumo rápido do foco atual do projeto.")
         val card = panel(14)
@@ -426,421 +292,6 @@ class MainActivity : Activity() {
             .setView(wrapper)
             .setPositiveButton("OK", null)
             .show()
-    }
-
-    /** Painel de opções moderno, sem os antigos itens de diálogo em listas longas. */
-    private fun showSettingsDialog() {
-        val (wrapper, layout) = dialogWrapper()
-        val header = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        val headText = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        headText.addView(label("Personalize e proteja", 17f, strong = true))
-        headText.addView(label("Controles do aparelho e do serviço", 11.5f, muted = true))
-        header.addView(headText, LinearLayout.LayoutParams(0, -2, 1f))
-        header.addView(settingsIcon(R.drawable.ic_settings, highlight, 26))
-        layout.addView(header)
-        sectionGap(layout, 12)
-
-        val options = listOf(
-            Triple("Aparência", "Claro · Escuro · Sistema", R.drawable.ic_palette),
-            Triple("Notificações", "Acesso e apps permitidos", R.drawable.ic_bell),
-            Triple("Segurança", "Chaves e pareamento", R.drawable.ic_shield),
-            Triple("Serviço", "Ativar e inicialização", R.drawable.ic_power),
-            Triple("Diagnóstico", "Rede e permissões", R.drawable.ic_activity),
-            Triple("Sobre", "Versão e privacidade", R.drawable.ic_info)
-        )
-        val actions: List<() -> Unit> = listOf(
-            { showAppearanceDialog() }, { showPermissionSettings() },
-            { showSecuritySettings() }, { showServiceSettings() },
-            { showDiagnostics() }, { showAboutDialog() }
-        )
-        var popup: AlertDialog? = null
-        options.chunked(2).forEachIndexed { rowIndex, rowOptions ->
-            val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-            rowOptions.forEachIndexed { index, option ->
-                val itemIndex = rowIndex * 2 + index
-                val tile = LinearLayout(this).apply {
-                    orientation = LinearLayout.VERTICAL
-                    background = shape(fieldColor, 17, true)
-                    setPadding(dp(13), dp(14), dp(9), dp(12))
-                    minimumHeight = dp(112)
-                    isClickable = true
-                    isFocusable = true
-                    contentDescription = "${option.first}: ${option.second}"
-                    setOnClickListener { popup?.dismiss(); actions[itemIndex]() }
-                }
-                tile.addView(settingsIcon(option.third, if (itemIndex == 2) highlight else secondaryAccent, 26))
-                tile.addView(label(option.first, 13f, strong = true).apply {
-                    setPadding(0, dp(8), 0, 0)
-                    maxLines = 1
-                    ellipsize = android.text.TextUtils.TruncateAt.END
-                })
-                tile.addView(label(option.second, 10.5f, muted = true).apply {
-                    setPadding(0, dp(3), 0, 0)
-                    maxLines = 2
-                    ellipsize = android.text.TextUtils.TruncateAt.END
-                })
-                row.addView(tile, LinearLayout.LayoutParams(0, -2, 1f).apply {
-                    if (index == 0) rightMargin = dp(8)
-                })
-            }
-            layout.addView(row)
-            if (rowIndex < 2) sectionGap(layout, 8)
-        }
-        sectionGap(layout, 10)
-        layout.addView(label("Monitor Remoto  ·  ${AppVersion.NAME}", 11f, muted = true))
-        popup = AlertDialog.Builder(this).setTitle("Configurações")
-            .setView(wrapper).setNegativeButton("Fechar", null).create()
-        popup.show()
-    }
-
-    private fun settingsIcon(drawable: Int, tint: Int, size: Int) = ImageView(this).apply {
-        setImageResource(drawable)
-        imageTintList = ColorStateList.valueOf(tint)
-        layoutParams = LinearLayout.LayoutParams(dp(size), dp(size))
-    }
-
-    private fun showAppearanceDialog() {
-        val options = listOf(
-            Triple("light", "Claro (padrão)", "Visual mais leve para uso diário"),
-            Triple("dark", "Escuro", "Mais confortável em ambientes pouco iluminados"),
-            Triple("system", "Acompanhar o sistema", "Segue o tema configurado no Android")
-        )
-        val current = SettingsStore.theme(this)
-        val (wrapper, layout) = dialogWrapper()
-        dialogIntro(layout, "Escolha a aparência padrão do aplicativo.")
-        var popup: AlertDialog? = null
-        options.forEachIndexed { index, option ->
-            val selected = option.first == current
-            layout.addView(dialogCardRow(option.second, option.third, if (selected) "●" else "○", accent = selected) {
-                if (option.first != SettingsStore.theme(this)) {
-                    SettingsStore.setTheme(this, option.first)
-                    popup?.dismiss()
-                    recreate()
-                } else popup?.dismiss()
-            })
-            if (index != options.lastIndex) sectionGap(layout, 8)
-        }
-        val dialog = AlertDialog.Builder(this).setTitle("Aparência").setView(wrapper).setNegativeButton("Fechar", null).create()
-        popup = dialog
-        dialog.show()
-    }
-
-    private fun showPermissionSettings() {
-        val state = if (hasListener()) "Autorizado" else "Sem acesso"
-        val count = SettingsStore.notificationAllowlist(this).size
-        val (wrapper, layout) = dialogWrapper()
-        dialogIntro(layout, "O monitoramento da bateria funciona sem esta permissão. As notificações só são enviadas para apps autorizados e não financeiros.")
-        layout.addView(dialogCardRow("Acesso às notificações", state, "›") {
-            AlertDialog.Builder(this).setTitle("Acesso a notificações (opcional)")
-                .setMessage("O Android concede acesso geral às notificações, que podem conter informações sensíveis. Apenas aplicativos escolhidos são transmitidos, com filtros não infalíveis. Você pode revogar o acesso nas Configurações Android. O monitoramento da bateria não exige essa permissão.")
-                .setNegativeButton("Cancelar", null)
-                .setPositiveButton("Configurar no Android") { _, _ ->
-                    startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
-                }.show()
-        })
-        sectionGap(layout, 8)
-        layout.addView(dialogCardRow("Aplicativos autorizados", "$count selecionado(s)", "›") { selectNotificationApps() })
-        AlertDialog.Builder(this)
-            .setTitle("Permissões e notificações")
-            .setView(wrapper)
-            .setNegativeButton("Fechar", null)
-            .show()
-    }
-
-    private fun showSecuritySettings() {
-        val (wrapper, layout) = dialogWrapper()
-        dialogIntro(layout, "As credenciais são protegidas pelo Android Keystore. Compartilhe a chave somente entre seus próprios aparelhos.")
-        layout.addView(dialogCardRow("Mostrar/copiar chave de pareamento", "Usar conexão manual com IP e chave", "›") { showMonitorKey() })
-        sectionGap(layout, 8)
-        layout.addView(dialogCardRow("Trocar chave e revogar acessos", "Todos os controladores precisarão parear novamente", "›") { confirmRotateMonitorKey() })
-        AlertDialog.Builder(this)
-            .setTitle("Segurança e pareamento")
-            .setView(wrapper)
-            .setNegativeButton("Fechar", null)
-            .show()
-    }
-
-    private fun showMonitorKey() {
-        // Mesma janela protegida e chave oculta inicialmente usada no modo Monitorado.
-        showMyConnectionInfo()
-    }
-
-    private fun confirmRotateMonitorKey() {
-        AlertDialog.Builder(this).setTitle("Revogar acessos?")
-            .setMessage("Todos os controladores precisarão parear novamente. A chave anterior deixará de funcionar.")
-            .setNegativeButton("Cancelar", null)
-            .setPositiveButton("Trocar chave") { _, _ ->
-                SecretVault.save(this, SecretVault.MONITOR_KEY, CryptoBox.newPairingKey())
-                PairingSession.revoke()
-                AuthenticatedAccess.clear()
-                message("Chave substituída. Os acessos anteriores foram revogados.")
-            }.show()
-    }
-
-    private fun showServiceSettings() {
-        val autostart = SettingsStore.autoStartEnabled(this)
-        val (wrapper, layout) = dialogWrapper()
-        dialogIntro(layout, "Controle o comportamento do serviço monitorado neste aparelho.")
-        layout.addView(dialogCardRow("Retomar serviço", "Recupera o monitoramento se estiver autorizado", "›") {
-            if (SettingsStore.isMonitorEnabled(this)) startServiceExplicitly()
-            else message("Ative o monitoramento antes de iniciar o serviço.")
-        })
-        sectionGap(layout, 8)
-        layout.addView(dialogCardRow(if (autostart) "Desativar início após reiniciar" else "Ativar início após reiniciar", "Depende das restrições do Android e do fabricante", "›") {
-            SettingsStore.setAutoStart(this, !autostart)
-            message("Preferência salva. A inicialização depende das restrições do Android e do fabricante.")
-        })
-        AlertDialog.Builder(this)
-            .setTitle("Serviço e inicialização")
-            .setView(wrapper)
-            .setNegativeButton("Fechar", null)
-            .show()
-    }
-
-    private fun showDiagnostics() {
-        val running = MonitorService.isRunning
-        val (wrapper, layout) = dialogWrapper()
-        dialogIntro(layout, "Resumo técnico do serviço local e das permissões relacionadas.")
-        val card = panel(14)
-        card.addView(dialogMetricRow("Serviço", if (running) "Ativo" else "Parado"))
-        card.addView(dialogMetricRow("Monitoramento autorizado", if (SettingsStore.isMonitorEnabled(this)) "Sim" else "Não"))
-        card.addView(dialogMetricRow("Porta TCP", WireProtocol.PORT.toString()))
-        card.addView(dialogMetricRow("IP local", localIps().ifBlank { "Indisponível" }))
-        card.addView(dialogMetricRow("Notificações", if (hasListener()) "Autorizadas" else "Sem acesso"))
-        card.addView(dialogMetricRow("Apps permitidos", SettingsStore.notificationAllowlist(this).size.toString()))
-        layout.addView(card)
-        AlertDialog.Builder(this)
-            .setTitle("Diagnóstico")
-            .setView(wrapper)
-            .setNegativeButton("Fechar", null)
-            .show()
-    }
-
-    /** Home é sempre navegável mesmo quando o monitor está parado ou sem rede. */
-    private fun renderHome() {
-        val remoteAccess = AuthenticatedAccess.recent()
-        if (remoteAccess.isNotEmpty() && SettingsStore.isMonitorEnabled(this) && MonitorService.isRunning) {
-            val banner = panel(12)
-            banner.addView(label("● Acesso remoto em andamento", 14f, strong = true).apply {
-                setTextColor(highlight)
-            })
-            banner.addView(label("${remoteAccess.size} aparelho(s) consultaram este celular recentemente.", 11f, muted = true))
-            banner.addView(actionButton("Ver acessos") { mode = 0; render() },
-                LinearLayout.LayoutParams(-1, dp(40)))
-            content.addView(banner)
-            gap(9)
-        }
-        content.addView(label("O que você deseja fazer?", 20f, strong = true))
-        content.addView(label("Conecte um aparelho ou disponibilize os dados deste celular.", 12f, muted = true))
-        gap(12)
-        content.addView(button("＋  Conectar novo aparelho", emphasis = true) { showConnectionChooser() })
-        gap(12)
-
-        val recent = RecentDevices.list(this)
-        val listPanel = panel(14)
-        listPanel.addView(label("Aparelhos anteriores", 16f, strong = true))
-        listPanel.addView(label("Conecte rapidamente ou use a engrenagem para gerenciar cada aparelho.", 12f, muted = true))
-        sectionGap(listPanel, 8)
-        if (recent.isEmpty()) {
-            listPanel.addView(label("Nenhum aparelho salvo. Escolha Conectar novo aparelho para começar.", 12f, muted = true))
-        } else {
-            recent.forEachIndexed { index, item ->
-                if (index != 0) sectionGap(listPanel, 9)
-                val devicePanel = panel(11)
-                val actions = LinearLayout(this).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    gravity = Gravity.CENTER_VERTICAL
-                }
-                actions.addView(label(item.name, 14f, strong = true).apply {
-                    maxLines = 2
-                    ellipsize = android.text.TextUtils.TruncateAt.END
-                }, LinearLayout.LayoutParams(0, -2, 1f))
-                actions.addView(View(this), LinearLayout.LayoutParams(dp(6), 1))
-                actions.addView(actionButton("Conectar", emphasis = true) {
-                    connectSavedDevice(item)
-                }.apply {
-                    minWidth = 0
-                    textSize = 11.5f
-                    setPadding(dp(4), 0, dp(4), 0)
-                }, LinearLayout.LayoutParams(dp(84), dp(44)))
-                actions.addView(View(this), LinearLayout.LayoutParams(dp(6), 1))
-                actions.addView(actionButton("⚙") {
-                    showHomeSavedDeviceOptions(item)
-                }.apply {
-                    textSize = 18f
-                    contentDescription = "Gerenciar ${item.name}: renomear ou esquecer"
-                    minWidth = 0
-                    setPadding(0, 0, 0, 0)
-                }, LinearLayout.LayoutParams(dp(44), dp(44)))
-                devicePanel.addView(actions)
-                devicePanel.addView(label("IP: ${item.host}", 12f, muted = true))
-                val lastUsed = if (item.lastSuccessMs > 0L)
-                    SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date(item.lastSuccessMs))
-                    else "ainda sem conexão confirmada"
-                devicePanel.addView(label("Última conexão: $lastUsed", 11f, muted = true))
-                listPanel.addView(devicePanel)
-            }
-        }
-        content.addView(listPanel)
-        gap(14)
-
-        val monitorCard = panel(14)
-        monitorCard.addView(label("Monitorar este aparelho", 16f, strong = true))
-        monitorCard.addView(label("Permite que outro celular consulte os dados deste aparelho.", 12f, muted = true))
-        sectionGap(monitorCard, 9)
-        monitorCard.addView(actionButton("Abrir tela do aparelho ›") {
-            mode = 0
-            render()
-        }, LinearLayout.LayoutParams(-1, dp(48)))
-        content.addView(monitorCard)
-    }
-
-    /** O menu da engrenagem de cada aparelho contém apenas ações de gerenciamento. */
-    private fun showHomeSavedDeviceOptions(item: RecentDevices.Device) {
-        val (wrapper, layout) = dialogWrapper()
-        dialogIntro(layout, "${item.name} · ${item.host}")
-        var popup: AlertDialog? = null
-        layout.addView(dialogCardRow("Renomear", "Alterar o nome do aparelho salvo") {
-            popup?.dismiss()
-            renameSavedDevice(item, returnToChooser = false)
-        })
-        sectionGap(layout, 8)
-        layout.addView(dialogCardRow("Esquecer aparelho", "Excluir a chave e remover este aparelho da lista") {
-            popup?.dismiss()
-            forgetSavedDevice(item, returnToChooser = false)
-        })
-        popup = AlertDialog.Builder(this)
-            .setTitle("Gerenciar aparelho")
-            .setView(wrapper)
-            .setNegativeButton("Fechar", null)
-            .create()
-        popup.show()
-    }
-
-    /** Tela monitorada: ações agrupadas à direita do cartão, sem botões longos. */
-    private fun renderMonitor() {
-        content.addView(label("Modo monitorado · este celular", 18f, strong = true))
-        content.addView(label("Compartilhe dados somente com aparelhos autorizados.", 12f, muted = true))
-        gap(9)
-        val enabled = SettingsStore.isMonitorEnabled(this)
-        val running = MonitorService.isRunning
-        val card = panel(14)
-        val columns = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.TOP
-        }
-        val details = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        details.addView(label("Este aparelho", 17f, strong = true))
-        val state = when {
-            !enabled -> "● Monitoramento inativo"
-            running -> "● Monitoramento ativo"
-            else -> "● Serviço sem execução"
-        }
-        details.addView(label(state, 13.5f, strong = true).apply {
-            setTextColor(if (enabled && running) highlight else if (enabled) Color.rgb(190, 88, 61) else dim)
-        })
-        val preferred = preferredLocalAddress()
-        details.addView(label("IP: ${preferred ?: "rede indisponível"}", 12.5f).apply {
-            maxLines = 3
-            ellipsize = android.text.TextUtils.TruncateAt.END
-        })
-        details.addView(label("Acesso autorizado por chave de pareamento.", 11f, muted = true))
-        columns.addView(details, LinearLayout.LayoutParams(0, -2, 1f))
-        columns.addView(View(this), LinearLayout.LayoutParams(dp(10), 1))
-
-        val actions = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        fun addCompact(title: String, emphasize: Boolean = false, onClick: () -> Unit) {
-            if (actions.childCount > 0) sectionGap(actions, 7)
-            actions.addView(actionButton(title, emphasis = emphasize, onClick = onClick).apply {
-                minWidth = 0
-                textSize = 11.5f
-                setPadding(dp(4), 0, dp(4), 0)
-            }, LinearLayout.LayoutParams(-1, dp(46)))
-        }
-        if (enabled && running) {
-            addCompact("Gerar QR", true) { chooseQrAddress() }
-            addCompact("Mostrar info") { showMyConnectionInfo() }
-            addCompact("Interromper") {
-                SettingsStore.setMonitorEnabled(this, false)
-                stopService(Intent(this, MonitorService::class.java))
-                render()
-            }
-        } else {
-            addCompact(if (enabled) "Retomar" else "Ativar", true) {
-                if (enabled) startServiceExplicitly() else requestStart()
-            }
-            addCompact("Mostrar info") { showMyConnectionInfo() }
-        }
-        columns.addView(actions, LinearLayout.LayoutParams(dp(118), -2))
-        card.addView(columns)
-        content.addView(card)
-        gap(12)
-        if (enabled && running) renderIncomingAccess()
-        else content.addView(label("Aguardando ativação do monitoramento.", 12f, muted = true))
-        gap(10)
-        addText("Permissões e segurança: ⚙ Configurações.", 11f, muted = true)
-    }
-
-    /** Event-driven on authenticated requests, plus timeout refresh for disconnected clients. */
-    private fun renderIncomingAccess() {
-        val peers = AuthenticatedAccess.recent()
-        val card = panel(12)
-        if (peers.isEmpty()) {
-            card.addView(label("● Aguardando aparelho", 14f, strong = true).apply { setTextColor(dim) })
-            card.addView(label("Nenhuma consulta autenticada nos últimos 45 segundos.", 11f, muted = true))
-        } else {
-            card.addView(label("● ${if (peers.size == 1) "Aparelho conectado recentemente" else "${peers.size} aparelhos com acesso recente"}", 14f, strong = true).apply {
-                setTextColor(highlight)
-            })
-            card.addView(label("Atividade detectada por consultas autenticadas, sem sessão permanente.", 10.5f, muted = true))
-            peers.forEach { peer ->
-                sectionGap(card, 6)
-                val line = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-                val data = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-                data.addView(label(peer.name.ifBlank { "Aparelho não identificado" }, 13f, strong = true).apply {
-                    maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
-                })
-                data.addView(label("${peer.address} · ${peer.method}", 11f, muted = true).apply {
-                    maxLines = 2; ellipsize = android.text.TextUtils.TruncateAt.END
-                })
-                line.addView(data, LinearLayout.LayoutParams(0, -2, 1f))
-                line.addView(actionButton("Ações") { showIncomingAccessActions(peer) }.apply {
-                    textSize = 11f; minWidth = 0
-                    setPadding(dp(3), 0, dp(3), 0)
-                }, LinearLayout.LayoutParams(dp(78), dp(40)))
-                card.addView(line)
-            }
-        }
-        content.addView(card)
-    }
-
-    private fun showIncomingAccessActions(peer: AuthenticatedAccess.Peer) {
-        val (wrapper, layout) = dialogWrapper()
-        dialogIntro(layout, "Identidade e método declarados pelo cliente autenticado; não constituem verificação independente.")
-        layout.addView(dialogMetricRow("Nome informado", peer.name.ifBlank { "Não informado" }))
-        layout.addView(dialogMetricRow("IP de origem", peer.address))
-        layout.addView(dialogMetricRow("Método informado", peer.method))
-        layout.addView(dialogMetricRow("Último acesso", formatDate(peer.lastSeenMs)))
-        layout.addView(dialogMetricRow("Primeiro acesso", formatDate(peer.sinceMs)))
-        sectionGap(layout, 8)
-        layout.addView(label("O acesso não é uma sessão TCP contínua. Interromper ou trocar a chave afeta todos os controladores.", 11f, muted = true))
-        val dialog = AlertDialog.Builder(this)
-            .setTitle("Acesso autenticado")
-            .setView(wrapper)
-            .setNeutralButton("Trocar chave") { _, _ -> confirmRotateMonitorKey() }
-            .setNegativeButton("Fechar", null)
-            .setPositiveButton("Parar serviço") { _, _ ->
-                AlertDialog.Builder(this)
-                    .setTitle("Interromper monitoramento?")
-                    .setMessage("Todos os controladores perderão acesso aos dados enquanto o serviço estiver parado.")
-                    .setNegativeButton("Cancelar", null)
-                    .setPositiveButton("Interromper") { _, _ ->
-                        SettingsStore.setMonitorEnabled(this, false)
-                        stopService(Intent(this, MonitorService::class.java))
-                        render()
-                    }.show()
-            }.create()
-        dialog.show()
     }
 
     private fun showSavedDeviceOptions(item: RecentDevices.Device) {
@@ -867,14 +318,14 @@ class MainActivity : Activity() {
     }
 
     /** Prefere a interface Wi-Fi no instante de abertura, evitando IP antigo em cache. */
-    private fun preferredLocalAddress(): String? {
+    internal fun preferredLocalAddress(): String? {
         val ips = availableLocalIps()
         return (ips.firstOrNull { it.first.startsWith("wlan", ignoreCase = true) }
             ?: ips.firstOrNull())?.second
     }
 
     /** IP + segredo só são lidos após solicitação explícita, e não ficam na tela principal. */
-    private fun showMyConnectionInfo() {
+    internal fun showMyConnectionInfo() {
         if (!SettingsStore.isMonitorEnabled(this) || !MonitorService.isRunning) {
             AlertDialog.Builder(this)
                 .setTitle("Monitoramento inativo")
@@ -960,7 +411,7 @@ class MainActivity : Activity() {
         dialog.show()
     }
 
-    private fun selectNotificationApps() {
+    internal fun selectNotificationApps() {
         val apps = packageManager.getInstalledApplications(0)
             .filter {
                 it.packageName != packageName &&
@@ -1110,7 +561,7 @@ class MainActivity : Activity() {
         else -> "🛡"
     }
 
-    private fun connectionKind(host: String): String = when {
+    internal fun connectionKind(host: String): String = when {
         host.isBlank() -> "Sem aparelho"
         localWifiPrefix()?.let { host.startsWith(it) } == true -> "IP da rede local"
         PairingCode.isPrivateIpv4(host) -> "IP privado / VPN"
@@ -1134,7 +585,7 @@ class MainActivity : Activity() {
 
     /** Etapa inicial compacta; somente a opção Manual abre os campos de IP e chave. */
     /** QR/manual as two horizontal choices. No redundant QR text-entry action. */
-    private fun showConnectionChooser() {
+    internal fun showConnectionChooser() {
         RecentDevices.migrateLegacy(this)
         val (wrapper, layout) = dialogWrapper()
         dialogIntro(layout, "Escolha como conectar.")
@@ -1188,7 +639,7 @@ class MainActivity : Activity() {
         chooser.show()
     }
 
-    private fun connectSavedDevice(item: RecentDevices.Device) {
+    internal fun connectSavedDevice(item: RecentDevices.Device) {
         if (RecentDevices.key(this, item.host) == null) {
             message("A chave desse aparelho não está disponível. Faça um novo pareamento.")
             showConnectionChooser()
@@ -1202,7 +653,7 @@ class MainActivity : Activity() {
         render(); refreshRemote(silent = false)
     }
 
-    private fun renameSavedDevice(item: RecentDevices.Device, returnToChooser: Boolean = true) {
+    internal fun renameSavedDevice(item: RecentDevices.Device, returnToChooser: Boolean = true) {
         val input = field("Nome do aparelho", item.name)
         AlertDialog.Builder(this).setTitle("Renomear aparelho").setView(input)
             .setNegativeButton("Cancelar") { _, _ -> if (returnToChooser) showConnectionChooser() }
@@ -1212,7 +663,7 @@ class MainActivity : Activity() {
             }.show()
     }
 
-    private fun forgetSavedDevice(item: RecentDevices.Device, returnToChooser: Boolean = true) {
+    internal fun forgetSavedDevice(item: RecentDevices.Device, returnToChooser: Boolean = true) {
         AlertDialog.Builder(this).setTitle("Esquecer aparelho?")
             .setMessage("Remover ${item.name} e apagar a chave de pareamento salva? Para conectar novamente será necessário parear.")
             .setNegativeButton("Cancelar") { _, _ -> if (returnToChooser) showConnectionChooser() }
@@ -1297,7 +748,7 @@ class MainActivity : Activity() {
             }.distinctBy { it.second }
     } catch (_: Exception) { emptyList() }
 
-    private fun chooseQrAddress() {
+    internal fun chooseQrAddress() {
         if (!MonitorService.isRunning) {
             message("Ative o monitoramento antes de gerar o QR Code.")
             return
@@ -1501,260 +952,14 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun displayResult(root: JSONObject, fromCache: Boolean = false) {
-        val panel = resultBox ?: return
-        panel.removeAllViews()
-        val battery = root.optJSONObject("battery") ?: return
-        val events = root.optJSONArray("events")
-        val host = SettingsStore.getRemoteHost(this)
-        val level = if (battery.isNull("levelPercent")) "—" else "${battery.optDouble("levelPercent").toInt()}%"
-        val charging = when {
-            battery.optBoolean("full") -> "Cheia"
-            battery.optBoolean("charging") -> "Carregando"
-            else -> "Descarregando"
-        }
-        fun current(name: String): String = if (battery.isNull(name)) "—" else
-            String.format(Locale.getDefault(), "%.0f mA", battery.optDouble(name))
-        val temp = if (battery.isNull("temperatureC")) "—" else String.format(Locale.getDefault(), "%.1f °C", battery.optDouble("temperatureC"))
-        val voltage = if (battery.isNull("voltageMv")) "—" else "${battery.optInt("voltageMv")} mV"
-        val eventCount = events?.length() ?: 0
-        val metricCards = listOf(
-            compactMetricCard("🔋", "Bateria", level, charging, accent = true),
-            compactMetricCard("🌡", "Temperatura", temp, "Térmica"),
-            compactMetricCard("⚡", "Corrente", current("currentMa"), "Agora"),
-            compactMetricCard("∿", "Média", current("averageMa"), "Consumo"),
-            compactMetricCard("🔌", "Tensão", voltage, "Bateria"),
-            compactMetricCard("🔔", "Eventos", eventCount.toString(), if (eventCount == 1) "1 evento" else "$eventCount eventos")
-        )
-        addMetricGrid(panel, metricCards)
-        sectionGap(panel, 10)
-
-        val remoteNetwork = root.optJSONObject("network")?.optString("type").orEmpty()
-        val quickStates = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        quickStates.addView(infoChip("🔋 $charging").apply {
-            maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
-        }, LinearLayout.LayoutParams(0, -2, 1f))
-        if (remoteNetwork.isNotBlank()) {
-            quickStates.addView(View(this), LinearLayout.LayoutParams(dp(8), 1))
-            quickStates.addView(infoChip("📶 Rede: $remoteNetwork").apply {
-                maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
-            }, LinearLayout.LayoutParams(0, -2, 1f))
-        }
-        panel.addView(quickStates)
-        sectionGap(panel, 10)
-
-        panel.addView(label("Funções remotas", 15f, strong = true).apply { setPadding(0, 0, 0, dp(2)) })
-        panel.addView(label("Toque para abrir dados atuais ou funções futuras.", 11f, muted = true).apply { setPadding(0, 0, 0, dp(4)) })
-        val tiles = listOf(
-            actionTile("🔔", "Notificações", if (eventCount == 0) "Sem alertas" else "$eventCount capturadas", emphasis = true) { showRemoteNotifications(root) },
-            actionTile("📋", "Copiar", "Resumo atual") { copyRemoteSnapshot(root) },
-            actionTile("ℹ", "Detalhes", "Bateria e rede") { showRemoteDetailsDialog(root) },
-            actionTile("💬", "Mensagens", "Em breve") { showFeatureSoon("Mensagens", "A visualização direta de mensagens ainda depende de um fluxo separado e de permissões específicas.") },
-            actionTile("🖥", "Ver tela", "Em breve") { showFeatureSoon("Ver tela", "A visualização da tela remota exigirá autorização explícita no aparelho monitorado.") },
-            actionTile("📍", "Localização", "Em breve") { showFeatureSoon("Localização", "A localização remota será exibida quando houver permissão e coleta dedicada desse dado.") }
-        )
-        addActionGrid(panel, tiles)
-
-        if (fromCache && connectionState != "connected") {
-            sectionGap(panel, 8)
-            panel.addView(label("Leitura anterior: aguarde confirmação de uma nova consulta antes de considerar estes dados atuais.", 11.5f, muted = true))
-        }
-
-    }
-
-    private fun compactMetricCard(icon: String, title: String, value: String, subtitle: String = "", accent: Boolean = false): LinearLayout =
-        panel(8).apply {
-            background = shape(if (accent) highlight else fieldColor, 15, !accent)
-            val caption = LinearLayout(this@MainActivity).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-            }
-            caption.addView(label(icon, 13f).apply { setPadding(0, 0, dp(4), 0) })
-            caption.addView(label(title, 10f, muted = !accent).apply {
-                setTextColor(if (accent) highlightText else dim)
-                maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
-                setPadding(0, 0, 0, 0)
-            })
-            addView(caption)
-            addView(label(value, 16f, strong = true).apply {
-                setTextColor(if (accent) highlightText else ink)
-                setPadding(0, dp(4), 0, 0)
-                maxLines = 1
-                ellipsize = android.text.TextUtils.TruncateAt.END
-            })
-        }
-
-    private fun addMetricGrid(parent: LinearLayout, cards: List<LinearLayout>) {
-        val rows = cards.chunked(3)
-        rows.forEachIndexed { rowIndex, rowCards ->
-            val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-            rowCards.forEachIndexed { index, card ->
-                row.addView(card, LinearLayout.LayoutParams(0, -2, 1f).apply {
-                    if (index < rowCards.lastIndex) rightMargin = dp(8)
-                })
-            }
-            while (row.childCount < 3) {
-                row.addView(View(this), LinearLayout.LayoutParams(0, 1, 1f).apply {
-                    if (row.childCount < 3) rightMargin = dp(8)
-                })
-            }
-            parent.addView(row)
-            if (rowIndex < rows.lastIndex) sectionGap(parent, 8)
-        }
-    }
-
-    private fun actionTile(icon: String, title: String, subtitle: String, emphasis: Boolean = false, onClick: () -> Unit): LinearLayout =
-        LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER_HORIZONTAL
-            background = shape(if (emphasis) highlight else fieldColor, 16, !emphasis)
-            setPadding(dp(7), dp(13), dp(7), dp(13))
-            minimumHeight = dp(98)
-            isClickable = true
-            isFocusable = true
-            contentDescription = "$title: $subtitle"
-            setOnClickListener { onClick() }
-            addView(label(icon, 22f).apply {
-                gravity = Gravity.CENTER
-                setPadding(0, 0, 0, dp(4))
-            })
-            addView(label(title, 12f, strong = true).apply {
-                gravity = Gravity.CENTER
-                setTextColor(if (emphasis) highlightText else ink)
-                setPadding(0, 0, 0, 0)
-                maxLines = 1
-                ellipsize = android.text.TextUtils.TruncateAt.END
-            })
-            addView(label(subtitle, 10f, muted = !emphasis).apply {
-                gravity = Gravity.CENTER
-                setTextColor(if (emphasis) Color.argb(216, 255, 255, 255) else dim)
-                setPadding(0, dp(3), 0, 0)
-                maxLines = 1
-                ellipsize = android.text.TextUtils.TruncateAt.END
-            })
-        }
-
-    private fun addActionGrid(parent: LinearLayout, tiles: List<LinearLayout>) {
-        val rows = tiles.chunked(3)
-        rows.forEachIndexed { rowIndex, rowTiles ->
-            val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-            rowTiles.forEachIndexed { index, tile ->
-                row.addView(tile, LinearLayout.LayoutParams(0, -2, 1f).apply {
-                    if (index < rowTiles.lastIndex) rightMargin = dp(8)
-                })
-            }
-            while (row.childCount < 3) {
-                row.addView(View(this), LinearLayout.LayoutParams(0, 1, 1f).apply {
-                    if (row.childCount < 3) rightMargin = dp(8)
-                })
-            }
-            parent.addView(row)
-            if (rowIndex < rows.lastIndex) sectionGap(parent, 8)
-        }
-    }
-
-    private fun showFeatureSoon(name: String, description: String) {
-        AlertDialog.Builder(this)
-            .setTitle(name)
-            .setMessage("$description\n\nEsse atalho já está previsto no painel, mas ainda será implementado em uma versão futura.")
-            .setPositiveButton("OK", null)
-            .show()
-    }
-
-    private fun showRemoteNotifications(root: JSONObject) {
-        val events = root.optJSONArray("events")
-        val (wrapper, layout) = dialogWrapper()
-        dialogIntro(layout, "Eventos autorizados recebidos do aparelho remoto.")
-        if (events == null || events.length() == 0) {
-            layout.addView(label("Nenhuma notificação autorizada capturada.", 12.5f, muted = true))
-        } else {
-            for (index in events.length() - 1 downTo 0) {
-                val event = events.optJSONObject(index) ?: continue
-                val item = panel(12)
-                item.addView(label("${event.optString("type").uppercase(Locale.getDefault())} · ${event.optString("app")}", 11f, muted = true))
-                item.addView(label(event.optString("title"), 14f, strong = true))
-                if (event.optString("preview").isNotBlank()) item.addView(label(event.optString("preview"), 12f))
-                item.addView(label(formatDate(event.optLong("whenMs")), 11f, muted = true))
-                layout.addView(item)
-                sectionGap(layout, 7)
-            }
-        }
-        AlertDialog.Builder(this)
-            .setTitle("Notificações")
-            .setView(wrapper)
-            .setPositiveButton("Fechar", null)
-            .show()
-    }
-
-    private fun copyRemoteSnapshot(root: JSONObject) {
-        val battery = root.optJSONObject("battery") ?: return
-        val host = SettingsStore.getRemoteHost(this)
-        val summary = buildString {
-            append(currentDeviceTitle?.text ?: "Monitor Remoto")
-            append("\nIP: ").append(host)
-            append("\nAcesso: ").append(connectionKind(host))
-            append("\nRede remota: ").append(root.optJSONObject("network")?.optString("type") ?: "Não informada")
-            append("\nMétodo: ").append(selectedConnectionMethod)
-            append("\nAtualizado: ").append(if (lastSuccessfulMs > 0L) formatDate(lastSuccessfulMs) else "agora")
-            append("\n\n").append(batterySummary(battery))
-        }
-        val clip = ClipData.newPlainText("Monitor Remoto: resumo do aparelho", summary)
-        if (Build.VERSION.SDK_INT >= 33) {
-            clip.description.extras = PersistableBundle().apply {
-                putBoolean(ClipDescription.EXTRA_IS_SENSITIVE, true)
-            }
-        }
-        (getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(clip)
-        message("Resumo atual copiado para a área de transferência.")
-    }
-
-    private fun showRemoteDetailsDialog(root: JSONObject) {
-        val battery = root.optJSONObject("battery") ?: return
-        val host = SettingsStore.getRemoteHost(this)
-        val (wrapper, layout) = dialogWrapper()
-        dialogIntro(layout, "Resumo técnico do aparelho remoto.")
-        val card = panel(14)
-        card.addView(dialogMetricRow("Aparelho", currentDeviceTitle?.text?.toString() ?: host))
-        card.addView(dialogMetricRow("Acesso", connectionKind(host)))
-        card.addView(dialogMetricRow("Rede do celular", root.optJSONObject("network")?.optString("type") ?: "Não informada"))
-        card.addView(dialogMetricRow("IP", host.ifBlank { "—" }))
-        card.addView(dialogMetricRow("Método", selectedConnectionMethod))
-        card.addView(dialogMetricRow("Atualização", if (lastSuccessfulMs > 0L) formatDate(lastSuccessfulMs) else "Sem leitura recente"))
-        card.addView(dialogMetricRow("Bateria", if (battery.isNull("levelPercent")) "—" else "${battery.optDouble("levelPercent").toInt()}%"))
-        card.addView(dialogMetricRow("Estado", if (battery.optBoolean("charging")) "Carregando" else "Descarregando"))
-        card.addView(dialogMetricRow("Temperatura", if (battery.isNull("temperatureC")) "—" else String.format(Locale.getDefault(), "%.1f °C", battery.optDouble("temperatureC"))))
-        card.addView(dialogMetricRow("Tensão", if (battery.isNull("voltageMv")) "—" else "${battery.optInt("voltageMv")} mV"))
-        card.addView(dialogMetricRow("Corrente atual", if (battery.isNull("currentMa")) "—" else String.format(Locale.getDefault(), "%.0f mA", battery.optDouble("currentMa"))))
-        card.addView(dialogMetricRow("Corrente média", if (battery.isNull("averageMa")) "—" else String.format(Locale.getDefault(), "%.0f mA", battery.optDouble("averageMa"))))
-        card.addView(dialogMetricRow("Eventos", "${root.optJSONArray("events")?.length() ?: 0}"))
-        layout.addView(card)
-        layout.addView(label("Correntes são leituras fornecidas pelo Android e podem variar conforme o aparelho.", 11f, muted = true))
-        AlertDialog.Builder(this)
-            .setTitle("Detalhes do aparelho")
-            .setView(wrapper)
-            .setPositiveButton("Fechar", null)
-            .show()
-    }
-
-    private fun batterySummary(battery: JSONObject): String {
-        fun number(name: String, suffix: String, digits: Int = 1): String = if (battery.isNull(name)) "indisponível" else
-            String.format(Locale.getDefault(), "% .${digits}f", battery.optDouble(name)).trim() + suffix
-        val charge = if (battery.optBoolean("charging")) "carregando" else "descarregando"
-        return "Bateria: ${number("levelPercent", "%", 0)} ($charge)\n" +
-            "Temperatura: ${number("temperatureC", " °C")}\n" +
-            "Tensão: ${if (battery.isNull("voltageMv")) "indisponível" else "${battery.optInt("voltageMv")} mV"}\n" +
-            "Corrente instantânea: ${number("currentMa", " mA", 0)}\n" +
-            "Corrente média: ${number("averageMa", " mA", 0)}"
-    }
-
-    private fun requestStart() {
+    internal fun requestStart() {
         if (Build.VERSION.SDK_INT >= 33 &&
             checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), notificationPermissionRequest)
         } else startServiceExplicitly()
     }
 
-    private fun startServiceExplicitly() {
+    internal fun startServiceExplicitly() {
         try {
             SecretVault.getOrCreateMonitorKey(this)
             SettingsStore.setMonitorEnabled(this, true)
@@ -1767,14 +972,14 @@ class MainActivity : Activity() {
     }
 
 
-    private fun hasListener(): Boolean = try {
+    internal fun hasListener(): Boolean = try {
         val setting = Settings.Secure.getString(contentResolver, "enabled_notification_listeners").orEmpty()
         setting.split(':').any {
             ComponentName.unflattenFromString(it) == ComponentName(this, NotificationCaptureService::class.java)
         }
     } catch (_: Exception) { false }
 
-    private fun localIps(): String = try {
+    internal fun localIps(): String = try {
         NetworkInterface.getNetworkInterfaces().toList()
             .filter { it.isUp && !it.isLoopback }
             .flatMap { iface -> iface.inetAddresses.toList().filterIsInstance<Inet4Address>()
@@ -1782,9 +987,9 @@ class MainActivity : Activity() {
             .joinToString(" · ")
     } catch (_: Exception) { "" }
 
-    private fun formatDate(timestamp: Long): String = SimpleDateFormat("dd/MM HH:mm:ss", Locale.getDefault()).format(Date(timestamp))
+    internal fun formatDate(timestamp: Long): String = SimpleDateFormat("dd/MM HH:mm:ss", Locale.getDefault()).format(Date(timestamp))
 
-    private fun message(message: String) {
+    internal fun message(message: String) {
         val (wrapper, layout) = dialogWrapper()
         layout.addView(label(message, 15f).apply { setPadding(0, dp(6), 0, dp(8)) })
         AlertDialog.Builder(this)

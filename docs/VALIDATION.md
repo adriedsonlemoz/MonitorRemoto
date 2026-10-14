@@ -252,3 +252,12 @@
 - [x] `versionName/versionCode/AppVersion`, `AppVersionTest` e referências de distribuição sincronizados.
 - [ ] Executar `:app:compileDebugKotlin`, `:app:testDebugUnitTest` e `:app:assembleDebug` no GitHub Actions.
 - [ ] Testar exibição da tela de acesso e status em dois Androids com alpha.21.
+
+## alpha.22: modularização da interface (13/10/2026)
+
+- [x] Extração de cinco módulos visuais, sem mudanças funcionais no protocolo ou nas permissões.
+- [x] Versionamento 22 sincronizado entre Gradle, AppVersion, JUnit e documentação.
+- [x] Preservação de único callback de permissões e dos fluxos Home, Monitorado, Controle e QR.
+- [x] Validação de sintaxe Kotlin por parser PSI e testes de distribuição de todos os módulos.
+- [ ] Build Android completo com Gradle e SDK; dependências não disponíveis localmente.
+- [ ] Testes físicos em ambos aparelhos, temas, escala de fonte, QR, credenciais e ciclo de vida.

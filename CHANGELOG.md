@@ -1,5 +1,14 @@
 # Histórico de versões
 
+## 0.1.0-alpha.22 (13/10/2026)
+
+- Primeira etapa de refatoração modular da interface, partindo da alpha.21 e preservando layout e recursos existentes.
+- Separados os renderizadores Home, Monitorado, Configurações e Painel remoto em quatro arquivos Kotlin dedicados; elementos visuais compartilhados em `UiComponents.kt`.
+- `MainActivity.kt` passou a concentrar navegação, permissão, conexão, QR e ciclo de vida, reduzindo significativamente o tamanho do arquivo principal.
+- Mantidos contrato `AppVersion.NAME`, versão exata em ambos os aparelhos, criptografia, chaves, serviço foreground, QR e atualização a cada 15 segundos.
+- Verificações de distribuição adaptadas à nova organização e adicionados testes estruturais para garantir que não haja duplicação de implementações e que a versão permaneça sincronizada.
+- Compilação Android completa e testes em celulares permanecem pendentes.
+
 ## 0.1.0-alpha.21 (13/10/2026)
 
 - Corrigido erro Kotlin do workflow **Gerar APK e Release 21**, `IncomingAccessActivity.kt:93`: resolução de `background` como `Drawable` no `ScrollView.apply`, incompatível com o parâmetro `Int` de `setBackgroundColor()`.
