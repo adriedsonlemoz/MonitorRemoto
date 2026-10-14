@@ -1,6 +1,6 @@
 # Monitor Remoto
 
-**v0.1.0-alpha.16 / versionCode 16** · Android 8.0+ · Kotlin 2.2.21 · AGP 8.13.2 · Gradle 8.13
+**v0.1.0-alpha.17 / versionCode 17** · Android 8.0+ · Kotlin 2.2.21 · AGP 8.13.2 · Gradle 8.13
 
 Dois modos no mesmo APK: **Monitorado** (servidor) e **Controle** (cliente).
 
@@ -20,11 +20,11 @@ Dois modos no mesmo APK: **Monitorado** (servidor) e **Controle** (cliente).
 
 ## Como utilizar
 
-1. Execute GitHub Actions > **Gerar APK e Release** > Run workflow. Para baixar **APK sem ZIP**, use Releases > `v0.1.0-alpha.16` > Assets > **`MonitorRemoto-v0.1.0-alpha.16.apk`**. Em Actions > Artifacts, um APK de contingência (quando presente) continua vindo em ZIP por comportamento padrão do GitHub. Instale o mesmo APK nos dois aparelhos.
-2. No telefone secundário: abra modo **Monitorado**; autorize a notificação de serviço; ative o monitoramento; autorize notificações em Configurações. Selecione explicitamente os aplicativos cujas notificações deseja compartilhar.
-3. Na tela Monitorado, toque em **Gerar QR Code**; escolha o IP local acessível (normalmente interface Wi-Fi). O QR expira em 2 minutos e é válido para um único pareamento.
-4. No telefone principal: na tela inicial Monitorado, toque em **Conectados recentemente > Conectar outro aparelho > QR Code**, aponte a câmera na janela compacta e confirme os dados do aparelho antes do pareamento. IP e chave de acesso são salvos automaticamente. A digitação manual de IP e chave continua disponível.
-5. Na internet: configure **Tailscale/WireGuard** em ambos, conecte-os à mesma rede privada VPN e, em **Conectar outro aparelho > Manualmente**, informe o IP/nome acessível na VPN. Não abra a porta no roteador à internet pública.
+1. Execute GitHub Actions > **Gerar APK e Release** > Run workflow. Para baixar **APK sem ZIP**, use Releases > `v0.1.0-alpha.17` > Assets > **`MonitorRemoto-v0.1.0-alpha.17.apk`**. Em Actions > Artifacts, um APK de contingência (quando presente) continua vindo em ZIP por comportamento padrão do GitHub. Instale o mesmo APK nos dois aparelhos.
+2. No telefone secundário: na nova **Home**, toque em **Monitorar este aparelho > Abrir modo monitorado**; autorize a notificação de serviço e ative o monitoramento. Em Configurações, conceda apenas as permissões necessárias e selecione os aplicativos cujas notificações deseja compartilhar.
+3. Na página Monitorado, toque em **Gerar QR** no lado direito do cartão. Escolha o IP privado acessível. O QR expira em 2 minutos e é válido para um único pareamento.
+4. No telefone principal: na **Home**, toque em **Conectar novo aparelho > QR Code**, aponte a câmera na janela compacta e confirme os dados do aparelho antes do pareamento. Para um aparelho salvo, use **Aparelhos anteriores > Conectar**. A digitação manual de IP e chave continua disponível.
+5. Na internet: configure **Tailscale/WireGuard** em ambos, conecte-os à mesma rede privada VPN e, em **Conectar novo aparelho > Manualmente**, informe o IP/nome acessível na VPN. Não abra a porta no roteador à internet pública.
 6. Com o secundário bloqueado, consulte os dados no principal. Depois de desligar/reiniciar, o serviço pode precisar ser reiniciado dependendo do Android, ROM, economia de bateria e permissões.
 
 **Nota:** a versão alpha usa QR e/ou IP/hostname manual, mas não faz descoberta automática NSD/mDNS de aparelhos. O segundo aparelho requer preparação inicial presencial. O app não acessa dados sem consentimento/permissões. A notificação de monitoramento permanece visível.
@@ -47,7 +47,7 @@ Requer Android SDK API 36, Java 17, Gradle 8.13. O repositório ainda não inclu
 gradle :app:testDebugUnitTest :app:assembleDebug
 ```
 
-APK local de teste: `app/build/outputs/apk/debug/app-debug.apk`. O workflow copia esse arquivo ou o Release assinado como **`MonitorRemoto-v0.1.0-alpha.16.apk`**. Baixe diretamente na aba GitHub **Releases**. **O APK não está incluído neste ZIP de código-fonte.** Veja `docs/PAIRING_QR.md` para segurança do QR.
+APK local de teste: `app/build/outputs/apk/debug/app-debug.apk`. O workflow copia esse arquivo ou o Release assinado como **`MonitorRemoto-v0.1.0-alpha.17.apk`**. Baixe diretamente na aba GitHub **Releases**. **O APK não está incluído neste ZIP de código-fonte.** Veja `docs/PAIRING_QR.md` para segurança do QR.
 
 Opcional: configure os quatro Secrets de assinatura para gerar APK Release assinado e AAB. Ver `docs/APK_DOWNLOAD.md`. Preservar a mesma keystore entre builds é essencial para atualizações sem reinstalação.
 
@@ -59,7 +59,7 @@ Opcional: configure os quatro Secrets de assinatura para gerar APK Release assin
 ## Interface Controle (alpha.11)
 
 - Visual claro por padrão, com opções em **⚙ Configurações > Aparência**: claro, escuro e seguir sistema; escolha guardada apenas neste aparelho.
-- **Histórico alpha.11:** a tela inicial abria no Painel Controle via menu ☰. **Na alpha.16**, a tela inicial passou a ser o modo Monitorado e a navegação usa Home (⌂), Configurações (⚙) e Conectados recentemente.
+- **Histórico:** a tela inicial já foi Controle (alpha.11) e Monitorado (alpha.16). **Na alpha.17**, a tela inicial é a **Home**, com Conectar novo aparelho, Aparelhos anteriores e Monitorar este aparelho; o ícone de casa sempre retorna à Home.
 - Cabeçalho com **⌂ Home** e **⚙ Configurações**; no cartão do aparelho, botão compacto **Conectar/Reconectar/Desconectar** junto ao nome e **↻ Atualizar** colorido à direita; chips de versão e estado do monitorado; atualização manual e polling automático a cada 15 s.
 - A etapa inicial **Conectar aparelho** oferece QR Code, Manualmente, Inserir código QR e aparelhos salvos com botões Conectar/Renomear/Esquecer. Somente Manualmente abre os blocos IP e chave com Colar/Limpar.
 - Até cinco aparelhos recentes com renomear/esquecer. Cada chave é protegida individualmente pelo Android Keystore, com migração da credencial antiga sem novo pareamento. O histórico registra somente nome/IP e último sucesso, **não** mensagens.
@@ -148,3 +148,11 @@ A tela Monitorado apresenta o estado real do serviço e IP local. Ativar, gerar 
 - Abaixo das ações, **Conectados recentemente** mostra atalhos compactos de até dois aparelhos, botão **Ver todos** (escolha QR/Manual/Salvos) e **Conectar outro aparelho**.
 - **Sobre o aplicativo** agora está dentro de **Configurações**. O diálogo de conexão existente da alpha.15 permanece disponível.
 - A compilação Gradle/Android e teste real de interface e compartilhamento permanecem pendentes de CI e aparelho.
+
+## Home e monitoramento separados (alpha.17)
+
+- **Home** é a primeira página e continua acessível sem Wi-Fi. Oferece **Conectar novo aparelho** (QR/manual), os **Aparelhos anteriores** e a opção **Monitorar este aparelho**.
+- Cada aparelho anterior mostra nome, IP e **Última conexão**. Essa data é derivada de `RecentDevices.lastSuccessMs`, atualizada **somente após uma consulta autenticada bem-sucedida**; se não houve sucesso, informa isso claramente. O botão **Conectar** é imediato; a **engrenagem** abre Renomear e Esquecer, com confirmação e revogação do segredo.
+- Na página Monitorado, os botões **Gerar QR**, **Mostrar info** e **Interromper** aparecem empilhados à direita do resumo deste aparelho. Não se trata de uma nova página inicial.
+- O ícone **Home** e a ação **Voltar** nas telas de monitoramento/controle retornam à escolha inicial sem encerrar serviços, apagar dados ou revogar credenciais.
+- As telas detalhadas de controle remoto e de aparelho monitorado serão refinadas em versão posterior; a alpha.17 só reorganiza a navegação e as ações locais.

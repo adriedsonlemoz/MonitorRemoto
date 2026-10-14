@@ -1,6 +1,14 @@
-# Monitor Remoto v0.1.0-alpha.16
+# Monitor Remoto v0.1.0-alpha.17
 
-## Novidades da alpha.16
+## Novidades da alpha.17
+
+- Home nova como primeira tela, com **Conectar novo aparelho**, **Aparelhos anteriores** e **Monitorar este aparelho**.
+- Em cada perfil anterior: último sucesso autenticado, IP, botão direto Conectar e engrenagem individual com Renomear/Esquecer.
+- Página Monitorado separada da Home, com ações **Gerar QR**, **Mostrar info** e **Interromper** compactas à direita do cartão. Ativar/Reiniciar aparece quando parado.
+- Home e Voltar não desligam o serviço nem apagam pareamentos. Configurações seguem acessíveis pela engrenagem no cabeçalho.
+- Preservados QR com confirmação, acesso manual, segredos no Keystore e atualização do Controle a cada 15 segundos.
+
+## Histórico: alpha.16
 
 - Nova tela inicial no modo Monitorado, com botão **⌂ Home** junto às Configurações.
 - Gerar QR Code, **Mostrar minhas informações** e Interromper monitoramento agrupados.

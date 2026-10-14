@@ -195,3 +195,13 @@
 - [x] Verificação local de invariantes `tools/check_distribution.py`: 8 grupos aprovados. Parser PSI Kotlin: 25 fontes, nenhum erro sintático. XML e workflow YAML válidos.
 - [ ] Compilar `:app:testDebugUnitTest :app:assembleDebug` em CI; **não inferir APK gerado a partir das verificações estáticas**.
 - [ ] Testar em aparelho: botão Home com serviço em execução, lista de recentes, cópia, share sheet, ocultação de segredo, aparelho sem Wi-Fi e rotação da tela.
+
+## alpha.17: Home independente e ações compactas (13/10/2026)
+
+- [x] Página inicial Home separada do Monitorado, inclusive offline; fluxo QR/manual preservado.
+- [x] Lista de pares na Home mostra último sucesso autenticado real (`RecentDevices.lastSuccessMs`), botão Conectar e engrenagem para Renomear/Esquecer.
+- [x] Diálogos Renomear/Esquecer iniciados na Home retornam à Home; outras entradas preservam comportamento anterior.
+- [x] Monitorado mantém informações do aparelho à esquerda e três ações compactas à direita quando ativo, ativação/reinício quando parado.
+- [x] Home/Voltar não chamam stopService nem apagam chaves.
+- [ ] Compilação Gradle/Android completa, instalação e navegação física, temas claro/escuro e fontes grandes.
+- [ ] Prova prática com dois celulares da conexão, captura QR, autenticidade do último horário e reentrada do app.

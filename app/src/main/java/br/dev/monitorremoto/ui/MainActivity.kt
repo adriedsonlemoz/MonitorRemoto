@@ -74,7 +74,7 @@ class MainActivity : Activity() {
     private val fieldColor get() = if (darkTheme()) Color.rgb(22, 34, 50) else Color.rgb(242, 246, 250)
     private lateinit var content: LinearLayout
     private val handler = Handler(Looper.getMainLooper())
-    private var mode = 0 // 0: monitorado, 1: controle
+    private var mode = 2 // 2: início, 0: monitorado, 1: controle
     private val cameraPermissionRequest = 4317
     private val qrScanRequest = 4318
     private val notificationPermissionRequest = 101
@@ -92,6 +92,7 @@ class MainActivity : Activity() {
     private var currentDeviceTitle: TextView? = null
     private var currentUpdated: TextView? = null
     private var currentConnectButton: Button? = null
+    private var systemBackCallback: android.window.OnBackInvokedCallback? = null
     private data class OptionItem(val title: String, val subtitle: String = "", val action: () -> Unit)
 
     private val poller = object : Runnable {
@@ -107,7 +108,7 @@ class MainActivity : Activity() {
         setTheme(if (darkTheme()) android.R.style.Theme_Material_NoActionBar else android.R.style.Theme_Material_Light_NoActionBar)
         super.onCreate(savedInstanceState)
         RecentDevices.migrateLegacy(this)
-        mode = savedInstanceState?.getInt("active_mode", 0) ?: 0
+        mode = savedInstanceState?.getInt("active_mode", 2)?.takeIf { it in 0..2 } ?: 2
         window.statusBarColor = bg
         window.navigationBarColor = bg
         window.decorView.systemUiVisibility = if (darkTheme()) 0 else
@@ -119,7 +120,24 @@ class MainActivity : Activity() {
         }
         scroll.addView(content)
         setContentView(scroll)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val callback = android.window.OnBackInvokedCallback {
+                if (mode == 2) finish() else navigateHome()
+            }
+            systemBackCallback = callback
+            onBackInvokedDispatcher.registerOnBackInvokedCallback(
+                android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT, callback
+            )
+        }
         render()
+    }
+
+    override fun onDestroy() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            systemBackCallback?.let { onBackInvokedDispatcher.unregisterOnBackInvokedCallback(it) }
+            systemBackCallback = null
+        }
+        super.onDestroy()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -283,14 +301,17 @@ class MainActivity : Activity() {
             maxLines = 1
             ellipsize = android.text.TextUtils.TruncateAt.END
         })
-        title.addView(label(if (mode == 1) "Painel de controle · privado e criptografado" else
-            "Modo monitorado · privado e criptografado", 10.5f, muted = true).apply {
+        title.addView(label(when (mode) {
+            1 -> "Painel de controle · privado e criptografado"
+            0 -> "Modo monitorado · privado e criptografado"
+            else -> "Início · conexão e aparelhos anteriores"
+        }, 10.5f, muted = true).apply {
             maxLines = 1
             ellipsize = android.text.TextUtils.TruncateAt.END
         })
         header.addView(title, LinearLayout.LayoutParams(0, -2, 1f))
         header.addView(actionButton("⌂") { navigateHome() }.apply {
-            contentDescription = "Início: voltar ao modo monitorado"
+            contentDescription = "Home: voltar à tela inicial"
             textSize = 22f
         }, LinearLayout.LayoutParams(dp(45), dp(43)))
         header.addView(View(this), LinearLayout.LayoutParams(dp(7), 1))
@@ -300,32 +321,41 @@ class MainActivity : Activity() {
         content.addView(header)
 
         val metaRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        metaRow.addView(infoChip("v0.1.0-alpha.16"))
+        metaRow.addView(infoChip("v0.1.0-alpha.17"))
         metaRow.addView(View(this), LinearLayout.LayoutParams(dp(8), 1))
         val monitorActive = SettingsStore.isMonitorEnabled(this) && MonitorService.isRunning
         metaRow.addView(infoChip(if (monitorActive) "Monitorado ativo" else "Monitorado inativo", accent = monitorActive))
         content.addView(metaRow)
 
         gap(16)
-        if (mode == 0) renderMonitor() else {
-            renderController()
-            content.post { if (active && mode == 1) refreshRemote(silent = true) }
+        when (mode) {
+            0 -> renderMonitor()
+            1 -> {
+                renderController()
+                content.post { if (active && mode == 1) refreshRemote(silent = true) }
+            }
+            else -> renderHome()
         }
         gap(20)
         addText("Somente em aparelhos próprios ou autorizados. Notificações permitidas são temporárias e filtradas.", 11f, muted = true)
     }
 
-    /** Home sempre retorna ao modo Monitorado, sem desligar o serviço ou revogar pareamentos. */
+    /** Home retorna à escolha inicial, preservando serviço e chaves de pareamento. */
     private fun navigateHome() {
-        if (mode != 0) { mode = 0; render() }
+        if (mode != 2) { mode = 2; render() }
+    }
+
+    @Deprecated("Android Activity back callback")
+    override fun onBackPressed() {
+        if (mode != 2) navigateHome() else super.onBackPressed()
     }
 
     private fun showAboutDialog() {
         val (wrapper, layout) = dialogWrapper()
         dialogIntro(layout, "Resumo rápido do foco atual do projeto.")
         val card = panel(14)
-        card.addView(dialogMetricRow("Versão", "0.1.0-alpha.16"))
-        card.addView(dialogMetricRow("Tela inicial", "Modo monitorado"))
+        card.addView(dialogMetricRow("Versão", "0.1.0-alpha.17"))
+        card.addView(dialogMetricRow("Tela inicial", "Home com escolha de aparelhos"))
         card.addView(dialogMetricRow("Modo monitorado", "No mesmo APK"))
         card.addView(dialogMetricRow("Segurança", "Pareamento local e Android Keystore"))
         layout.addView(card)
@@ -497,74 +527,151 @@ class MainActivity : Activity() {
             .show()
     }
 
+    /** Home é sempre navegável mesmo quando o monitor está parado ou sem rede. */
+    private fun renderHome() {
+        content.addView(label("O que você deseja fazer?", 20f, strong = true))
+        content.addView(label("Conecte um aparelho ou disponibilize os dados deste celular.", 12f, muted = true))
+        gap(12)
+        content.addView(button("＋  Conectar novo aparelho", emphasis = true) { showConnectionChooser() })
+        gap(12)
+
+        val recent = RecentDevices.list(this)
+        val listPanel = panel(14)
+        listPanel.addView(label("Aparelhos anteriores", 16f, strong = true))
+        listPanel.addView(label("Conecte rapidamente ou use a engrenagem para gerenciar cada aparelho.", 12f, muted = true))
+        sectionGap(listPanel, 8)
+        if (recent.isEmpty()) {
+            listPanel.addView(label("Nenhum aparelho salvo. Escolha Conectar novo aparelho para começar.", 12f, muted = true))
+        } else {
+            recent.forEachIndexed { index, item ->
+                if (index != 0) sectionGap(listPanel, 9)
+                val devicePanel = panel(11)
+                val actions = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                }
+                actions.addView(label(item.name, 14f, strong = true).apply {
+                    maxLines = 2
+                    ellipsize = android.text.TextUtils.TruncateAt.END
+                }, LinearLayout.LayoutParams(0, -2, 1f))
+                actions.addView(View(this), LinearLayout.LayoutParams(dp(6), 1))
+                actions.addView(actionButton("Conectar", emphasis = true) {
+                    connectSavedDevice(item)
+                }.apply {
+                    minWidth = 0
+                    textSize = 11.5f
+                    setPadding(dp(4), 0, dp(4), 0)
+                }, LinearLayout.LayoutParams(dp(84), dp(44)))
+                actions.addView(View(this), LinearLayout.LayoutParams(dp(6), 1))
+                actions.addView(actionButton("⚙") {
+                    showHomeSavedDeviceOptions(item)
+                }.apply {
+                    textSize = 18f
+                    contentDescription = "Gerenciar ${item.name}: renomear ou esquecer"
+                    minWidth = 0
+                    setPadding(0, 0, 0, 0)
+                }, LinearLayout.LayoutParams(dp(44), dp(44)))
+                devicePanel.addView(actions)
+                devicePanel.addView(label("IP: ${item.host}", 12f, muted = true))
+                val lastUsed = if (item.lastSuccessMs > 0L)
+                    SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date(item.lastSuccessMs))
+                    else "ainda sem conexão confirmada"
+                devicePanel.addView(label("Última conexão: $lastUsed", 11f, muted = true))
+                listPanel.addView(devicePanel)
+            }
+        }
+        content.addView(listPanel)
+        gap(14)
+
+        val monitorCard = panel(14)
+        monitorCard.addView(label("Monitorar este aparelho", 16f, strong = true))
+        monitorCard.addView(label("Disponibilizar informações deste celular para aparelhos autorizados.", 12f, muted = true))
+        sectionGap(monitorCard, 9)
+        monitorCard.addView(actionButton("Abrir modo monitorado ›") {
+            mode = 0
+            render()
+        }, LinearLayout.LayoutParams(-1, dp(48)))
+        content.addView(monitorCard)
+    }
+
+    /** O menu da engrenagem de cada aparelho contém apenas ações de gerenciamento. */
+    private fun showHomeSavedDeviceOptions(item: RecentDevices.Device) {
+        val (wrapper, layout) = dialogWrapper()
+        dialogIntro(layout, "${item.name} · ${item.host}")
+        var popup: AlertDialog? = null
+        layout.addView(dialogCardRow("Renomear", "Alterar o nome do aparelho salvo") {
+            popup?.dismiss()
+            renameSavedDevice(item, returnToChooser = false)
+        })
+        sectionGap(layout, 8)
+        layout.addView(dialogCardRow("Esquecer aparelho", "Excluir a chave e remover este aparelho da lista") {
+            popup?.dismiss()
+            forgetSavedDevice(item, returnToChooser = false)
+        })
+        popup = AlertDialog.Builder(this)
+            .setTitle("Gerenciar aparelho")
+            .setView(wrapper)
+            .setNegativeButton("Fechar", null)
+            .create()
+        popup.show()
+    }
+
+    /** Tela monitorada: ações agrupadas à direita do cartão, sem botões longos. */
     private fun renderMonitor() {
         val enabled = SettingsStore.isMonitorEnabled(this)
         val running = MonitorService.isRunning
-        val card = panel(18)
-        card.addView(label("Este aparelho", 17f, strong = true))
+        val card = panel(14)
+        val columns = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.TOP
+        }
+        val details = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        details.addView(label("Este aparelho", 17f, strong = true))
         val state = when {
             !enabled -> "● Monitoramento inativo"
             running -> "● Monitoramento ativo"
             else -> "● Serviço sem execução"
         }
-        card.addView(label(state, 15f, strong = true).apply {
+        details.addView(label(state, 13.5f, strong = true).apply {
             setTextColor(if (enabled && running) highlight else if (enabled) Color.rgb(190, 88, 61) else dim)
         })
         val preferred = preferredLocalAddress()
-        card.addView(label("IP: ${preferred ?: "rede local indisponível"}", 14f))
-        card.addView(label("Dados disponíveis somente para aparelhos autorizados.", 12f, muted = true))
-        content.addView(card)
-        gap(14)
+        details.addView(label("IP: ${preferred ?: "rede indisponível"}", 12.5f).apply {
+            maxLines = 3
+            ellipsize = android.text.TextUtils.TruncateAt.END
+        })
+        details.addView(label("Dados disponíveis somente para aparelhos autorizados.", 11.5f, muted = true))
+        columns.addView(details, LinearLayout.LayoutParams(0, -2, 1f))
+        columns.addView(View(this), LinearLayout.LayoutParams(dp(10), 1))
+
+        val actions = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        fun addCompact(title: String, emphasize: Boolean = false, onClick: () -> Unit) {
+            if (actions.childCount > 0) sectionGap(actions, 7)
+            actions.addView(actionButton(title, emphasis = emphasize, onClick = onClick).apply {
+                minWidth = 0
+                textSize = 11.5f
+                setPadding(dp(4), 0, dp(4), 0)
+            }, LinearLayout.LayoutParams(-1, dp(46)))
+        }
         if (enabled && running) {
-            content.addView(button("▣  Gerar QR Code", emphasis = true) { chooseQrAddress() })
-            content.addView(button("⚿  Mostrar minhas informações") { showMyConnectionInfo() })
-            content.addView(button("Interromper monitoramento") {
+            addCompact("Gerar QR", true) { chooseQrAddress() }
+            addCompact("Mostrar info") { showMyConnectionInfo() }
+            addCompact("Interromper") {
                 SettingsStore.setMonitorEnabled(this, false)
                 stopService(Intent(this, MonitorService::class.java))
                 render()
-            })
-        } else {
-            content.addView(button(if (enabled) "Reiniciar monitoramento" else "Ativar monitoramento", emphasis = true) {
-                if (enabled) startServiceExplicitly() else requestStart()
-            })
-            content.addView(button("⚿  Mostrar minhas informações") { showMyConnectionInfo() })
-        }
-        gap(8)
-        renderRecentDevicesHome()
-        gap(10)
-        addText("Permissões, chaves e detalhes técnicos: ⚙ Configurações.", 12f, muted = true)
-    }
-
-    /** Lista pequena no início; gerenciador detalhado permanece na escolha Conectar. */
-    private fun renderRecentDevicesHome() {
-        val recent = RecentDevices.list(this)
-        val card = panel(14)
-        val row = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-        }
-        row.addView(label("Conectados recentemente", 14f, strong = true).apply {
-            maxLines = 2
-        }, LinearLayout.LayoutParams(0, -2, 1f))
-        row.addView(actionButton("Ver todos ›") { showConnectionChooser() }.apply {
-            textSize = 12f
-        }, LinearLayout.LayoutParams(dp(98), dp(40)))
-        card.addView(row)
-        if (recent.isEmpty()) {
-            card.addView(label("Nenhum aparelho salvo ainda.", 12f, muted = true))
-        } else {
-            recent.take(2).forEach { device ->
-                sectionGap(card, 7)
-                card.addView(dialogCardRow(device.name, device.host, trailing = "›") {
-                    showSavedDeviceOptions(device)
-                })
             }
+        } else {
+            addCompact(if (enabled) "Reiniciar" else "Ativar", true) {
+                if (enabled) startServiceExplicitly() else requestStart()
+            }
+            addCompact("Mostrar info") { showMyConnectionInfo() }
         }
-        sectionGap(card, 8)
-        card.addView(actionButton("Conectar outro aparelho", emphasis = true) {
-            showConnectionChooser()
-        }, LinearLayout.LayoutParams(-1, dp(44)))
+        columns.addView(actions, LinearLayout.LayoutParams(dp(118), -2))
+        card.addView(columns)
         content.addView(card)
+        gap(14)
+        addText("Permissões, chaves e detalhes técnicos: ⚙ Configurações.", 12f, muted = true)
     }
 
     private fun showSavedDeviceOptions(item: RecentDevices.Device) {
@@ -880,20 +987,20 @@ class MainActivity : Activity() {
         render(); refreshRemote(silent = false)
     }
 
-    private fun renameSavedDevice(item: RecentDevices.Device) {
+    private fun renameSavedDevice(item: RecentDevices.Device, returnToChooser: Boolean = true) {
         val input = field("Nome do aparelho", item.name)
         AlertDialog.Builder(this).setTitle("Renomear aparelho").setView(input)
-            .setNegativeButton("Cancelar") { _, _ -> showConnectionChooser() }
+            .setNegativeButton("Cancelar") { _, _ -> if (returnToChooser) showConnectionChooser() }
             .setPositiveButton("Salvar") { _, _ ->
                 RecentDevices.rename(this, item.host, input.text.toString())
-                render(); showConnectionChooser()
+                render(); if (returnToChooser) showConnectionChooser()
             }.show()
     }
 
-    private fun forgetSavedDevice(item: RecentDevices.Device) {
+    private fun forgetSavedDevice(item: RecentDevices.Device, returnToChooser: Boolean = true) {
         AlertDialog.Builder(this).setTitle("Esquecer aparelho?")
             .setMessage("Remover ${item.name} e apagar a chave de pareamento salva? Para conectar novamente será necessário parear.")
-            .setNegativeButton("Cancelar") { _, _ -> showConnectionChooser() }
+            .setNegativeButton("Cancelar") { _, _ -> if (returnToChooser) showConnectionChooser() }
             .setPositiveButton("Esquecer") { _, _ ->
                 val wasSelected = SettingsStore.getRemoteHost(this).equals(item.host, ignoreCase = true)
                 RecentDevices.forget(this, item.host)
@@ -901,7 +1008,7 @@ class MainActivity : Activity() {
                     lastResult = null; lastResultHost = ""; lastSuccessfulMs = 0L
                     connectionState = "idle"; connectionMessage = null
                 }
-                render(); showConnectionChooser()
+                render(); if (returnToChooser) showConnectionChooser()
             }.show()
     }
 

@@ -12,7 +12,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.16" and code.group(1) == "16", "Versões incompatíveis"
+assert version == "0.1.0-alpha.17" and code.group(1) == "17", "Versões incompatíveis"
 assert version in ui, "Tela de versão desatualizada"
 assert f"versionCode={code.group(1)}" in (root / 'docs/ARCHITECTURE.md').read_text(), "Arquitetura com versionCode desatualizado"
 # alpha.9 remove a Activity antiga do ZXing Embedded; Camera2 + ZXing Core offline.
@@ -113,15 +113,29 @@ assert '@android:style/Theme.Material.Light.Dialog.NoActionBar' in manifest
 assert 'window.setLayout(' in scan and 'Aponte para o QR Code' in scan
 print('PASSOU: fluxo alpha.15, confirmação QR, botões de ação, scanner pop-up')
 
-# alpha.16: início Monitorado, navegação Home, manual seguro e recentes compactos.
-assert 'savedInstanceState?.getInt("active_mode", 0) ?: 0' in ui
-assert 'private fun navigateHome()' in ui and 'private fun renderRecentDevicesHome()' in ui
+# alpha.17: Home de escolha, modo Monitorado separado e manual seguro.
+assert 'savedInstanceState?.getInt("active_mode", 2)' in ui
+assert 'private fun navigateHome()' in ui and 'private fun renderHome()' in ui
 assert 'private fun showMyConnectionInfo()' in ui and 'private fun preferredLocalAddress()' in ui
 assert 'OptionItem("Sobre o aplicativo"' in ui and 'showMainMenu()' not in ui
 assert 'showMyConnectionInfo()' in ui and 'getOrCreateMonitorKey(this)' in ui
 assert 'WindowManager.LayoutParams.FLAG_SECURE' in ui
 assert 'ClipDescription.EXTRA_IS_SENSITIVE' in ui and 'Intent.ACTION_SEND' in ui
 assert 'setTitle("Compartilhar credencial?")' in ui and 'setNegativeButton("Cancelar", null)' in ui
-assert 'showConnectionChooser()' in ui and 'showSavedDeviceOptions(' in ui
-assert 'if (mode != 0) { mode = 0; render() }' in ui
-print('PASSOU: alpha.16, home, informações manuais protegidas e recentes na tela inicial')
+assert 'showConnectionChooser()' in ui and 'showHomeSavedDeviceOptions(' in ui
+assert 'if (mode != 2) { mode = 2; render() }' in ui
+print('PASSOU: alpha.17, Home independente, informações manuais protegidas e recentes')
+
+# alpha.17: não reapresentar Monitorado como Home; atalhos separados e ação de gerenciamento por aparelho.
+assert 'private var mode = 2 // 2: início, 0: monitorado, 1: controle' in ui
+assert 'else -> renderHome()' in ui and '0 -> renderMonitor()' in ui and '1 -> {' in ui
+assert '＋  Conectar novo aparelho' in ui and 'Aparelhos anteriores' in ui
+assert 'Última conexão: $lastUsed' in ui and 'item.lastSuccessMs > 0L' in ui
+assert 'showHomeSavedDeviceOptions(item)' in ui and 'returnToChooser = false' in ui
+assert 'Abrir modo monitorado' in ui and 'mode = 0' in ui
+assert 'val columns = LinearLayout(this)' in ui and 'LinearLayout.LayoutParams(dp(118), -2)' in ui
+assert 'addCompact("Gerar QR"' in ui and 'addCompact("Mostrar info")' in ui and 'addCompact("Interromper")' in ui
+assert 'showMyConnectionInfo()' in ui and 'FLAG_SECURE' in ui
+assert 'startServiceExplicitly()' in ui and 'stopService(Intent(this, MonitorService::class.java))' in ui
+assert 'private fun renderRecentDevicesHome()' not in ui
+print('PASSOU: Home com recentes, última conexão real, engrenagem e controles locais compactos')

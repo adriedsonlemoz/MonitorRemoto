@@ -1,5 +1,16 @@
 # Histórico de versões
 
+## 0.1.0-alpha.17 (13/10/2026)
+
+- **Home independente como tela inicial**, com o convite para conectar novo aparelho, mesmo quando o serviço monitorado ou a rede estão indisponíveis.
+- A seção **Aparelhos anteriores** lista os perfis já pareados, com nome, IP, data/hora da última consulta autenticada bem-sucedida ou indicação de que ainda não houve conexão confirmada.
+- Cada aparelho anterior recebeu **Conectar** e engrenagem individual com **Renomear** e **Esquecer**. Ações a partir da Home retornam à Home, sem reabrir o seletor de métodos.
+- **Monitorar este aparelho** abre uma página separada, acessível também quando não há aparelhos salvos. O botão **Home** (e Voltar) retorna à escolha inicial sem interromper o serviço.
+- Na página Monitorado, **Gerar QR**, **Mostrar info** e **Interromper** foram reunidos em coluna à direita do cartão de status. Quando o serviço está parado, a coluna oferece Ativar/Reiniciar e Mostrar info.
+- Preservados scanner QR com confirmação, conexão manual, Keystore, credenciais por aparelho, segurança da chave, serviço foreground e polling de 15 segundos no Controle.
+- Verificações de fonte e integridade locais executadas; compilação Android completa e testes de layout físico ainda pendentes.
+
+
 ## 0.1.0-alpha.16 (13/10/2026)
 
 - Início passa ao modo Monitorado, com botão Home no cabeçalho ao lado da engrenagem; o menu hambúrguer foi removido sem eliminar acesso ao Controle por conexão remota.

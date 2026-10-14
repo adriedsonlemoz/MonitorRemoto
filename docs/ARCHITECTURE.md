@@ -1,4 +1,4 @@
-# Arquitetura (0.1.0-alpha.16)
+# Arquitetura (0.1.0-alpha.17)
 
 ```text
 MONITORADO                                      CONTROLE
@@ -19,9 +19,9 @@ O FGS `connectedDevice` mantém o socket de escuta durante monitoramento ativo. 
 
 ## Distribuição e assinatura
 
-O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.16` e `versionCode=16`.
+O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.17` e `versionCode=17`.
 
-- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.16.apk`.
+- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.17.apk`.
 - `upload-artifact` sempre distribui um ZIP; GitHub Releases recebe o **arquivo APK direto**.
 - Com quatro Secrets, Gradle gera APK Release assinado e AAB. Sem Secrets, o arquivo é Debug de teste e não preserva necessariamente a assinatura entre execuções.
 - Releases são prévias, não substituem a futura revisão da Google Play e nem os ensaios reais.
@@ -61,3 +61,7 @@ Na alpha.14, os pop-ups internos passam a seguir um padrão visual comum com car
 Na alpha.15, a interface separa escolha de conexão e formulário manual. Aparelhos salvos têm ações diretas; scanner Camera2 opera como janela de Activity em tema Dialog, mantendo o protocolo e a confirmação antes do pareamento.
 
 Na alpha.16, a tela inicial volta a ser Monitorado, com retorno por Home. Controle só é aberto após conectar a outro celular pela seção de recentes ou escolha de conexão. Informações manuais são exibidas em diálogo protegido por `FLAG_SECURE`, com segredo oculto inicialmente, confirmação ao compartilhar e IP de rede lido a cada abertura. Nenhuma alteração no transporte criptografado.
+
+## Fluxo de navegação alpha.17
+
+`MainActivity.mode` tem três estados: `2` Home (padrão), `0` Monitorado e `1` Controle. Salvar/restaurar a escolha na recriação não altera o estado do serviço foreground. Home oferece escolha de conexão, até cinco pares locais e entrada para o modo Monitorado. O histórico de conexão vem exclusivamente de `RecentDevices.lastSuccessMs`, persistido após sucesso autenticado, sem inventar conexões e sem ler segredos para exibição. Engrenagem do perfil invoca renomeação/revogação no armazenamento existente; Voltar/Home troca apenas a interface. O Monitorado reúne no cartão status, IP privado atual e controles curtos empilhados à direita; chaves seguem protegidas no diálogo seguro já existente.
