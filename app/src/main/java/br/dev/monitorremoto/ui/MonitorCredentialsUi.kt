@@ -29,18 +29,14 @@ internal fun MainActivity.preferredLocalAddress(): String? {
 /** IP + segredo só são lidos após solicitação explícita, e não ficam na tela principal. */
 internal fun MainActivity.showMyConnectionInfo() {
     if (!SettingsStore.isMonitorEnabled(this) || !MonitorService.isRunning) {
-        AlertDialog.Builder(this)
-            .setTitle("Monitoramento inativo")
-            .setMessage("Ative o monitoramento para compartilhar os dados de conexão deste aparelho.")
-            .setPositiveButton("Entendi", null).show()
+        showAppNotice("Monitoramento inativo",
+            "Ative o monitoramento para compartilhar os dados de conexão deste aparelho.", R.drawable.ic_power)
         return
     }
     val ip = preferredLocalAddress()
     if (ip == null) {
-        AlertDialog.Builder(this)
-            .setTitle("Rede indisponível")
-            .setMessage("Nenhum IP privado disponível. Conecte o aparelho a uma rede Wi-Fi ou VPN compatível e tente novamente.")
-            .setPositiveButton("OK", null).show()
+        showAppNotice("Rede indisponível",
+            "Nenhum IP privado disponível. Conecte o aparelho a uma rede Wi-Fi ou VPN compatível e tente novamente.", R.drawable.ic_wifi)
         return
     }
     val key = try { CryptoBox.encode(SecretVault.getOrCreateMonitorKey(this)) }
@@ -94,18 +90,16 @@ internal fun MainActivity.showMyConnectionInfo() {
         message("IP e chave copiados. Limpe a área de transferência após o uso.")
     })
     addInfoAction(actionButton("Compartilhar") {
-        AlertDialog.Builder(this)
-            .setTitle("Compartilhar credencial?")
-            .setMessage("A mensagem inclui IP e chave. Envie somente a aparelho ou pessoa autorizada.")
-            .setNegativeButton("Cancelar", null)
-            .setPositiveButton("Escolher app") { _, _ ->
-                val intent = Intent(Intent.ACTION_SEND).apply {
-                    type = "text/plain"
-                    putExtra(Intent.EXTRA_TEXT, payload)
-                }
-                try { startActivity(Intent.createChooser(intent, "Compartilhar conexão")) }
-                catch (_: Exception) { message("Nenhum aplicativo disponível.") }
-            }.show()
+        showAppConfirm("Compartilhar credencial?",
+            "A mensagem inclui IP e chave de acesso. Envie somente a aparelho ou pessoa autorizada.",
+            R.drawable.ic_shield, "Escolher app") {
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_TEXT, payload)
+            }
+            try { startActivity(Intent.createChooser(intent, "Compartilhar conexão")) }
+            catch (_: Exception) { message("Nenhum aplicativo disponível.") }
+        }
     })
     layout.addView(actions)
     val dialog = AlertDialog.Builder(this)
@@ -114,5 +108,5 @@ internal fun MainActivity.showMyConnectionInfo() {
         .setNegativeButton("Fechar", null)
         .create()
     dialog.window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
-    dialog.show()
+    showManagedDialog(dialog)
 }

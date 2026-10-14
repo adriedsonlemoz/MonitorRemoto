@@ -36,6 +36,8 @@ import java.util.Locale
 
 /** Interface Android Views sem dependências adicionais; ambos os modos no mesmo APK. */
 class MainActivity : Activity() {
+    internal var activeUiDialog: AlertDialog? = null
+
     private fun darkTheme(): Boolean = when (SettingsStore.theme(this)) {
         "dark" -> true
         "system" -> (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
@@ -138,6 +140,8 @@ class MainActivity : Activity() {
     }
 
     override fun onDestroy() {
+        activeUiDialog?.dismiss()
+        activeUiDialog = null
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             systemBackCallback?.let { onBackInvokedDispatcher.unregisterOnBackInvokedCallback(it) }
             systemBackCallback = null
@@ -315,11 +319,6 @@ class MainActivity : Activity() {
     internal fun formatDate(timestamp: Long): String = SimpleDateFormat("dd/MM HH:mm:ss", Locale.getDefault()).format(Date(timestamp))
 
     internal fun message(message: String) {
-        val (wrapper, layout) = dialogWrapper()
-        layout.addView(label(message, 15f).apply { setPadding(0, dp(6), 0, dp(8)) })
-        AlertDialog.Builder(this)
-            .setView(wrapper)
-            .setPositiveButton("OK", null)
-            .show()
+        showAppNotice("Monitor Remoto", message)
     }
 }

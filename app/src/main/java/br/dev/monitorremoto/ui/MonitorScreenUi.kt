@@ -130,16 +130,17 @@ private fun MainActivity.showIncomingAccessActions(peer: AuthenticatedAccess.Pee
         .setNeutralButton("Trocar chave") { _, _ -> confirmRotateMonitorKey() }
         .setNegativeButton("Fechar", null)
         .setPositiveButton("Parar serviço") { _, _ ->
-            AlertDialog.Builder(this)
-                .setTitle("Interromper monitoramento?")
-                .setMessage("Todos os controladores perderão acesso aos dados enquanto o serviço estiver parado.")
-                .setNegativeButton("Cancelar", null)
-                .setPositiveButton("Interromper") { _, _ ->
-                    SettingsStore.setMonitorEnabled(this, false)
-                    stopService(Intent(this, MonitorService::class.java))
-                    render()
-                }.show()
+            showAppConfirm(
+                "Interromper monitoramento?",
+                "Todos os aparelhos pareados perderão acesso aos dados enquanto o serviço estiver parado.",
+                br.dev.monitorremoto.R.drawable.ic_power, "Interromper"
+            ) {
+                SettingsStore.setMonitorEnabled(this, false)
+                stopService(Intent(this, MonitorService::class.java))
+                render()
+            }
+        }.create().let { showManagedDialog(it) }
         }.create()
-    dialog.show()
+    showManagedDialog(dialog)
 }
 

@@ -45,13 +45,19 @@ internal fun MainActivity.chooseQrAddress() {
         return
     }
     if (addresses.size == 1) showPairingQr(addresses.first().second)
-    else AlertDialog.Builder(this)
-        .setTitle("Escolha a rede do outro celular")
-        .setItems(addresses.map { "${it.first}: ${it.second}" }.toTypedArray()) { _, index ->
-            showPairingQr(addresses[index].second)
+    else {
+        val (wrapper, layout) = dialogWrapper()
+        layout.addView(iconSectionHeader(R.drawable.ic_wifi, "Escolher rede", "Selecione o endereço que o outro celular consegue alcançar"))
+        sectionGap(layout, 10)
+        addresses.forEach { (iface, ip) ->
+            layout.addView(iconMenuRow(R.drawable.ic_wifi, ip, "Interface: $iface") {
+                activeUiDialog?.dismiss()
+                showPairingQr(ip)
+            })
+            sectionGap(layout, 7)
         }
-        .setNegativeButton("Cancelar", null)
-        .show()
+        showManagedDialog(AlertDialog.Builder(this).setView(wrapper).setNegativeButton("Cancelar", null))
+    }
 }
 
 internal fun MainActivity.showPairingQr(ip: String) {
@@ -95,7 +101,7 @@ internal fun MainActivity.showPairingQr(ip: String) {
             .setNegativeButton("Fechar", null)
             .create()
         dialog.setOnDismissListener { PairingSession.revoke(offer.session) }
-        dialog.show()
+        showManagedDialog(dialog)
         dialog.window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         val monitorQr = object : Runnable {
             override fun run() {
@@ -141,14 +147,16 @@ internal fun MainActivity.launchQrCapture() {
 internal fun MainActivity.confirmQrCode(text: String) {
     try {
         val code = PairingCode.decode(text)
-        AlertDialog.Builder(this)
-            .setTitle("Confirmar aparelho")
-            .setMessage("Aparelho: ${RecentDevices.list(this).firstOrNull { it.host == code.host }?.name ?: "Não identificado (novo)"}\nEndereço: ${code.host}:${WireProtocol.PORT}\n\nConfira se é o celular monitorado. O nome só poderá ser verificado após autenticação.")
-            .setNegativeButton("Cancelar", null)
-            .setPositiveButton("Confirmar") { _, _ -> pairByQr(code) }
-            .show()
+        showAppConfirm(
+            "Confirmar aparelho",
+            "Aparelho: ${RecentDevices.list(this).firstOrNull { it.host == code.host }?.name ?: "Não identificado (novo)"}\n" +
+                "IP: ${code.host}:${WireProtocol.PORT}\nConfira se é o celular esperado. O nome só pode ser conhecido depois da autenticação.",
+            R.drawable.ic_qr, "Confirmar"
+        ) { pairByQr(code) }
     } catch (e: Exception) {
-        message("QR inválido ou incompatível: ${e.message}")
+        if (e.message?.contains("Versões incompatíveis") == true) {
+            showAppNotice("QR incompatível", e.message ?: "Atualize os dois aparelhos.", R.drawable.ic_shield)
+        } else showAppNotice("QR não reconhecido", e.message ?: "Gere um novo QR e tente novamente.", R.drawable.ic_qr)
     }
 }
 
@@ -166,7 +174,10 @@ internal fun MainActivity.pairByQr(code: PairingCode.Offer) {
                 refreshRemote(silent = false)
             } catch (e: Exception) { message("Erro ao salvar pareamento: ${e.message}") }
         }.onFailure { e ->
-            message("Não foi possível parear: ${e.message}. Verifique o Wi-Fi, serviço ativo, tempo do QR e isolamento de clientes no roteador. Gere novo QR.")
+            val issue = ConnectionIssue.from(e)
+            showAppNotice(issue.title,
+                "${issue.explanation}\n\n" + issue.checks.joinToString("\n") { "• $it" },
+                R.drawable.ic_activity)
         }
     }
 }

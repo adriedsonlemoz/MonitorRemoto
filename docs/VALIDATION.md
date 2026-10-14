@@ -300,3 +300,11 @@
 - [x] Fluxos de permissão, pareamento, serviço e revogação não foram intencionalmente modificados.
 - [ ] Compilação Android/Gradle completa no GitHub Actions.
 - [ ] Teste manual das telas, tema claro/escuro e em aparelhos com diferentes tamanhos.
+
+## alpha.28 (14/10/2026)
+
+- [x] Revisão estática das rotas de avisos e ausência de sobreposição de diálogos da MainActivity.
+- [x] Verificação local da classificação de incompatibilidade, EOF, timeout e recusa de conexão em Kotlin/JVM.
+- [ ] Compilação Gradle Android completa no GitHub Actions.
+- [ ] Testar alpha.28 x alpha.28, alpha.28 x versão antiga, chave alterada e Wi-Fi indisponível em dois aparelhos.
+- [ ] Confirmar visual e rolagem de todos os diálogos em telas menores.

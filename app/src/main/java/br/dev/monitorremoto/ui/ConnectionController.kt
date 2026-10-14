@@ -26,11 +26,15 @@ internal fun MainActivity.refreshRemote(silent: Boolean) {
                 currentDeviceTitle?.text = RecentDevices.list(this).firstOrNull { it.host == host }
                     ?.name ?: name.ifBlank { host }
                 displayResult(fresh)
-            } else if (remoteConnection.cachedHost == host) {
-                remoteConnection.cached?.let { displayResult(it, fromCache = true) }
-            } else if (!silent && remoteConnection.state == "offline") {
-                resultBox?.removeAllViews()
-                resultBox?.addView(label(remoteConnection.message ?: "Não foi possível consultar o aparelho. Confira Wi-Fi/VPN, endereço e chave.", 13f, muted = true))
+            } else if (remoteConnection.state == "offline") {
+                val old = remoteConnection.cached?.takeIf { remoteConnection.cachedHost == host }
+                if (old != null) {
+                    displayResult(old, fromCache = true)
+                    resultBox?.addView(connectionIssueCard(host), 0)
+                } else {
+                    resultBox?.removeAllViews()
+                    resultBox?.addView(connectionIssueCard(host))
+                }
             }
         }
         updateConnectionLabels()

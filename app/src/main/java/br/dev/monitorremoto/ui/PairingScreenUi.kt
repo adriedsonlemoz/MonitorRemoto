@@ -32,7 +32,7 @@ internal fun MainActivity.showSavedDeviceOptions(item: RecentDevices.Device) {
     })
     popup = AlertDialog.Builder(this).setTitle("Aparelho salvo")
         .setView(wrapper).setNegativeButton("Fechar", null).create()
-    popup.show()
+    popup?.let { showManagedDialog(it) }
 }
 
 
@@ -101,7 +101,7 @@ internal fun MainActivity.showConnectionChooser() {
     }
     chooser = AlertDialog.Builder(this).setTitle("Conectar aparelho")
         .setView(wrapper).setNegativeButton("Fechar", null).create()
-    chooser.show()
+    chooser?.let { showManagedDialog(it) }
 }
 
 internal fun MainActivity.connectSavedDevice(item: RecentDevices.Device) {
@@ -117,27 +117,32 @@ internal fun MainActivity.connectSavedDevice(item: RecentDevices.Device) {
 }
 
 internal fun MainActivity.renameSavedDevice(item: RecentDevices.Device, returnToChooser: Boolean = true) {
+    val (wrapper, layout) = dialogWrapper()
+    layout.addView(iconSectionHeader(R.drawable.ic_phone, "Renomear aparelho", "Altera apenas o nome mostrado no controle"))
+    sectionGap(layout, 10)
     val input = field("Nome do aparelho", item.name)
-    AlertDialog.Builder(this).setTitle("Renomear aparelho").setView(input)
+    layout.addView(input)
+    showManagedDialog(AlertDialog.Builder(this).setView(wrapper)
         .setNegativeButton("Cancelar") { _, _ -> if (returnToChooser) showConnectionChooser() }
         .setPositiveButton("Salvar") { _, _ ->
             RecentDevices.rename(this, item.host, input.text.toString())
-            render(); if (returnToChooser) showConnectionChooser()
-        }.show()
+            render()
+            if (returnToChooser) showConnectionChooser()
+        })
 }
 
 internal fun MainActivity.forgetSavedDevice(item: RecentDevices.Device, returnToChooser: Boolean = true) {
-    AlertDialog.Builder(this).setTitle("Esquecer aparelho?")
-        .setMessage("Remover ${item.name} e apagar a chave de pareamento salva? Para conectar novamente será necessário parear.")
-        .setNegativeButton("Cancelar") { _, _ -> if (returnToChooser) showConnectionChooser() }
-        .setPositiveButton("Esquecer") { _, _ ->
-            val wasSelected = SettingsStore.getRemoteHost(this).equals(item.host, ignoreCase = true)
-            RecentDevices.forget(this, item.host)
-            if (wasSelected) {
-                remoteConnection.clear(resetMethod = false)
-            }
-            render(); if (returnToChooser) showConnectionChooser()
-        }.show()
+    showAppConfirm(
+        "Esquecer aparelho?",
+        "Apagar o aparelho ${item.name} e sua chave de pareamento? Será necessário pareá-lo novamente.",
+        R.drawable.ic_logout, "Esquecer"
+    ) {
+        val wasSelected = SettingsStore.getRemoteHost(this).equals(item.host, ignoreCase = true)
+        RecentDevices.forget(this, item.host)
+        if (wasSelected) remoteConnection.clear(resetMethod = false)
+        render()
+        if (returnToChooser) showConnectionChooser()
+    }
 }
 
 internal fun MainActivity.showManualConnectionDialog() {
@@ -168,12 +173,17 @@ internal fun MainActivity.showManualConnectionDialog() {
     keyActions.addView(actionButton("Colar", emphasis = true) {
         val clip = (getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).primaryClip
         val pasted = clip?.getItemAt(0)?.coerceToText(this)?.toString().orEmpty().trim()
-        if (pasted.isNotBlank()) key.setText(pasted) else message("Área de transferência vazia.")
+        if (pasted.isNotBlank()) key.setText(pasted) else key.error = "Área de transferência vazia."
     }, LinearLayout.LayoutParams(0, dp(46), 1f))
     keyActions.addView(View(this), LinearLayout.LayoutParams(dp(8), 1))
     keyActions.addView(actionButton("Limpar") { key.text.clear() }, LinearLayout.LayoutParams(0, dp(46), 1f))
     keyPanel.addView(keyActions)
     layout.addView(keyPanel)
+    val inputError = label("", 11.5f).apply {
+        setTextColor(Color.rgb(186, 67, 58))
+        visibility = View.GONE
+    }
+    layout.addView(inputError)
     val dialog = AlertDialog.Builder(this).setTitle("Conexão manual")
         .setView(wrapper).setNegativeButton("Voltar") { _, _ -> showConnectionChooser() }
         .setPositiveButton("Conectar", null).create()
@@ -192,8 +202,11 @@ internal fun MainActivity.showManualConnectionDialog() {
                 SettingsStore.setRemoteHost(this, address)
                 remoteConnection.select("Manual")
                 key.text.clear(); dialog.dismiss(); mode = 1; render(); refreshRemote(silent = false)
-            } catch (ex: Exception) { message("Não foi possível conectar: ${ex.message}") }
+            } catch (ex: Exception) {
+                inputError.text = ex.message ?: "Verifique IP e chave antes de conectar."
+                inputError.visibility = View.VISIBLE
+            }
         }
     }
-    dialog.show()
+    showManagedDialog(dialog)
 }

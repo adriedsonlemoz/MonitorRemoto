@@ -123,9 +123,7 @@ private fun MainActivity.addActionGrid(parent: LinearLayout, tiles: List<LinearL
 }
 
 private fun MainActivity.showFeatureSoon(name: String, description: String) {
-    AlertDialog.Builder(this).setTitle(name)
-        .setMessage("$description\n\nEste recurso ainda não está implementado.")
-        .setPositiveButton("Entendi", null).show()
+    showAppNotice(name, "$description\n\nEste recurso ainda não está implementado.", R.drawable.ic_info)
 }
 
 private fun MainActivity.showRemoteNotifications(root: JSONObject) {
@@ -147,7 +145,7 @@ private fun MainActivity.showRemoteNotifications(root: JSONObject) {
         }
     }
     AlertDialog.Builder(this).setTitle("Notificações")
-        .setView(wrapper).setPositiveButton("Fechar", null).show()
+        .setView(wrapper).setPositiveButton("Fechar", null).create().let { showManagedDialog(it) }
 }
 
 private fun MainActivity.showRemoteDetailsDialog(root: JSONObject) {

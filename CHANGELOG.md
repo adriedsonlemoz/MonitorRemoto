@@ -1,5 +1,16 @@
 # Histórico de versões
 
+## 0.1.0-alpha.28 (14/10/2026)
+
+- Falhas de conexão diferenciadas por causa provável (EOF, timeout, conexão recusada, endereço inválido, autenticação e versão), sem exibir exceções duplicadas no painel.
+- Mismatch de versão em consultas autenticadas passa a receber uma resposta AES-GCM explícita do monitorado, permitindo identificar a versão remota quando o servidor também usa o novo fluxo. Chaves inválidas continuam sem resposta.
+- Cartão de diagnóstico do controlador com versão local/remota quando conhecida, IP, horário, checagens, ações de tentar novamente/editar e cópia do diagnóstico sem chave.
+- `AppDialogUi.kt` centraliza janelas do aplicativo para evitar sobreposição, com cabeçalhos de ícones e conteúdo em cartões para informações e confirmações importantes.
+- Seleção de aplicativos para notificações agora mostra lista real com ícones, busca, checkboxes, contagem, tratamento de lista vazia e aviso de privacidade.
+- Validação manual de IP/chave permanece no próprio formulário sem apagar o texto ao informar erros.
+- Preservados QR seguro, Android Keystore, consentimento do número do chip e funcionalidades existentes; nenhuma permissão Android nova.
+- Compilação Android completa e testes físicos pendentes.
+
 ## 0.1.0-alpha.27 (14/10/2026)
 
 - Padronização visual do aplicativo segundo os cartões, bordas, ícones vetoriais e espaços da tela Detalhes do aparelho da alpha.26.

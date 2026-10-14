@@ -86,7 +86,15 @@ class MonitorServer(private val context: Context) {
                         while (seenNonces.size > 1024) seenNonces.remove(seenNonces.first())
                     }
                     // A chave válida não dispensa a exigência da mesma versão do app.
-                    if (!AppVersion.compatible(regular.optString("appVersion"))) return
+                    if (!AppVersion.compatible(regular.optString("appVersion"))) {
+                        // Apenas pedidos autenticados recebem a versão real do servidor.
+                        // Clientes sem chave válida continuam sem resposta para evitar sondagem.
+                        val mismatch = JSONObject().put("v", WireProtocol.VERSION)
+                            .put("op", "versionMismatch")
+                            .put("appVersion", AppVersion.NAME)
+                        WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(permanentKey, mismatch))
+                        return
+                    }
                     if (regular.optString("op") == "disconnect") {
                         val reply = JSONObject()
                             .put("v", WireProtocol.VERSION)

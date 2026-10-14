@@ -72,6 +72,7 @@ internal fun MainActivity.renderController() {
     updateConnectionLabels()
     val cached = remoteConnection.cached
     if (cached != null && remoteConnection.cachedHost == host) displayResult(cached, fromCache = true)
+    else if (remoteConnection.state == "offline") resultBox?.addView(connectionIssueCard(host))
     else resultBox?.addView(label("Toque em Conectar para escolher QR Code, conexão manual ou aparelho salvo.", 13f, muted = true))
     gap(12)
     addText("Atualização automática a cada 15 segundos enquanto esta tela estiver aberta.", 11f, muted = true)
@@ -99,14 +100,16 @@ internal fun MainActivity.updateConnectionLabels() {
         "Desconectar e voltar à Home" else "Conectar ou escolher aparelho"
     currentConnectButton?.text = when (actualState) {
         "connected", "loading" -> "Sair"
-        "offline" -> "Tentar"
+        "offline" -> "Opções"
         else -> "Conectar"
     }
     currentUpdated?.text = when {
         !hasKey -> "Selecione uma forma de conexão no botão Conectar"
+        actualState == "offline" -> "Última tentativa: ${formatDate(remoteConnection.lastAttemptMs)}" +
+            if (remoteConnection.cachedHost == host && remoteConnection.lastSuccessMs > 0L)
+                " · última leitura: ${formatDate(remoteConnection.lastSuccessMs)}" else ""
         remoteConnection.lastSuccessMs > 0 && remoteConnection.cachedHost == host ->
-            "Atualizado: ${formatDate(remoteConnection.lastSuccessMs)}" +
-                if (actualState == "offline") " · dados anteriores" else ""
+            "Atualizado: ${formatDate(remoteConnection.lastSuccessMs)}"
         else -> remoteConnection.message ?: "Aguardando resposta de $host"
     }
 }

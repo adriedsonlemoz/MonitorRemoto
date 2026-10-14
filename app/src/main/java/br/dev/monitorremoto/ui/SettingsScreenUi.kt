@@ -85,7 +85,7 @@ internal fun MainActivity.showSettingsDialog() {
     layout.addView(label("Monitor Remoto  ·  ${AppVersion.NAME}", 11f, muted = true))
     popup = AlertDialog.Builder(this).setTitle("Configurações")
         .setView(wrapper).setNegativeButton("Fechar", null).create()
-    popup.show()
+    popup?.let { showManagedDialog(it) }
 }
 
 private fun MainActivity.settingsIcon(drawable: Int, tint: Int, size: Int) = ImageView(this).apply {
@@ -118,7 +118,7 @@ private fun MainActivity.showAppearanceDialog() {
     }
     val dialog = AlertDialog.Builder(this).setTitle("Aparência").setView(wrapper).setNegativeButton("Fechar", null).create()
     popup = dialog
-    dialog.show()
+    showManagedDialog(dialog)
 }
 
 private fun MainActivity.showPermissionSettings() {
@@ -127,12 +127,11 @@ private fun MainActivity.showPermissionSettings() {
     val (wrapper, layout) = dialogWrapper()
     dialogIntro(layout, "O monitoramento da bateria funciona sem esta permissão. As notificações só são enviadas para apps autorizados e não financeiros.")
     layout.addView(iconMenuRow(R.drawable.ic_bell, "Acesso às notificações", state) {
-        AlertDialog.Builder(this).setTitle("Acesso a notificações (opcional)")
-            .setMessage("O Android concede acesso geral às notificações, que podem conter informações sensíveis. Apenas aplicativos escolhidos são transmitidos, com filtros não infalíveis. Você pode revogar o acesso nas Configurações Android. O monitoramento da bateria não exige essa permissão.")
-            .setNegativeButton("Cancelar", null)
-            .setPositiveButton("Configurar no Android") { _, _ ->
-                startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
-            }.show()
+        showAppConfirm(
+            "Acesso às notificações",
+            "O Android poderá mostrar notificações sensíveis. Somente aplicativos escolhidos serão transmitidos, com filtros que podem falhar. O acesso pode ser revogado nas Configurações do Android.",
+            R.drawable.ic_bell, "Configurar no Android"
+        ) { startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) }
     })
     sectionGap(layout, 8)
     layout.addView(iconMenuRow(R.drawable.ic_phone, "Aplicativos autorizados", "$count selecionado(s)") { selectNotificationApps() })
@@ -144,23 +143,23 @@ private fun MainActivity.showPermissionSettings() {
             SettingsStore.setSharePhoneNumber(this, false)
             message("Compartilhamento do número desativado. O Android pode manter a permissão concedida, mas o app não transmitirá o número.")
         } else {
-            AlertDialog.Builder(this)
-                .setTitle("Compartilhar número do chip?")
-                .setMessage("Opcional. O número da linha, quando disponível, será enviado somente a aparelhos pareados e autenticados. Não é necessário para bateria, redes ou armazenamento. Você poderá desativar em Permissões.")
-                .setNegativeButton("Cancelar", null)
-                .setPositiveButton("Autorizar") { _, _ ->
-                    if (checkSelfPermission(Manifest.permission.READ_PHONE_NUMBERS) == PackageManager.PERMISSION_GRANTED) {
-                        SettingsStore.setSharePhoneNumber(this, true)
-                        message("Compartilhamento ativado. Algumas operadoras não informam o número ao Android.")
-                    } else requestPermissions(arrayOf(Manifest.permission.READ_PHONE_NUMBERS), phoneNumberPermissionRequest)
-                }.show()
+            showAppConfirm(
+                "Compartilhar número do chip?",
+                "Opcional. Quando disponível, o número será enviado somente a aparelhos pareados e autenticados. Não é necessário para bateria, redes ou armazenamento. Você poderá desativar esta opção a qualquer momento.",
+                R.drawable.ic_sim, "Autorizar"
+            ) {
+                if (checkSelfPermission(Manifest.permission.READ_PHONE_NUMBERS) == PackageManager.PERMISSION_GRANTED) {
+                    SettingsStore.setSharePhoneNumber(this, true)
+                    message("Compartilhamento ativado. Algumas operadoras não informam o número ao Android.")
+                } else requestPermissions(arrayOf(Manifest.permission.READ_PHONE_NUMBERS), phoneNumberPermissionRequest)
+            }
         }
     })
     AlertDialog.Builder(this)
         .setTitle("Permissões e notificações")
         .setView(wrapper)
         .setNegativeButton("Fechar", null)
-        .show()
+        .create().let { showManagedDialog(it) }
 }
 
 private fun MainActivity.showSecuritySettings() {
@@ -173,7 +172,7 @@ private fun MainActivity.showSecuritySettings() {
         .setTitle("Segurança e pareamento")
         .setView(wrapper)
         .setNegativeButton("Fechar", null)
-        .show()
+        .create().let { showManagedDialog(it) }
 }
 
 private fun MainActivity.showMonitorKey() {
@@ -182,15 +181,16 @@ private fun MainActivity.showMonitorKey() {
 }
 
 internal fun MainActivity.confirmRotateMonitorKey() {
-    AlertDialog.Builder(this).setTitle("Revogar acessos?")
-        .setMessage("Todos os controladores precisarão parear novamente. A chave anterior deixará de funcionar.")
-        .setNegativeButton("Cancelar", null)
-        .setPositiveButton("Trocar chave") { _, _ ->
-            SecretVault.save(this, SecretVault.MONITOR_KEY, CryptoBox.newPairingKey())
-            PairingSession.revoke()
-            AuthenticatedAccess.clear()
-            message("Chave substituída. Os acessos anteriores foram revogados.")
-        }.show()
+    showAppConfirm(
+        "Revogar acessos?",
+        "Todos os controladores perderão a chave atual e precisarão parear novamente. Essa operação não pode ser desfeita.",
+        R.drawable.ic_shield, "Trocar chave"
+    ) {
+        SecretVault.save(this, SecretVault.MONITOR_KEY, CryptoBox.newPairingKey())
+        PairingSession.revoke()
+        AuthenticatedAccess.clear()
+        message("Chave substituída. Os acessos anteriores foram revogados.")
+    }
 }
 
 private fun MainActivity.showServiceSettings() {
@@ -210,7 +210,7 @@ private fun MainActivity.showServiceSettings() {
         .setTitle("Serviço e inicialização")
         .setView(wrapper)
         .setNegativeButton("Fechar", null)
-        .show()
+        .create().let { showManagedDialog(it) }
 }
 
 private fun MainActivity.showDiagnostics() {
@@ -241,7 +241,7 @@ private fun MainActivity.showDiagnostics() {
         .setTitle("Diagnóstico")
         .setView(wrapper)
         .setNegativeButton("Fechar", null)
-        .show()
+        .create().let { showManagedDialog(it) }
 }
 
 
@@ -262,7 +262,7 @@ internal fun MainActivity.showAboutDialog() {
         .setTitle("Sobre o Monitor Remoto")
         .setView(wrapper)
         .setPositiveButton("OK", null)
-        .show()
+        .create().let { showManagedDialog(it) }
 }
 
 /** Prefere a interface Wi-Fi no instante de abertura, evitando IP antigo em cache. */
@@ -277,19 +277,85 @@ internal fun MainActivity.selectNotificationApps() {
                 )
         }
         .sortedBy { packageManager.getApplicationLabel(it).toString().lowercase(Locale.getDefault()) }
-    val names = apps.map { "${packageManager.getApplicationLabel(it)} (${it.packageName})" }.toTypedArray()
     val selected = SettingsStore.notificationAllowlist(this).toMutableSet()
-    val checked = apps.map { it.packageName in selected }.toBooleanArray()
-    AlertDialog.Builder(this).setTitle("Autorizar apps não financeiros")
-        .setMessage("Somente os apps marcados podem ter notificações transmitidas. " +
-            "Aplicativos bancários conhecidos são ocultados. O filtro não cobre todos os bancos. " +
-            "SMS, quando disponível, pode aparecer pela notificação do aplicativo de mensagens, não pela caixa SMS.")
-        .setMultiChoiceItems(names, checked) { _, index, enabled ->
-            if (enabled) selected.add(apps[index].packageName) else selected.remove(apps[index].packageName)
+    val (wrapper, layout) = dialogWrapper()
+    layout.addView(iconSectionHeader(R.drawable.ic_bell, "Aplicativos autorizados", "Permita apenas o que deseja compartilhar"))
+    sectionGap(layout, 8)
+    dialogIntro(layout, "As notificações dos aplicativos selecionados poderão ser consultadas por aparelhos pareados. Os filtros de conteúdo sensível não são infalíveis.")
+    val search = field("Buscar aplicativo por nome").apply {
+        inputType = android.text.InputType.TYPE_CLASS_TEXT
+    }
+    layout.addView(search)
+    sectionGap(layout, 8)
+    val count = label("", 11.5f, muted = true)
+    layout.addView(count)
+    val appList = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+    val listScroll = android.widget.ScrollView(this).apply {
+        isFillViewport = false
+        addView(appList)
+    }
+    layout.addView(listScroll, LinearLayout.LayoutParams(-1, dp(300)))
+    sectionGap(layout, 8)
+    layout.addView(panel(11).apply {
+        background = shape(fieldColor, 15)
+        addView(label("Aplicativos bancários conhecidos são excluídos da lista. Não há acesso à caixa de SMS: apenas notificações dos aplicativos autorizados.", 11f, muted = true))
+    })
+
+    fun refreshList(filter: String) {
+        appList.removeAllViews()
+        val visible = apps.filter { packageManager.getApplicationLabel(it).toString()
+            .contains(filter.trim(), ignoreCase = true) }
+        count.text = "${selected.size} selecionado(s) · ${visible.size} aplicativo(s) exibido(s)"
+        if (visible.isEmpty()) {
+            appList.addView(label(if (apps.isEmpty()) "Nenhum aplicativo elegível foi encontrado neste aparelho."
+                else "Nenhum aplicativo corresponde à pesquisa.", 12.5f, muted = true))
+            return
         }
+        visible.forEach { app ->
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                background = shape(fieldColor, 15, true)
+                setPadding(dp(10), dp(8), dp(10), dp(8))
+            }
+            val symbol = ImageView(this).apply {
+                setImageDrawable(runCatching { packageManager.getApplicationIcon(app.packageName) }.getOrNull())
+                contentDescription = null
+            }
+            row.addView(symbol, LinearLayout.LayoutParams(dp(30), dp(30)))
+            row.addView(android.view.View(this), LinearLayout.LayoutParams(dp(10), 1))
+            val name = packageManager.getApplicationLabel(app).toString()
+            val title = label(name, 13f, strong = true).apply {
+                maxLines = 2; setPadding(0, 0, 0, 0)
+            }
+            row.addView(title, LinearLayout.LayoutParams(0, -2, 1f))
+            val check = android.widget.CheckBox(this).apply {
+                isChecked = app.packageName in selected
+                contentDescription = "Permitir notificações de $name"
+                setOnCheckedChangeListener { _, checked ->
+                    if (checked) selected.add(app.packageName) else selected.remove(app.packageName)
+                    count.text = "${selected.size} selecionado(s) · ${visible.size} aplicativo(s) exibido(s)"
+                }
+            }
+            row.addView(check)
+            row.setOnClickListener { check.isChecked = !check.isChecked }
+            appList.addView(row)
+            sectionGap(appList, 7)
+        }
+    }
+    search.addTextChangedListener(object : android.text.TextWatcher {
+        override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+        override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+            refreshList(s?.toString().orEmpty())
+        }
+        override fun afterTextChanged(s: android.text.Editable?) = Unit
+    })
+    refreshList("")
+    showManagedDialog(AlertDialog.Builder(this)
+        .setView(wrapper)
         .setNegativeButton("Cancelar", null)
         .setPositiveButton("Salvar") { _, _ ->
             SettingsStore.setNotificationAllowlist(this, selected)
             render()
-        }.show()
+        })
 }

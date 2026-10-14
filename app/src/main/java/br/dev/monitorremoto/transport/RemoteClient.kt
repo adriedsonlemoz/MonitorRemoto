@@ -29,6 +29,9 @@ object RemoteClient {
             WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(key, request))
             val answer = WireProtocol.receive(socket.getInputStream(), 128 * 1024)
             WireProtocol.decode(key, answer).also {
+                if (it.optString("op") == "versionMismatch") {
+                    throw IllegalStateException(AppVersion.incompatibility(it.optString("appVersion")))
+                }
                 check(it.getInt("v") == WireProtocol.VERSION) { "Protocolo incompatível." }
                 check(AppVersion.compatible(it.optString("appVersion"))) {
                     AppVersion.incompatibility(it.optString("appVersion"))

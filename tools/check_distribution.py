@@ -16,7 +16,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.27" and code.group(1) == "27", "Versões incompatíveis"
+assert version == "0.1.0-alpha.28" and code.group(1) == "28", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -113,7 +113,7 @@ print('PASSOU: UI alpha.15, migração única, Keystore por host, tema e sugest�
 # alpha.15: entrada simples, ações explícitas e câmera em janela flutuante.
 assert 'internal fun MainActivity.connectSavedDevice(' in ui and 'internal fun MainActivity.renameSavedDevice(' in ui
 assert 'internal fun MainActivity.forgetSavedDevice(' in ui and 'internal fun MainActivity.showConnectionChooser()' in ui
-assert 'showManualConnectionDialog()' in ui and 'setTitle("Confirmar aparelho")' in ui
+assert 'showManualConnectionDialog()' in ui and '"Confirmar aparelho"' in ui
 assert 'R.drawable.ic_refresh' in ui and 'contentDescription = "Atualizar dados do aparelho"' in ui
 assert '@android:style/Theme.Material.Light.Dialog.NoActionBar' in manifest
 assert 'window.setLayout(' in scan and 'Aponte para o QR Code' in scan
@@ -127,7 +127,7 @@ assert 'showAboutDialog()' in ui and 'showMainMenu()' not in ui
 assert 'showMyConnectionInfo()' in ui and 'getOrCreateMonitorKey(this)' in ui
 assert 'WindowManager.LayoutParams.FLAG_SECURE' in ui
 assert 'ClipDescription.EXTRA_IS_SENSITIVE' in ui and 'Intent.ACTION_SEND' in ui
-assert 'setTitle("Compartilhar credencial?")' in ui and 'setNegativeButton("Cancelar", null)' in ui
+assert 'showAppConfirm("Compartilhar credencial?"' in ui and 'setNegativeButton("Cancelar", null)' in ui
 assert 'showConnectionChooser()' in ui and 'showHomeSavedDeviceOptions(' in ui
 assert 'if (mode != 2) { mode = 2; render() }' in ui
 print('PASSOU: alpha.17, Home independente, informações manuais protegidas e recentes')
@@ -324,3 +324,22 @@ assert 'ic_qr' in qr_reader and 'window.addFlags(WindowManager.LayoutParams.FLAG
 assert 'ClipDescription.EXTRA_IS_SENSITIVE' in credentials_ui
 assert 'assertFalse(AppVersion.compatible("0.1.0-alpha.26"))' in app_version_test
 print('PASSOU: alpha.27, Home, Monitorado, Configurações, QR, credenciais, ícones e versões')
+
+# alpha.28: diagnóstico, contrato de incompatibilidade e controle central de diálogos.
+connection_issue = (ui_root / 'ConnectionIssue.kt').read_text(encoding='utf-8')
+connection_error = (ui_root / 'ConnectionErrorUi.kt').read_text(encoding='utf-8')
+app_dialog = (ui_root / 'AppDialogUi.kt').read_text(encoding='utf-8')
+assert '"versionMismatch"' in server and 'WireProtocol.encode(permanentKey, mismatch)' in server
+assert 'if (it.optString("op") == "versionMismatch")' in client
+assert 'ConnectionIssue.from(error)' in remote_manager
+assert 'EOFException' in connection_issue and 'SocketTimeoutException' in connection_issue
+assert 'remoteVersion' in connection_error and 'Copiar diagnóstico' in connection_error
+assert 'Tentar novamente' in connection_error and 'Editar conexão' in connection_error
+assert 'showManagedDialog' in app_dialog and 'activeUiDialog' in main_ui
+assert 'val inputError = label(' in pairing_ui and 'inputError.visibility = View.VISIBLE' in pairing_ui
+assert 'fun refreshList(filter: String)' in settings_ui and 'getApplicationIcon(' in settings_ui
+assert 'Nenhum aplicativo elegível' in settings_ui and 'CheckBox(this)' in settings_ui
+assert 'showAppConfirm(' in settings_ui and 'showAppConfirm(' in credentials_ui
+assert 'assertFalse(AppVersion.compatible("0.1.0-alpha.27"))' in app_version_test
+assert (root / 'app/src/test/java/br/dev/monitorremoto/ui/ConnectionIssueTest.kt').exists()
+print('PASSOU: alpha.28, incompatibilidade cifrada, erros classificados, diálogo único e seleção de apps')

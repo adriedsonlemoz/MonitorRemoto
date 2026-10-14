@@ -138,5 +138,5 @@ private fun MainActivity.showHomeSavedDeviceOptions(item: RecentDevices.Device) 
         .setView(wrapper)
         .setNegativeButton("Fechar", null)
         .create()
-    popup.show()
+    popup?.let { showManagedDialog(it) }
 }

@@ -23,11 +23,15 @@ internal class RemoteConnectionManager(context: Context) {
         private set
     var message: String? = null
         private set
+    var issue: ConnectionIssue? = null
+        private set
     var cached: JSONObject? = null
         private set
     var cachedHost = ""
         private set
     var lastSuccessMs = 0L
+        private set
+    var lastAttemptMs = 0L
         private set
 
     fun effectiveState(host: String): String =
@@ -39,6 +43,7 @@ internal class RemoteConnectionManager(context: Context) {
         this.method = method
         state = "loading"
         message = null
+        issue = null
     }
 
     /** A saved device was removed or has been forgotten. */
@@ -48,6 +53,7 @@ internal class RemoteConnectionManager(context: Context) {
         cachedHost = ""
         lastSuccessMs = 0L
         state = "idle"
+        issue = null
         message = if (resetMethod) "Seleção removida." else null
         if (resetMethod) method = "Chave salva"
     }
@@ -82,11 +88,13 @@ internal class RemoteConnectionManager(context: Context) {
             return
         }
         fetching = true
+        lastAttemptMs = System.currentTimeMillis()
         fetchingHost = host
         val token = ++generation
         val accessMethod = method
         state = "loading"
         message = null
+        issue = null
         onUpdate(false, null)
 
         thread(name = "MonitorRemoto-client") {
@@ -102,13 +110,14 @@ internal class RemoteConnectionManager(context: Context) {
                     cached = snapshot
                     cachedHost = host
                     state = "connected"
+                    issue = null
                     val deviceName = snapshot.optJSONObject("battery")?.optString("device").orEmpty()
                     RecentDevices.markSuccess(appContext, host, deviceName, lastSuccessMs)
                     onUpdate(true, snapshot)
                 }.onFailure { error ->
                     state = "offline"
-                    message = error.message?.takeIf { it.contains("Versões incompatíveis") }
-                        ?: "Sem resposta: ${error.javaClass.simpleName}"
+                    issue = ConnectionIssue.from(error)
+                    message = issue?.title
                     onUpdate(true, null)
                 }
             }

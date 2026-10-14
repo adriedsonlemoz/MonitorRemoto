@@ -132,9 +132,18 @@ class IncomingAccessActivity : Activity() {
     }
 
     private fun confirmStop() {
+        val confirmation = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(20), dp(20), dp(20), dp(10))
+            background = shape(surface, 20, true)
+            addView(icon(R.drawable.ic_shield, accent, 30))
+            addView(gap(12))
+            addView(text("Interromper todos os acessos?", 19f, bold = true))
+            addView(gap(8))
+            addView(text("O monitoramento será desligado para todos os controladores. Ele só voltará a compartilhar dados após uma nova ativação explícita.", 13.5f, subtle = true))
+        }
         AlertDialog.Builder(this)
-            .setTitle("Interromper todos os acessos?")
-            .setMessage("O serviço monitorado será desligado e nenhum aparelho poderá consultar novos dados até você ativá-lo novamente. Esta ação afeta todos os controladores.")
+            .setView(confirmation)
             .setNegativeButton("Cancelar", null)
             .setPositiveButton("Parar monitoramento") { _, _ ->
                 SettingsStore.setMonitorEnabled(this, false)
