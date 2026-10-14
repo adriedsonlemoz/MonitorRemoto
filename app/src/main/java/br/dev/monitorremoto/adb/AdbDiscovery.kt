@@ -15,8 +15,10 @@ class AdbDiscovery(context: Context, private val found: (Endpoint) -> Unit, priv
     private val queue = ArrayDeque<NsdServiceInfo>()
     private var resolving = false
     private var stopped = false
-    fun start() {
-        for (type in listOf("_adb-tls-pairing._tcp.", "_adb-tls-connect._tcp.")) {
+    fun start(connectOnly: Boolean = false) {
+        val types = if (connectOnly) listOf("_adb-tls-connect._tcp.")
+            else listOf("_adb-tls-pairing._tcp.", "_adb-tls-connect._tcp.")
+        for (type in types) {
             val listener = object : NsdManager.DiscoveryListener {
                 override fun onDiscoveryStarted(t: String) {}
                 override fun onDiscoveryStopped(t: String) {}

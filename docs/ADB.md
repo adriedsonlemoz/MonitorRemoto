@@ -1,4 +1,18 @@
-# Modo avançado ADB — implementação alpha.49
+# Modo avançado ADB — implementação alpha.52
+
+## Visualizador de tela com navegação por ADB (alpha.52)
+
+Após estabelecer uma sessão ADB TLS no **Modo avançado ADB**, a ação explícita **Ver tela remota • controle ADB** verifica se existe uma chave de pareamento **normal** do Monitor Remoto para o mesmo IP. Em caso negativo, apresenta as instruções para autorizar a captura de tela no aparelho monitorado, sem fingir que ADB já entrega o vídeo.
+
+Quando a chave normal existe, a Activity transfere a sessão ADB já conectada para `AdbScreenBridge`, ponte volátil no processo. `RemoteScreenActivity` mostra **Navegação: ADB conectado • Imagem: Monitor Remoto (MediaProjection)**. Somente Voltar, Início e Recentes passam pelo ADB. Isso exige uma resposta autenticada do canal normal para o mesmo IP; os toques na imagem, captura JPEG/H.264, áudio e ações de notificações continuam pelo Monitor Remoto e dependem das permissões existentes. Se o ADB perder a conexão, navegação pode usar novamente o canal normal quando a Acessibilidade estiver autorizada.
+
+Ao sair de Ver tela (`onPause`), a ponte e o socket ADB são encerrados. Não há streaming via ADB, reconexão ADB do visualizador ou permanência oculta no fundo. A reconexão automática da alpha.51 continua dentro da tela de configuração ADB enquanto visível; a sessão transferida não herda essa rotina na alpha.52. Revalidar fisicamente o status e o funcionamento dos comandos.
+
+## Reconexão segura da alpha.51
+
+Após sessão ADB confirmada, a tela realiza heartbeat a cada 30 segundos. Se a resposta falhar/expirar, ela encerra o socket e tenta reconectar ao mesmo aparelho usando o último IP/porta e o serviço TLS mDNS encontrado no mesmo IP. A espera entre tentativas cresce até 30 segundos. Há ação explícita para cancelar, e nenhuma tentativa persiste enquanto a tela ADB está fora do primeiro plano. Ao reabrir a mesma Activity, a retomada solicitada pode continuar.
+
+**Limite real:** quando o Android ou o usuário desativar Depuração sem fios, o servidor ADB deixa de escutar. Nenhuma permissão comum permite reativá-la; o usuário ou o sistema Android (somente se suportar rede confiável) precisa reativar. Se o IP mudar ou houver mDNS bloqueado, a UI exige reconexão manual para evitar associar dispositivos errados. Heartbeat envia somente um comando fixo e limitado. Os controles do resumo são navegação e volume, não espelhamento de tela. Não criar shell arbitrário, servidor oculto ou automação de permissões.
 
 ## Fluxo compacto da alpha.50
 

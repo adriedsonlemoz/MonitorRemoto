@@ -1,3 +1,18 @@
+## Alpha.52 — integração entre ADB e Ver tela (14/10/2026)
+
+- Escopo: transferência explícita de uma sessão ADB já ativa para o visualizador, somente se existir chave normal AES-GCM para o mesmo IP. Indicador separado de **Navegação ADB** e **Imagem via Monitor Remoto/MediaProjection**. Voltar/Início/Recentes usam ADB depois de uma resposta autenticada do canal de imagem; comandos restantes continuam no protocolo existente.
+- `python3 tools/check_distribution.py`: **aprovado**, incluindo regressões do handoff e fechamento ao sair.
+- Parser Kotlin PSI: **85 arquivos Kotlin de produção**, nenhum erro sintático. Parser não faz resolução completa dos símbolos Android.
+- Compilação Kotlin/JVM isolada de `AdbScreenBridge`, `AdbScreenRouting` e `AdbPolicy` com stubs Android: **aprovada**; **14 casos** de roteamento de comandos, IP diferente, canal autenticado, sessão e encerramento passaram. Isso não substitui os testes Android.
+- **Pendências:** compilação Android completa no GitHub Actions, testes reais em dois celulares, expiração/queda de ADB durante o visualizador, mudança de IP, retorno do background, autorização MediaProjection, testes de toque e latência. A alpha.52 **não fornece vídeo por ADB** nem reconexão ADB durante o visualizador.
+
+## Alpha.51 — retomada ADB e controles (14/10/2026)
+
+- Escopo: heartbeat de resposta ADB 30 s, timeout 8 s, tentativas progressivas 2/4/8/15/30 s enquanto a Activity ADB estiver visível, redescoberta mDNS somente `_adb-tls-connect` no último IP, ação Cancelar reconexão e controles fixos de navegação/volume.
+- Checagens locais: `python3 tools/check_distribution.py`, compilação/execução isolada da política de retry Kotlin/JVM, parser PSI em 104 fontes Kotlin, conferência XML/YAML e CRC do ZIP.
+- **Não executado:** compilação Android Gradle (`:app:testDebugUnitTest :app:assembleDebug`) e teste de queda/retorno de Wi-Fi, depuração desligada, alteração de porta, múltiplos aparelhos e reentrada na Activity. A compilação depende do CI com SDK Android.
+- Sem tentativa de reativar a Depuração sem fios quando o Android a desliga. A conexão depende do serviço ADB TLS estar novamente ativo; o espelhamento continua em MediaProjection separado.
+
 ## Alpha.47 — assistente de configuração ADB (14/10/2026)
 
 - GUI: início → papel (controlador/monitorado) → QR/código ou instruções Android → conexão ou orientação de confirmação. Exibição de IP/modelo apenas com `AdbClient.connected() == true`; o pareamento da sessão não equivale a conexão.

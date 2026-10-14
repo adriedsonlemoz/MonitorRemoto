@@ -31,6 +31,9 @@ import br.dev.monitorremoto.adb.AdbIdentity
 import br.dev.monitorremoto.adb.AdbKnownDevice
 import br.dev.monitorremoto.adb.AdbKnownDevices
 import br.dev.monitorremoto.adb.AdbPolicy
+import br.dev.monitorremoto.adb.AdbReconnectPolicy
+import br.dev.monitorremoto.adb.AdbScreenBridge
+import br.dev.monitorremoto.core.RecentDevices
 import br.dev.monitorremoto.core.SettingsStore
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.MultiFormatWriter
@@ -41,6 +44,7 @@ import java.util.concurrent.Executors
 class AdbActivity : Activity() {
     private val handler = Handler(Looper.getMainLooper())
     private val worker = Executors.newSingleThreadExecutor()
+    private val heartbeatWorker = Executors.newSingleThreadExecutor()
     private var client: AdbClient? = null
     private var discovery: AdbDiscovery? = null
     private var qr: AdbPolicy.QrSession? = null
@@ -51,12 +55,24 @@ class AdbActivity : Activity() {
     private var discoveryGeneration = 0
     private var busy = false
     private var visible = false
+    private var handingOffToViewer = false
     private var pairingHost: String? = null
     private var reportedPhone = ""
     private var advancedVisible = false
     private var discoveryHost: String? = null
     private var reconnectTarget: AdbKnownDevice? = null
     private var discoveryPending = false
+    // Retomar apenas o dispositivo selecionado/conectado pelo usuário, nunca qualquer anúncio mDNS.
+    private var desiredTarget: AdbKnownDevice? = null
+    private var retryTask: Runnable? = null
+    private var retryFailures = 0
+    private var recovering = false
+    private var heartbeatRunning = false
+    private var heartbeatToken = 0
+    private var lastHeartbeatMs = 0L
+    private lateinit var stopRetryButton: Button
+    private lateinit var openControlsButton: Button
+    private lateinit var openViewerButton: Button
     private val endpoints = linkedMapOf<String, AdbDiscovery.Endpoint>()
     private lateinit var root: LinearLayout
     private lateinit var chip: TextView
@@ -94,7 +110,8 @@ class AdbActivity : Activity() {
             setLineSpacing(dp(2).toFloat(), 1.02f)
             setPadding(0, dp(3), 0, dp(3))
         }
-    private fun button(label: String, primary: Boolean = false, outline: Boolean = false, act: () -> Unit) =
+    private fun button(label: String, primary: Boolean = false, outline: Boolean = false,
+        allowBusy: Boolean = false, act: () -> Unit) =
         Button(this).apply {
             text = label
             isAllCaps = false
@@ -102,7 +119,7 @@ class AdbActivity : Activity() {
             elevation = 0f
             background = shape(if (primary) Color.rgb(19, 21, 25) else if (outline) surface else soft, 17, outline)
             setTextColor(if (primary) Color.WHITE else fg)
-            setOnClickListener { if (!busy) act() }
+            setOnClickListener { if (!busy || allowBusy) act() }
         }
     private fun column() = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
     private fun card(container: LinearLayout, fill: Int = surface) = column().apply {
@@ -176,11 +193,20 @@ class AdbActivity : Activity() {
         detail = text("Adicione um aparelho ou reconecte um salvo.", 13f, secondary = true)
         summaryCard.addView(summary)
         summaryCard.addView(detail)
+        openViewerButton = button("Ver tela remota • controle ADB", primary = true) { openViewerWithAdb() }
+        openViewerButton.visibility = View.GONE
+        summaryCard.addView(openViewerButton)
+        openControlsButton = button("Comandos ADB") { showControls() }
+        openControlsButton.visibility = View.GONE
+        summaryCard.addView(openControlsButton)
 
         root.addView(text("Conectados anteriormente", 20f, bold = true))
         savedContainer = column()
         root.addView(savedContainer)
         root.addView(button("+ Adicionar outro celular", outline = true) { chooseRole() })
+        stopRetryButton = button("Cancelar reconexão automática", outline = true, allowBusy = true) { stopReconnect() }
+        stopRetryButton.visibility = View.GONE
+        root.addView(stopRetryButton)
         advancedToggle = button("Configurações avançadas  ▾") { toggleAdvanced() }
         root.addView(advancedToggle)
         advancedContainer = column().apply { visibility = View.GONE }
@@ -201,13 +227,20 @@ class AdbActivity : Activity() {
     private fun render() {
         if (!this::savedContainer.isInitialized) return
         val connected = client?.connected() == true
-        chip.text = if (connected) "Conectado" else "Desconectado"
+        val waiting = !connected && desiredTarget != null
+        chip.text = if (connected) "Conectado" else if (waiting) "Reconectando" else "Desconectado"
         chip.setTextColor(if (connected) success else muted)
         chip.background = shape(if (connected) {
             if (dark) Color.rgb(36, 75, 56) else Color.rgb(227, 247, 235)
         } else soft, 30)
-        summary.text = if (connected) reportedPhone.ifBlank { "Aparelho conectado" } else "Pronto para conectar"
-        detail.text = if (connected) "Conexão ADB ativa • ${client?.endpoint.orEmpty()}" else "Escolha um dispositivo salvo para reconectar."
+        summary.text = if (connected) reportedPhone.ifBlank { "Aparelho conectado" }
+            else if (waiting) desiredTarget?.name ?: "Aguardando aparelho" else "Pronto para conectar"
+        detail.text = if (connected) "Conexão ADB ativa • ${client?.endpoint.orEmpty()}"
+            else if (waiting) "Aguardando Depuração sem fios ou rede Wi-Fi. Reconexão automática nesta tela."
+            else "Escolha um dispositivo salvo para reconectar."
+        if (this::stopRetryButton.isInitialized) stopRetryButton.visibility = if (waiting) View.VISIBLE else View.GONE
+        if (this::openViewerButton.isInitialized) openViewerButton.visibility = if (connected) View.VISIBLE else View.GONE
+        if (this::openControlsButton.isInitialized) openControlsButton.visibility = if (connected) View.VISIBLE else View.GONE
         savedContainer.removeAllViews()
         val known = AdbKnownDevices.load(this)
         if (known.isEmpty()) {
@@ -370,7 +403,7 @@ class AdbActivity : Activity() {
         stopDiscovery()
         endpoints.clear()
         discoveryHost = host
-        discoveryPending = mode == "connect" || mode == "reconnect"
+        discoveryPending = mode == "connect" || mode == "reconnect" || mode == "recover"
         val sequence = discoveryGeneration
         discovery = AdbDiscovery(this, found@{ endpoint ->
             if (!visible || sequence != discoveryGeneration) return@found
@@ -383,7 +416,7 @@ class AdbActivity : Activity() {
                     afterPair(endpoint.host)
                 })
             }
-            if (discoveryPending && (mode == "connect" || mode == "reconnect") &&
+            if (discoveryPending && (mode == "connect" || mode == "reconnect" || mode == "recover") &&
                 endpoint.type.contains("_adb-tls-connect") && endpoint.host == host && !busy) {
                 // Aguarde outros anúncios do mesmo host antes de escolher uma porta.
                 handler.postDelayed({
@@ -392,21 +425,30 @@ class AdbActivity : Activity() {
                         if (possible.size == 1) {
                             discoveryPending = false
                             connectEndpoint(possible[0].host, possible[0].port,
-                                if (mode == "reconnect") reconnectTarget else null, true)
+                                if (mode == "reconnect" || mode == "recover") reconnectTarget else null,
+                                true, mode == "recover")
                         } else if (possible.size > 1) {
                             discoveryPending = false
-                            manualFallback("Mais de uma porta ADB encontrada no mesmo IP. Confira no aparelho.", host)
+                            if (mode == "recover") {
+                                recovering = false
+                                stopReconnect("Mais de uma porta ADB encontrada. Selecione manualmente o aparelho.")
+                            } else manualFallback("Mais de uma porta ADB encontrada no mesmo IP. Confira no aparelho.", host)
                         }
                     }
                 }, 900)
             }
-        }, { problem -> if (visible) setFeedback(problem) }).also { it.start() }
+        }, { problem -> if (visible) setFeedback(problem) }).also {
+            it.start(connectOnly = mode == "connect" || mode == "reconnect" || mode == "recover")
+        }
         handler.postDelayed({
             if (sequence == discoveryGeneration && visible && discoveryPending) {
                 discoveryPending = false
-                manualFallback("Não foi possível localizar automaticamente a porta ADB. Confira a Depuração sem fios no monitorado.", host)
+                if (mode == "recover") {
+                    recovering = false
+                    planRetry("Serviço de Depuração sem fios não encontrado na rede.")
+                } else manualFallback("Não foi possível localizar automaticamente a porta ADB. Confira a Depuração sem fios no monitorado.", host)
             }
-        }, 16000)
+        }, if (mode == "recover") 8000L else 16000L)
     }
     private fun stopDiscovery() {
         discoveryGeneration++
@@ -443,15 +485,19 @@ class AdbActivity : Activity() {
         modalStatus = info
     }
     private fun reconnect(device: AdbKnownDevice) {
+        desiredTarget = device
+        retryFailures = 0
+        cancelRetryTask()
         val body = modalBody()
         val info = text("Tentando conectar a ${device.name}…", 15f)
         body.addView(info)
         body.addView(button("Conectar manualmente") { manualConnect(device.host) })
         modal("Reconectar", body)
         modalStatus = info
-        connectEndpoint(device.host, device.port, device, false)
+        connectEndpoint(device.host, device.port, device, false, true)
     }
-    private fun connectEndpoint(host: String, port: Int, expected: AdbKnownDevice? = null, discovered: Boolean = false) {
+    private fun connectEndpoint(host: String, port: Int, expected: AdbKnownDevice? = null,
+        discovered: Boolean = false, autoRetry: Boolean = false) {
         if (busy) return
         runOperation("Conectando a $host:$port…", { adb ->
             adb.connect(host, port)
@@ -476,7 +522,17 @@ class AdbActivity : Activity() {
                     .show()
             } else finishConnected(displayModel, android, host, port, expected)
         }, { failure ->
-            if (expected != null && !discovered) {
+            if (expected != null && autoRetry) {
+                // Uma tentativa por porta salva, depois descoberta restrita ao mesmo IP.
+                if (!discovered) {
+                    setFeedback("Conexão interrompida. Buscando a porta ADB atual em ${expected.host}…")
+                    reconnectTarget = expected
+                    beginDiscovery("recover", expected.host)
+                } else {
+                    recovering = false
+                    planRetry("Depuração sem fios indisponível ou conexão recusada.")
+                }
+            } else if (expected != null && !discovered) {
                 setFeedback("A porta salva não respondeu. Procurando a porta atual em ${expected.host}…")
                 reconnectTarget = expected
                 beginDiscovery("reconnect", expected.host)
@@ -491,17 +547,67 @@ class AdbActivity : Activity() {
         if (expected != null && (expected.host != host || expected.port != port)) {
             AdbKnownDevices.forget(this, expected)
         }
-        AdbKnownDevices.remember(this, AdbKnownDevice(label, host, port, System.currentTimeMillis(), android, model))
+        val saved = AdbKnownDevice(label, host, port, System.currentTimeMillis(), android, model)
+        AdbKnownDevices.remember(this, saved)
+        desiredTarget = saved
+        recovering = false
+        retryFailures = 0
+        cancelRetryTask()
+        lastHeartbeatMs = SystemClock.elapsedRealtime()
         clearQr(); stopDiscovery(); closeDialog()
         render()
         setFeedback("Conectado a $model. A identificação foi informada pelo Android do aparelho.")
     }
+    /** Transfere ADB apenas se a imagem já tiver uma chave normal para o MESMO IP. */
+    private fun openViewerWithAdb() {
+        val activeClient = client
+        if (busy || heartbeatRunning || activeClient?.connected() != true) {
+            setFeedback("Conecte o ADB e conclua a verificação de resposta antes de abrir a tela.")
+            return
+        }
+        val adbHost = activeClient.endpoint?.substringBeforeLast(':').orEmpty()
+        if (adbHost.isBlank() || RecentDevices.key(applicationContext, adbHost) == null) {
+            AlertDialog.Builder(this)
+                .setTitle("Falta autorizar a imagem")
+                .setMessage("O ADB está conectado, mas a tela remota usa outro canal. No celular monitorado, " +
+                    "autorize o Monitor Remoto normal e a captura pelo Android (MediaProjection). " +
+                    "Depois, pareie este controlador normalmente com o mesmo celular. " +
+                    "O ADB não transmite a imagem nesta versão.")
+                .setPositiveButton("Entendi", null)
+                .show()
+            return
+        }
+        cancelRetryTask()
+        cancelHeartbeat()
+        stopDiscovery()
+        clearQr()
+        // A escolha do usuário permanece: ao voltar para esta Activity, a alpha.51
+        // poderá retomar a sessão autorizada sem atuar enquanto o visualizador está aberto.
+        AdbScreenBridge.handoff(adbHost, activeClient)
+        handingOffToViewer = true
+        client = null
+        try {
+            startActivity(Intent(this, RemoteScreenActivity::class.java).apply {
+                putExtra(RemoteScreenActivity.EXTRA_HOST, adbHost)
+                putExtra(RemoteScreenActivity.EXTRA_METHOD, "Chave salva")
+                putExtra(RemoteScreenActivity.EXTRA_ADB_HANDOFF, true)
+            })
+            setFeedback("ADB entregue ao visualizador. Imagem: Monitor Remoto/MediaProjection.")
+        } catch (e: Exception) {
+            handingOffToViewer = false
+            AdbScreenBridge.close(adbHost)
+            setFeedback("Não foi possível abrir Ver tela: ${e.javaClass.simpleName}")
+        }
+    }
+
     private fun showControls() {
         if (client?.connected() != true) { setFeedback("Conecte um aparelho antes de usar os comandos ADB."); return }
         val body = modalBody()
         body.addView(text("${reportedPhone.ifBlank { "Aparelho conectado" }} • ${client?.endpoint.orEmpty()}", 14f, secondary = true))
         listOf("Voltar" to AdbPolicy.Command.BACK, "Início" to AdbPolicy.Command.HOME,
-            "Recentes" to AdbPolicy.Command.RECENTS).forEach { (label, command) ->
+            "Recentes" to AdbPolicy.Command.RECENTS,
+            "Volume +" to AdbPolicy.Command.VOLUME_UP, "Volume −" to AdbPolicy.Command.VOLUME_DOWN
+        ).forEach { (label, command) ->
             body.addView(button(label) {
                 runOperation("Enviando $label…", { it.execute(command); "Comando enviado. Confira o resultado no aparelho." })
             })
@@ -596,20 +702,103 @@ class AdbActivity : Activity() {
         if (old != null) Thread { old.close() }.start()
     }
     private fun disconnect() {
+        stopReconnect(null)
         clearQr(); stopDiscovery(); cancelWork()
         reportedPhone = ""
         setFeedback("ADB desconectado. A autorização de pareamento pode continuar no outro celular.")
         render()
     }
+    private fun cancelRetryTask() {
+        retryTask?.let { handler.removeCallbacks(it) }
+        retryTask = null
+    }
+
+    private fun stopReconnect(message: String? = "Reconexão automática cancelada.") {
+        desiredTarget = null
+        retryFailures = 0
+        recovering = false
+        cancelRetryTask()
+        stopDiscovery()
+        cancelHeartbeat()
+        if (busy) cancelWork()
+        if (message != null) setFeedback(message)
+        render()
+    }
+
+    private fun planRetry(problem: String) {
+        val target = desiredTarget ?: return
+        if (!visible) return
+        recovering = false
+        stopDiscovery()
+        cancelRetryTask()
+        val delay = AdbReconnectPolicy.delayMs(retryFailures++)
+        setFeedback("$problem Tentando ${target.name} novamente em ${delay / 1000} s. " +
+            "Se a Depuração sem fios estiver desligada, reative-a no Android do monitorado.")
+        val task = Runnable {
+            retryTask = null
+            if (!AdbReconnectPolicy.shouldRetry(visible, desiredTarget == target,
+                    client?.connected() == true, busy)) return@Runnable
+            recovering = true
+            setFeedback("Reconectando a ${target.name}…")
+            connectEndpoint(target.host, target.port, target, false, true)
+        }
+        retryTask = task
+        handler.postDelayed(task, delay)
+        render()
+    }
+
+    private fun onConnectionLost(reason: String) {
+        cancelHeartbeat()
+        stopDiscovery()
+        cancelWork()
+        reportedPhone = ""
+        recovering = false
+        setFeedback(reason)
+        planRetry(reason)
+    }
+
+    private fun cancelHeartbeat() {
+        heartbeatToken++
+        heartbeatRunning = false
+    }
+
+    /** Verifica resposta do daemon remoto, não apenas o flag local do socket TLS. */
+    private fun startHeartbeat(active: AdbClient) {
+        heartbeatRunning = true
+        val token = ++heartbeatToken
+        val timeout = Runnable {
+            if (visible && token == heartbeatToken && client === active) {
+                onConnectionLost("O celular remoto parou de responder ao ADB.")
+            }
+        }
+        handler.postDelayed(timeout, AdbReconnectPolicy.HEARTBEAT_TIMEOUT_MS)
+        heartbeatWorker.execute {
+            val healthy = runCatching {
+                active.execute(AdbPolicy.Command.HEARTBEAT).contains("monitor_remoto_alive")
+            }.getOrDefault(false)
+            handler.post {
+                handler.removeCallbacks(timeout)
+                if (visible && token == heartbeatToken && client === active) {
+                    heartbeatRunning = false
+                    if (healthy) lastHeartbeatMs = SystemClock.elapsedRealtime()
+                    else onConnectionLost("O Android encerrou a sessão de Depuração sem fios.")
+                }
+            }
+        }
+    }
+
     private val watcher = object : Runnable {
         override fun run() {
             if (!visible) return
             val active = client
             if (active != null && !busy && !active.connected()) {
-                client = null
-                Thread { active.close() }.start()
-                reportedPhone = ""
-                setFeedback("A conexão ADB foi encerrada. Use Reconectar para tentar novamente.")
+                onConnectionLost("A sessão ADB caiu.")
+            } else if (active != null && active.connected() && !busy && !heartbeatRunning &&
+                SystemClock.elapsedRealtime() - lastHeartbeatMs >= AdbReconnectPolicy.HEARTBEAT_INTERVAL_MS) {
+                startHeartbeat(active)
+            }
+            if (desiredTarget != null && client == null && !recovering && retryTask == null && !busy) {
+                planRetry("Aguardando reconexão ADB.")
             }
             render()
             handler.postDelayed(this, 2000)
@@ -618,18 +807,24 @@ class AdbActivity : Activity() {
     override fun onStart() {
         super.onStart()
         visible = true
+        handingOffToViewer = false
         handler.removeCallbacks(watcher)
         handler.post(watcher)
     }
     override fun onStop() {
         visible = false
         handler.removeCallbacks(watcher)
-        clearQr(); stopDiscovery(); cancelWork()
+        clearQr(); stopDiscovery(); cancelRetryTask(); cancelHeartbeat()
+        if (!handingOffToViewer) cancelWork()
+        // O visualizador possui a sessão explicitamente transferida até sair do primeiro plano.
+        // Em qualquer outra saída, a sessão ADB continua sendo encerrada como antes.
+        recovering = false
         super.onStop()
     }
     override fun onDestroy() {
         handler.removeCallbacksAndMessages(null)
         worker.shutdownNow()
+        heartbeatWorker.shutdownNow()
         super.onDestroy()
     }
 }

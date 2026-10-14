@@ -1,4 +1,4 @@
-# Arquitetura (0.1.0-alpha.50)
+# Arquitetura (0.1.0-alpha.52)
 
 ```text
 MONITORADO                                      CONTROLE
@@ -29,9 +29,9 @@ A captura usa `ImageReader` RGBA, `Bitmap` JPEG com largura máxima 540 px, taxa
 
 ## Distribuição e assinatura
 
-O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.50` e `versionCode=50`.
+O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.52` e `versionCode=52`.
 
-- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.50.apk`.
+- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.52.apk`.
 - `upload-artifact` sempre distribui um ZIP; GitHub Releases recebe o **arquivo APK direto**.
 - Com quatro Secrets, Gradle gera APK Release assinado e AAB. Sem Secrets, o arquivo é Debug de teste e não preserva necessariamente a assinatura entre execuções.
 - Releases são prévias, não substituem a futura revisão da Google Play e nem os ensaios reais.
@@ -198,6 +198,10 @@ Projeção única consentida por sessão no monitorado usa `ImageReader` RGBA. Q
 
 A `RemoteScreenActivity` mantém o vídeo como camada de fundo do `FrameLayout` e desenha barras de ação com fundo translúcido na parte superior/inferior, visíveis somente no modo fullscreen. Os botões usam a mesma API remota e autorização local; não enviam comandos pela simples visualização. Os toques no `ImageView` seguem `RemoteGesturePolicy.fitCenterPoint/centerCropPoint`, respeitando recortes e barras que interceptam apenas toques diretamente sobre seus próprios botões. Exibir estado H.264/JPEG e tempo de rede somente quando recebidos do servidor.
 
+## Sessão e reconexão ADB alpha.51
+
+`AdbActivity` acompanha uma sessão ADB consentida com heartbeat de 30 s (`echo monitor_remoto_alive`) e limite de 8 s. Após queda detectada, `AdbReconnectPolicy` agenda 2/4/8/15/30 s, reaproveita IP/porta guardados e procura `_adb-tls-connect` apenas no mesmo IPv4 privado; não varre IPs, não aceita serviços de pareamento para reconectar e não tenta habilitar depuração. A recuperação roda somente com a tela ADB visível e permite cancelamento explícito; `onStop()` encerra o canal para não manter acesso oculto. O fluxo de vídeo do app continua separado.
+
 ## ADB alpha.42
 `adb-core` contém protocolo ADB/TLS/SPAKE2 de libadb; `adb/AdbClient` limita operações; `AdbIdentity` protege identidade persistente; `AdbDiscovery` resolve mDNS em série; `AdbPolicy` valida endpoints/QR e comandos; `AdbKnownDevices` guarda localmente o histórico mínimo de aparelhos já conectados; `ui/AdbActivity` controla sessão foreground, reconexão rápida, cartões de aparelhos salvos e invalidação de callbacks. O servidor TCP/AES-GCM existente não encaminha comandos ADB. Ver ADB.md.
 
@@ -208,3 +212,9 @@ O monitorado usa `ACTION_OPEN_DOCUMENT_TREE` para o usuário selecionar diretame
 ## UI ADB alpha.50 e descoberta automática
 
 `AdbActivity` é uma tela principal compacta com diálogo de seleção de papel, método QR/código e controles opcionais. Depois que `AdbClient.pair()` retorna com sucesso, `AdbDiscovery` procura `_adb-tls-connect` no mesmo endereço obtido do serviço de pareamento; `AdbAutoConnectPolicy` ignora outros IPs e serviços de pareamento. Em caso de ambiguidade/erro, exige fallback manual. Reconexão consulta `AdbKnownDevices` e confirma divergências de modelo. As credenciais não são gravadas no histórico, e o ADB é encerrado ao sair da Activity. A identificação não é atestado criptográfico do dispositivo.
+
+## Handoff ADB para o visualizador (alpha.52)
+
+A `AdbActivity` pode passar a instância **já conectada** do `AdbClient` para a ponte volátil `AdbScreenBridge` somente após ação explícita **Ver tela remota • controle ADB**, confirmação da mesma origem IPv4 e presença de uma chave do protocolo normal em `RecentDevices`. Ao entrar em `RemoteScreenActivity`, a imagem continua vinda de `RemoteClient.screenFrame`/`videoFrame` com AES-GCM e MediaProjection autorizada; **ADB não é transporte de imagem**. `AdbScreenRouting` mapeia somente `back`, `home` e `recents` para comandos ADB permitidos, e a Activity exige que uma consulta da imagem tenha retornado autenticada antes de enviar esses comandos à ponte.
+
+A sessão ADB é detida no processo, não em um serviço. Ao sair do visualizador, `onPause()` encerra a ponte/socket. Ao voltar para a tela ADB visível, a reconexão da alpha.51 pode retomar o dispositivo explicitamente escolhido. Se ADB cair durante a visualização, os comandos de navegação podem seguir por `RemoteClient.touch` quando a Acessibilidade no monitorado estiver autorizada. A reconexão automática da alpha.51 não é transportada para a ponte enquanto o visualizador está ativo; isso exigirá outra revisão de ciclo de vida. Sem acesso ADB livre, gravação de vídeo, captura sem MediaProjection nem novos privilégios.

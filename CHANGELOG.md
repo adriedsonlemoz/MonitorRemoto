@@ -1,4 +1,22 @@
-## 0.1.0-alpha.50 (14/10/2026)
+## 0.1.0-alpha.52 (14/10/2026)
+
+- Integrado o ADB real ao visualizador de tela remota por uma transferência explícita de sessão, sem serviço persistente nem abertura automática: o usuário toca em **Ver tela remota • controle ADB** no Modo avançado ADB.
+- O visualizador exibe indicador de canal **Navegação: ADB conectado • Imagem: Monitor Remoto (MediaProjection)** e informa a alternativa normal quando não existe ADB ativo.
+- Voltar/Início/Recentes usam comandos ADB permitidos durante a visualização após resposta autenticada da captura normal no mesmo host. Demais comandos e interação por toque continuam usando o protocolo Monitor Remoto e as permissões anteriores.
+- Para abrir o visualizador via ADB, exige chave normal já pareada para o mesmo IP. Sem ela, explica que o ADB não transmite vídeo nesta versão e orienta o consentimento local no monitorado.
+- Sessão ADB da ponte é encerrada quando Ver tela deixa o primeiro plano. Nenhum segredo/código/QR é persistido pelo visualizador e não foi adicionado serviço de fundo. Não há reconexão ADB durante a visualização nesta etapa.
+- Versionamento alpha.52 / versionCode 52, documentação, notas e verificações sincronizados. Build Android completo e testes de hardware continuam pendentes.
+
+## 0.1.0-alpha.51 (14/10/2026)
+
+- Adicionada reconexão automática, restrita à Activity ADB visível e ao aparelho escolhido/conectado pelo usuário. Ao perder a sessão, tenta a última porta e redescobre serviço `_adb-tls-connect` no mesmo IP (nunca varre a rede ou reativa opções do Android).
+- Heartbeat ADB de leitura/resposta a cada 30 s e timeout de 8 s identificam queda de conexão que o flag local TLS ainda não percebeu. Tentativas usam atrasos 2/4/8/15/30 s e permanecem em 30 s enquanto a tela estiver aberta.
+- Botão visível **Cancelar reconexão automática** interrompe novas tentativas. Desconectar também desliga a retomada; ao sair da Activity a sessão/socket é encerrado, e uma retomada pendente só volta quando a mesma tela é reaberta.
+- **Comandos ADB** aparecem diretamente no resumo quando a sessão está ativa. Controles limitados a Voltar, Início, Recentes e volume +/−; sem shell livre, sem desbloqueio, sem captura via ADB e sem novo serviço persistente.
+- Mantidas as autenticações TLS, QR e identidade Android Keystore. Se a Depuração sem fios for desligada no monitorado, o app aguarda o usuário/Android reativar o serviço; não é possível ligá-la à força. A reconexão depende da disponibilidade do mesmo IP/serviço, com fallback manual.
+- Versionamento e documentação sincronizados. Validações de fonte locais não substituem build Android CI nem testes em dois aparelhos.
+
+## 0.1.0-alpha.51 (14/10/2026)
 
 - Simplificada a tela principal ADB de acordo com a referência: dispositivos salvos, Reconectar/Desconectar e Adicionar outro celular; controles técnicos recolhidos.
 - Substituídas as telas do wizard por diálogos centralizados de papel, método, QR temporário, código e orientação do monitorado. Comandos Voltar/Início/Recentes movidos para diálogo de Controles ADB nas configurações avançadas.
@@ -6,7 +24,7 @@
 - Reconectar tenta o último IP/porta e busca a porta atual no mesmo IP após falha; mudanças na identificação do modelo exigem confirmação. Nome comercial informado pelo Android é consultado quando disponível.
 - Corrigida a transição de client ADB de pareamento para conexão: o cliente encerrado é liberado antes de invocar o callback de sucesso. Lista ADB não mescla automaticamente aparelhos de mesmo modelo apenas pelo nome.
 - Preservados controles de consentimento, QR com FLAG_SECURE, sessão encerrada ao sair e funcionalidade normal de vídeo/Recuperar dados; sem novos acessos.
-- VersionName 0.1.0-alpha.50, versionCode 50, AppVersion, README, AGENTS, arquitetura, notas e validações sincronizados. Build Gradle Android e testes físicos ainda pendentes.
+- VersionName 0.1.0-alpha.51, versionCode 51, AppVersion, README, AGENTS, arquitetura, notas e validações sincronizados. Build Gradle Android e testes físicos ainda pendentes.
 
 ## 0.1.0-alpha.46 (14/10/2026)
 

@@ -29,6 +29,8 @@ object AdbPolicy {
     }
     enum class Command(val shell: String) {
         DIAGNOSTIC("getprop ro.product.model; getprop ro.build.version.release; getprop ro.product.marketname; getprop ro.product.vendor.marketname"),
-        BACK("input keyevent 4"), HOME("input keyevent 3"), RECENTS("input keyevent 187")
+        HEARTBEAT("echo monitor_remoto_alive"),
+        BACK("input keyevent 4"), HOME("input keyevent 3"), RECENTS("input keyevent 187"),
+        VOLUME_UP("input keyevent 24"), VOLUME_DOWN("input keyevent 25")
     }
 }

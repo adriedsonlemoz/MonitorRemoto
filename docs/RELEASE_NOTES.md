@@ -1,4 +1,22 @@
-# Monitor Remoto v0.1.0-alpha.50
+# Monitor Remoto v0.1.0-alpha.52
+
+## Integração ADB com Ver tela (alpha.52)
+
+- Botão **Ver tela remota • controle ADB** após uma conexão ADB ativa. A imagem exige o pareamento normal e consentimento MediaProjection no aparelho monitorado.
+- Indicador no visualizador: **Navegação ADB conectada / Imagem Monitor Remoto (MediaProjection)**; sem confundir os transportes.
+- Voltar/Início/Recentes usam ADB durante a sessão em primeiro plano após autenticação da visualização. Os demais controles permanecem no canal AES-GCM normal.
+- A ponte de ADB é encerrada ao sair do visualizador. Não há captura por ADB nem sessão oculta.
+- Compilação Android CI e ensaio real em dois aparelhos pendentes.
+
+
+## Reconexão ADB quando a sessão cair (alpha.51)
+
+- Reconexão automática enquanto a Activity do modo ADB estiver visível, com espera crescente e redescoberta mDNS somente no IP anteriormente escolhido.
+- Verificação periódica da resposta real do ADB; indicação de reconectando, orientação caso a Depuração sem fios esteja desligada e opção Cancelar reconexão.
+- Atalho Comandos ADB no resumo da conexão, incluindo navegação e volume; não adiciona captura de tela, streaming ADB nem controle em segundo plano.
+- O Android continua exigindo autorização manual para Depuração sem fios. A recuperação não liga esse recurso e não remove PIN/biometria.
+- Build Android/Gradle completo e testes em aparelhos reais pendentes.
+
 
 ## Novo fluxo ADB compacto (alpha.50)
 

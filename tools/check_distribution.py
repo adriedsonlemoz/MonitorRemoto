@@ -16,7 +16,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.50" and code.group(1) == "50", "Versões incompatíveis"
+assert version == "0.1.0-alpha.52" and code.group(1) == "52", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -579,7 +579,7 @@ for token in ['fullscreenTopBar', 'fullscreenBottomBar', 'fullscreenStatus',
 for gesture in ['back', 'home', 'recents', 'notifications']:
     assert f'"{gesture}")' in viewer, gesture
 assert 'Color.argb(112, 12, 21, 32)' in viewer
-assert 'fullscreenStatus.text = realStatus' in viewer and 'FPS reais' in viewer
+assert 'fullscreenStatus.text = transportStatus' in viewer and 'FPS reais' in viewer
 assert 'if (!global && !touchMode)' in viewer
 print('PASSOU: alpha.41, overlay translúcido, navegação, foto/áudio/despertar e rotação')
 
@@ -678,3 +678,47 @@ assert (root / 'app/src/main/java/br/dev/monitorremoto/adb/AdbAutoConnectPolicy.
 assert (root / 'app/src/test/java/br/dev/monitorremoto/adb/AdbAutoConnectPolicyTest.kt').exists()
 assert 'Reconexão rápida e configuração guiada ADB' in (ui_root / 'SettingsScreenUi.kt').read_text()
 print('PASSOU: alpha.50, wizard modal, QR com descoberta automática e fallback manual')
+
+# Alpha.51: reconexão somente foreground, serviço ADB já autorizado e heartbeat real.
+reconnect_ui = (ui_root / 'AdbActivity.kt').read_text(encoding='utf-8')
+reconnect_policy = (root / 'app/src/main/java/br/dev/monitorremoto/adb/AdbReconnectPolicy.kt').read_text(encoding='utf-8')
+adb_policy51 = (root / 'app/src/main/java/br/dev/monitorremoto/adb/AdbPolicy.kt').read_text(encoding='utf-8')
+for required in ['private var desiredTarget: AdbKnownDevice?', 'planRetry(',
+                 'onConnectionLost(', 'startHeartbeat(', 'cancelHeartbeat()',
+                 'AdbReconnectPolicy.delayMs', 'beginDiscovery("recover", expected.host)',
+                 'if (mode == "recover")', 'Cancelar reconexão automática',
+                 'stopReconnect(null)', 'heartbeatWorker.shutdownNow()', 'override fun onStop()',
+                 'client?.connected() == true', 'Comandos ADB']:
+    assert required in reconnect_ui, f'alpha.51: missing {required}'
+assert 'HEARTBEAT("echo monitor_remoto_alive")' in adb_policy51
+adb_discovery51 = (root / 'app/src/main/java/br/dev/monitorremoto/adb/AdbDiscovery.kt').read_text(encoding='utf-8')
+assert 'fun start(connectOnly: Boolean = false)' in adb_discovery51
+assert 'it.start(connectOnly = mode == "connect" || mode == "reconnect" || mode == "recover")' in reconnect_ui
+assert 'VOLUME_UP("input keyevent 24")' in adb_policy51
+assert 'VOLUME_DOWN("input keyevent 25")' in adb_policy51
+assert '30_000L' in reconnect_policy and '8_000L' in reconnect_policy
+assert 'context.startForegroundService' not in reconnect_ui
+assert (root / 'app/src/test/java/br/dev/monitorremoto/adb/AdbReconnectPolicyTest.kt').exists()
+print('PASSOU: alpha.51, heartbeat, retry conservador, cancelamento, foreground e comandos limitados')
+
+# Alpha.52: origem da imagem não pode ser confundida com o canal de controle ADB.
+adb_bridge52 = (root / 'app/src/main/java/br/dev/monitorremoto/adb/AdbScreenBridge.kt').read_text()
+adb_route52 = (root / 'app/src/main/java/br/dev/monitorremoto/adb/AdbScreenRouting.kt').read_text()
+viewer52 = (ui_root / 'RemoteScreenActivity.kt').read_text()
+adb_ui52 = (ui_root / 'AdbActivity.kt').read_text()
+for required in ['AdbScreenBridge.handoff(adbHost, activeClient)', 'RecentDevices.key(applicationContext, adbHost)',
+                 'putExtra(RemoteScreenActivity.EXTRA_ADB_HANDOFF, true)', 'if (!handingOffToViewer) cancelWork()']:
+    assert required in adb_ui52, f'alpha.52: faltando handoff restrito: {required}'
+for required in ['EXTRA_ADB_HANDOFF', 'AdbScreenBridge.connectedFor(host)',
+                 'AdbScreenRouting.navigation(action, adbAvailable(), screenChannelAuthenticated)',
+                 'screenChannelAuthenticated = authenticatedThisPoll', 'authenticatedThisPoll = true', 'if (fromAdbHandoff) AdbScreenBridge.close(host)',
+                 'fullscreenStatus.text = transportStatus', 'channelBadge']:
+    assert required in viewer52, f'alpha.52: faltando controle de visualização: {required}'
+assert '"back" -> AdbPolicy.Command.BACK' in adb_route52
+assert '"home" -> AdbPolicy.Command.HOME' in adb_route52
+assert '"recents" -> AdbPolicy.Command.RECENTS' in adb_route52
+assert 'MediaProjection' in adb_route52 and 'Navegação: ADB conectado' in adb_route52
+assert 'Thread({ client.close() }' in adb_bridge52 and 'session = null' in adb_bridge52
+assert (root / 'app/src/test/java/br/dev/monitorremoto/adb/AdbScreenRoutingTest.kt').is_file()
+assert 'context.startForegroundService' not in adb_bridge52
+print('PASSOU: alpha.52, canais ADB/imagem separados, comandos limitados, handoff foreground e fechamento')

@@ -30,6 +30,8 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import br.dev.monitorremoto.R
+import br.dev.monitorremoto.adb.AdbScreenBridge
+import br.dev.monitorremoto.adb.AdbScreenRouting
 import br.dev.monitorremoto.core.DisplayedFrameRate
 import br.dev.monitorremoto.core.RecentDevices
 import br.dev.monitorremoto.core.RemoteGesturePolicy
@@ -45,6 +47,7 @@ class RemoteScreenActivity : Activity() {
     companion object {
         const val EXTRA_HOST = "host"
         const val EXTRA_METHOD = "method"
+        const val EXTRA_ADB_HANDOFF = "adb_viewer_handoff"
         private const val REFRESH_MS = 85L // solicita próximo frame após resposta; sem filas de quadros
         private const val DOCUMENT_SAVE_REQUEST = 9036
     }
@@ -60,6 +63,9 @@ class RemoteScreenActivity : Activity() {
     private val saving = AtomicBoolean(false)
     private lateinit var picture: ImageView
     private lateinit var status: TextView
+    private lateinit var channelBadge: TextView
+    private var fromAdbHandoff = false
+    @Volatile private var screenChannelAuthenticated = false
     private lateinit var stage: FrameLayout
     private lateinit var placeholder: LinearLayout
     private lateinit var fullscreenExit: ImageButton
@@ -210,9 +216,37 @@ class RemoteScreenActivity : Activity() {
         return Triple(container, imageView, title)
     }
 
+    private fun adbAvailable() = fromAdbHandoff && AdbScreenBridge.connectedFor(host)
+
+    private fun updateChannelBadge() {
+        if (!::channelBadge.isInitialized) return
+        val enabled = adbAvailable()
+        val label = AdbScreenRouting.label(enabled)
+        if (channelBadge.text.toString() != label) channelBadge.text = label
+        channelBadge.setTextColor(if (enabled) accent else muted)
+    }
+
     private fun remoteCommand(action: String, x: Float = 0.5f, y: Float = 0.5f,
         ex: Float = x, ey: Float = y, duration: Long = 240L) {
         if (!active) { toast("Controle remoto desconectado"); return }
+        // A imagem segue autenticada por AES-GCM/MediaProjection; o ADB só assume navegação
+        // quando ambos os canais respondem para o mesmo endereço autorizado.
+        val adbNav = AdbScreenRouting.navigation(action, adbAvailable(), screenChannelAuthenticated)
+        if (adbNav != null) {
+            AdbScreenBridge.execute(host, adbNav) { success, message ->
+                if (active) {
+                    if (!success) toast(message)
+                    updateChannelBadge()
+                    updateControls()
+                }
+            }
+            return
+        }
+        if (adbAvailable() && !screenChannelAuthenticated &&
+            (action == "back" || action == "home" || action == "recents")) {
+            toast("Aguardando autenticação do canal de imagem antes de usar comandos ADB.")
+            return
+        }
         val global = RemoteGesturePolicy.isGlobalAction(action)
         if (!touchReady) { toast("Controle indisponível: confira captura, desbloqueio e Acessibilidade"); return }
         if (!global && !touchMode) { toast("Ative Toque para interagir com a imagem"); return }
@@ -275,6 +309,7 @@ class RemoteScreenActivity : Activity() {
                 var sharing = false
                 var codecAvailable = false
                 var retryDelay = REFRESH_MS
+                var authenticatedThisPoll = false
                 try {
                     val key = RecentDevices.key(applicationContext, host)
                         ?: error("Chave não encontrada. Conecte novamente.")
@@ -283,6 +318,7 @@ class RemoteScreenActivity : Activity() {
                     val result = if (tryVideo) RemoteClient.videoFrame(host, key, applicationContext,
                         method, videoSeq) else RemoteClient.screenFrame(host, key, applicationContext, method)
                     val networkRoundTrip = SystemClock.elapsedRealtime() - queryStart
+                    authenticatedThisPoll = true
                     val locked = result.optBoolean("deviceLocked")
                     val interactive = result.optBoolean("screenInteractive", true)
                     val frameAge = result.optLong("frameAgeMs", -1L)
@@ -374,6 +410,7 @@ class RemoteScreenActivity : Activity() {
                         }
                     }
                 } catch (e: Exception) {
+                    authenticatedThisPoll = false
                     nextStatus = "Visualização: ${e.message?.take(80) ?: "rede indisponível"}"
                     // Decodificador falhou: recuperar com JPEG por 30 s.
                     videoFailUntil = SystemClock.elapsedRealtime() + 30_000L
@@ -383,6 +420,7 @@ class RemoteScreenActivity : Activity() {
                 main.post {
                     fetching.set(false)
                     if (!active || isFinishing || isDestroyed) { nextBitmap?.recycle(); return@post }
+                    screenChannelAuthenticated = authenticatedThisPoll
                     sharingReady = sharing
                     touchReady = canTouch && sharing
                     audioReady = canAudio && sharing
@@ -401,11 +439,13 @@ class RemoteScreenActivity : Activity() {
                     val realStatus = if (sharing && measuredFps > 0f)
                         "$nextStatus · %.1f FPS reais".format(java.util.Locale.US, measuredFps)
                     else nextStatus
-                    if (realStatus != previousStatus) {
+                    val transportStatus = if (adbAvailable()) "Navegação ADB conectada · $realStatus" else realStatus
+                    if (transportStatus != previousStatus) {
                         status.text = realStatus
-                        fullscreenStatus.text = realStatus
-                        previousStatus = realStatus
+                        fullscreenStatus.text = transportStatus
+                        previousStatus = transportStatus
                     }
+                    updateChannelBadge()
                     placeholder.visibility = if (bitmap == null) View.VISIBLE else View.GONE
                     updateControls()
                     main.postDelayed(this, retryDelay)
@@ -418,7 +458,12 @@ class RemoteScreenActivity : Activity() {
         super.onCreate(savedInstanceState)
         host = intent.getStringExtra(EXTRA_HOST).orEmpty()
         method = intent.getStringExtra(EXTRA_METHOD)?.take(72) ?: method
-        if (host.isBlank() || RecentDevices.key(this, host) == null) { finish(); return }
+        fromAdbHandoff = intent.getBooleanExtra(EXTRA_ADB_HANDOFF, false)
+        if (host.isBlank() || RecentDevices.key(this, host) == null) {
+            if (fromAdbHandoff) AdbScreenBridge.close(host)
+            finish()
+            return
+        }
         window.statusBarColor = backgroundColor
         window.navigationBarColor = backgroundColor
         if (!dark && Build.VERSION.SDK_INT >= 26) {
@@ -458,6 +503,13 @@ class RemoteScreenActivity : Activity() {
             maxLines = 2; setPadding(dp(3), dp(9), 0, dp(11))
         }
         normal.addView(status)
+        channelBadge = text(AdbScreenRouting.label(false), 12f, muted, true).apply {
+            setPadding(dp(12), dp(8), dp(12), dp(8))
+            background = shape(surface, 12, true)
+            maxLines = 2
+        }
+        normal.addView(channelBadge, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(6); bottomMargin = dp(6) })
+        updateChannelBadge()
         streamModeButton = text("Transmissão: JPEG (menor atraso) · tocar para testar H.264", 12.5f, accent, true).apply {
             contentDescription = "Alternar JPEG e H.264 experimental"
             setPadding(dp(6), dp(7), dp(6), dp(10))
@@ -669,9 +721,10 @@ class RemoteScreenActivity : Activity() {
         // desabilitá-los deixava o usuário sem qualquer resposta.
         touchAction.isEnabled = true
         touchAction.alpha = if (touchReady) 1f else 0.55f
+        val adbNavReady = adbAvailable() && screenChannelAuthenticated
         for (action in listOf(backAction, homeAction, recentsAction, notificationsAction)) {
             action.isEnabled = true
-            action.alpha = if (touchReady) 1f else 0.55f
+            action.alpha = if (touchReady || (adbNavReady && action !== notificationsAction)) 1f else 0.55f
         }
         touchLabel.text = if (touchMode) "Toque ligado" else "Toque"
         touchIcon.imageTintList = ColorStateList.valueOf(if (touchMode) accent else ink)
@@ -704,7 +757,9 @@ class RemoteScreenActivity : Activity() {
             fullscreenTouch.contentDescription = if (touchMode) "Desligar toque remoto"
                 else "Ativar toque remoto"
         }
-        for (item in fullscreenNavigation) item.alpha = if (touchReady) 1f else 0.62f
+        for ((index, item) in fullscreenNavigation.withIndex()) {
+            item.alpha = if (touchReady || (adbNavReady && index < 3)) 1f else 0.62f
+        }
     }
 
     private fun toggleFullscreen() {
@@ -895,6 +950,7 @@ class RemoteScreenActivity : Activity() {
     override fun onResume() {
         super.onResume()
         active = host.isNotBlank() && ::picture.isInitialized
+        updateChannelBadge()
         if (isFullscreen) applyImmersiveMode(true)
         main.removeCallbacks(poll); main.post(poll)
         if (!wakeRequestedOnOpen && SettingsStore.autoWakeOnView(this)) {
@@ -904,6 +960,8 @@ class RemoteScreenActivity : Activity() {
     }
     override fun onPause() {
         active = false; sharingReady = false; touchMode = false; touchReady = false; audioReady = false
+        screenChannelAuthenticated = false
+        if (fromAdbHandoff) AdbScreenBridge.close(host)
         stopAudio()
         main.removeCallbacks(poll)
         closeVideo()
