@@ -101,7 +101,7 @@ class AdbActivity : Activity() {
             validate {
                 val endpoint=AdbPolicy.endpoint(host.text.toString().trim(), pairPort.text.toString().trim())
                 val password=AdbPolicy.code(code.text.toString().trim()); code.text.clear(); clearQr()
-                runOperation("Pareando…") { it.pair(endpoint.first,endpoint.second,password); "Pareado com ${endpoint.first}. Informe a porta de conexão, diferente da porta de pareamento." }
+                runOperation("Pareando…", operation = { adb -> adb.pair(endpoint.first, endpoint.second, password); "Pareado com ${endpoint.first}. Informe a porta de conexão, diferente da porta de pareamento." })
             }
         })
         val connection=card(root,"2. Conectar depois de parear")
@@ -110,7 +110,7 @@ class AdbActivity : Activity() {
         connection.addView(button("Conectar") {
             validate {
                 val endpoint=AdbPolicy.endpoint(host.text.toString().trim(),connectPort.text.toString().trim())
-                runOperation("Conectando…", { adb ->
+                runOperation("Conectando…", operation = { adb ->
                     adb.connect(endpoint.first, endpoint.second)
                     val lines = runCatching { adb.execute(AdbPolicy.Command.DIAGNOSTIC) }
                         .getOrNull()?.lines()?.map { it.trim().take(72) }.orEmpty()
@@ -119,7 +119,7 @@ class AdbActivity : Activity() {
                     val summary = if (model.isBlank()) "Modelo não disponível" else
                         "Modelo informado: $model" + (if (android.isNotBlank()) " • Android $android" else "")
                     "Conectado ao IP ${endpoint.first}:${endpoint.second}\n$summary"
-                }, { result ->
+                }, onSuccess = { result ->
                     reportedPhone = result.substringAfter('\n', "Modelo não disponível")
                     deviceInfo.text = "Telefone conectado: $reportedPhone. Confirme no próprio aparelho antes de enviar comandos."
                 })
@@ -127,12 +127,12 @@ class AdbActivity : Activity() {
         })
         connection.addView(button("Desconectar / cancelar") { cancel(); status.text="Desconectado. Se cancelou durante o pareamento, confira a lista de aparelhos autorizados no Android." })
         connection.addView(button("Consultar modelo e versão Android") {
-            runOperation("Consultando…") { "Diagnóstico ADB:\n"+it.execute(AdbPolicy.Command.DIAGNOSTIC) }
+            runOperation("Consultando…", operation = { adb -> "Diagnóstico ADB:\n" + adb.execute(AdbPolicy.Command.DIAGNOSTIC) })
         })
         val row=LinearLayout(this)
         listOf("Voltar" to AdbPolicy.Command.BACK, "Início" to AdbPolicy.Command.HOME, "Recentes" to AdbPolicy.Command.RECENTS).forEach { (label,cmd) ->
             row.addView(button(label) { AlertDialog.Builder(this).setTitle("Enviar $label?").setMessage("Executar por ADB em ${client?.endpoint ?: "nenhum aparelho conectado"}.").setNegativeButton("Cancelar",null).setPositiveButton("Enviar") { _,_ ->
-                runOperation("Enviando…") { it.execute(cmd); "Comando enviado. Verifique o resultado no monitorado." }
+                runOperation("Enviando…", operation = { adb -> adb.execute(cmd); "Comando enviado. Verifique o resultado no monitorado." })
             }.show() },LinearLayout.LayoutParams(0,-2,1f))
         }; connection.addView(row)
         connection.addView(button("Apagar credencial ADB local") {
@@ -174,7 +174,7 @@ class AdbActivity : Activity() {
                 val session=qr
                 if(session!=null && session.valid(SystemClock.elapsedRealtime()) && endpoint.type.contains("_adb-tls-pairing") && endpoint.name==session.service && !busy) {
                     clearQr(); host.setText(endpoint.host); pairPort.setText(endpoint.port.toString())
-                    runOperation("Pareando pelo QR…") { it.pair(endpoint.host,endpoint.port,session.password); "Pareado pelo QR com ${endpoint.host}. Selecione o serviço de conexão abaixo e toque Conectar." }
+                    runOperation("Pareando pelo QR…", operation = { adb -> adb.pair(endpoint.host, endpoint.port, session.password); "Pareado pelo QR com ${endpoint.host}. Selecione o serviço de conexão abaixo e toque Conectar." })
                 }
                 val key="${endpoint.name}/${endpoint.type}/${endpoint.host}:${endpoint.port}"
                 if(seen.size<16 && seen.add(key)) {

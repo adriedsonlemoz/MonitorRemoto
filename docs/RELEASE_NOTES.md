@@ -1,4 +1,13 @@
-# Monitor Remoto v0.1.0-alpha.43
+# Monitor Remoto v0.1.0-alpha.44
+
+## Correção de compilação do modo avançado ADB (alpha.44)
+
+- Corrigidas as quatro referências inválidas `pair` e `execute` da alpha.43 com parâmetro nomeado `operation` em `runOperation`.
+- Mantidos guia ADB/QR, captura protegida somente com QR visível, JPEG inicial e AVC opcional da alpha.43.
+- Workflow 43 parou em `:app:compileDebugKotlin`; a compilação e testes da alpha.44 ainda dependem de nova execução do CI.
+
+## Registro da versão anterior (alpha.43)
+
 
 ## Ajustes de pareamento ADB e transmissão de tela (alpha.43)
 

@@ -1,3 +1,9 @@
+## 0.1.0-alpha.44 (14/10/2026)
+
+- Corrigida falha de compilação `:app:compileDebugKotlin` do workflow 43: quatro lambdas de `runOperation` em `AdbActivity` se associavam indevidamente ao callback `onSuccess(String)`, gerando referências `pair`/`execute` não resolvidas.
+- Todas as cinco invocações ADB passam agora `operation = { adb -> ... }` e o callback de identificação utiliza `onSuccess = { result -> ... }`. Adicionada regressão estrutural no validador.
+- VersionName/Code, AppVersion, distribuição APK, README e notas atualizados. Sem mudanças no TLS ADB, nas permissões ou nos codecs. Build Android completo da alpha.44 ainda não validado.
+
 ## 0.1.0-alpha.43 (14/10/2026)
 
 - O **Modo avançado ADB** permite capturar imagens das instruções, campos comuns e diagnóstico. Enquanto um QR de pareamento ADB está visível, aplica `FLAG_SECURE` para proteger a senha temporária; removido ao fechar, expirar ou sair.

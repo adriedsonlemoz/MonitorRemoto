@@ -1,3 +1,11 @@
+## Alpha.44 — correção do workflow 43 (14/10/2026)
+
+- Logs recebidos: workflow 43 falhou em `:app:compileDebugKotlin` com `Unresolved reference pair` (linhas 104 e 177) e `execute` (130 e 135) em `AdbActivity.kt`. Causa: uso de trailing lambda associado ao último parâmetro `onSuccess: ((String) -> Unit)?`, em vez de `operation: (AdbClient) -> String`.
+- Correção: quatro chamadas receberam `operation = { adb -> ... }`; chamada Conectar também usa argumentos nomeados e callback `onSuccess = { result -> ... }` para impedir ambiguidade futura.
+- Verificação local: `python3 tools/check_distribution.py` aprovou todas as invariantes, inclusive a checagem de regressão de cinco chamadas nomeadas. Parser PSI Kotlin 1.9.0: 76 arquivos e zero erros sintáticos. Contrato de lambdas `AdbClient`/`String` compilado e executado com Kotlin/JVM 1.9.0 usando stubs de API (não é compilação real da Activity Android). 41 XML e 1 YAML válidos.
+- ZIP: integridade/CRC conferidos após gerar o pacote.
+- Não há compilação Gradle Android completa nem testes de pareamento em aparelho atestados para alpha.44; rodar CI e medir separadamente.
+
 ## Alpha.43 — validação desta edição (14/10/2026)
 
 - O código-fonte foi alterado para melhorar o modo ADB e o modo de tela conforme CHANGELOG.

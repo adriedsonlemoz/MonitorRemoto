@@ -16,7 +16,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.43" and code.group(1) == "43", "Versões incompatíveis"
+assert version == "0.1.0-alpha.44" and code.group(1) == "44", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -619,3 +619,17 @@ assert 'MAX_LAG_FRAMES = 5' in store43 and 'requestSync = true' in store43
 assert 'VideoFrameStore.videoRequestedRecent()' in service43
 assert 'VideoFrameStore.viewerPing()' in server43
 print('PASSOU: alpha.43, janela de QR protegida, instruções ADB e JPEG/AVC sem fila obsoleta')
+
+# Alpha.44: regressão da compilação Kotlin do workflow 43.
+# runOperation(label, operation: (AdbClient)->String, onSuccess: ((String)->Unit)?).
+# Uma lambda final sem `operation =` é vinculada por Kotlin ao parâmetro onSuccess (String).
+# Exigir sintaxe inequívoca para todas as invocações na Activity.
+import re as _re44
+call_starts44 = _re44.findall(r'\brunOperation\s*\(\s*"[^"\n]+"\s*,\s*operation\s*=\s*\{\s*adb\s*->', ui43)
+assert len(call_starts44) == 5, f"alpha.44: esperadas 5 invocações ADB com operation nomeada, achadas {len(call_starts44)}"
+assert not _re44.search(r'\brunOperation\s*\(\s*"[^"\n]+"\s*\)\s*\{', ui43), "Trailing lambda de runOperation será interpretada como onSuccess(String)"
+assert 'onSuccess = { result ->' in ui43, 'Callback de conexão deve ser nomeado'
+assert 'adb.pair(endpoint.first, endpoint.second, password)' in ui43
+assert 'adb.pair(endpoint.host, endpoint.port, session.password)' in ui43
+assert 'adb.execute(AdbPolicy.Command.DIAGNOSTIC)' in ui43 and 'adb.execute(cmd)' in ui43
+print('PASSOU: alpha.44, lambdas ADB vinculadas ao parâmetro operation(AdbClient), não a onSuccess(String)')
