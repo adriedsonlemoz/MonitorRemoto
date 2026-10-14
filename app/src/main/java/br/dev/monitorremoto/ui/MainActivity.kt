@@ -351,7 +351,7 @@ class MainActivity : Activity() {
         content.addView(header)
 
         val metaRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        metaRow.addView(infoChip("v0.1.0-alpha.18"))
+        metaRow.addView(infoChip("v0.1.0-alpha.19"))
         metaRow.addView(View(this), LinearLayout.LayoutParams(dp(8), 1))
         val monitorActive = SettingsStore.isMonitorEnabled(this) && MonitorService.isRunning
         metaRow.addView(infoChip(if (monitorActive) "Monitorado ativo" else "Monitorado inativo", accent = monitorActive))
@@ -384,7 +384,7 @@ class MainActivity : Activity() {
         val (wrapper, layout) = dialogWrapper()
         dialogIntro(layout, "Resumo rápido do foco atual do projeto.")
         val card = panel(14)
-        card.addView(dialogMetricRow("Versão", "0.1.0-alpha.18"))
+        card.addView(dialogMetricRow("Versão", "0.1.0-alpha.19"))
         card.addView(dialogMetricRow("Tela inicial", "Home com escolha de aparelhos"))
         card.addView(dialogMetricRow("Modo monitorado", "No mesmo APK"))
         card.addView(dialogMetricRow("Segurança", "Pareamento local e Android Keystore"))
@@ -935,35 +935,50 @@ class MainActivity : Activity() {
         val savedDevice = RecentDevices.list(this).firstOrNull { it.host == host }
         val lastDeviceName = lastResult?.optJSONObject("battery")?.optString("device")
             ?.takeIf { lastResultHost == host && it.isNotBlank() }
+        val titleText = if (savedDevice?.customName == true) savedDevice.name
+            else lastDeviceName ?: savedDevice?.name ?: "Nenhum aparelho selecionado"
 
         val heading = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.TOP }
-        currentDeviceTitle = label(
-            if (savedDevice?.customName == true) savedDevice.name else lastDeviceName ?: savedDevice?.name ?: "Nenhum aparelho selecionado",
-            18f,
-            strong = true
-        ).apply { maxLines = 2; ellipsize = android.text.TextUtils.TruncateAt.END }
-        heading.addView(currentDeviceTitle, LinearLayout.LayoutParams(0, -2, 1f))
-        heading.addView(View(this), LinearLayout.LayoutParams(dp(8), 1))
+        val infoColumn = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        currentDeviceTitle = label(titleText, 19f, strong = true).apply {
+            maxLines = 2; ellipsize = android.text.TextUtils.TruncateAt.END
+        }
+        infoColumn.addView(currentDeviceTitle)
+        val statusRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+        currentStatus = label("", 13f, strong = true)
+        statusRow.addView(currentStatus)
+        statusRow.addView(View(this), LinearLayout.LayoutParams(dp(6), 1))
+        statusRow.addView(infoChip("${networkIcon(host)} ${connectionKind(host)}"))
+        infoColumn.addView(statusRow)
+        currentUpdated = label("", 11.5f, muted = true).apply { setPadding(0, dp(1), 0, dp(2)) }
+        infoColumn.addView(currentUpdated)
+
+        val extraRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+        extraRow.addView(infoChip("🌐 ${if (host.isBlank()) "Sem IP" else host}"))
+        extraRow.addView(View(this), LinearLayout.LayoutParams(dp(6), 1))
+        extraRow.addView(infoChip("🔐 $selectedConnectionMethod"))
+        infoColumn.addView(extraRow)
+
+        heading.addView(infoColumn, LinearLayout.LayoutParams(0, -2, 1f))
+        heading.addView(View(this), LinearLayout.LayoutParams(dp(10), 1))
+        val actionColumn = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         currentConnectButton = actionButton("Conectar", emphasis = true) {
             val actualState = effectiveConnectionState()
             if (actualState == "connected" || actualState == "loading") disconnectCurrent()
             else showConnectionChooser()
-        }.apply { textSize = 12f; minWidth = 0; setPadding(dp(5), 0, dp(5), 0) }
-        heading.addView(currentConnectButton, LinearLayout.LayoutParams(dp(100), dp(44)))
-        card.addView(heading)
-        currentStatus = label("", 13f, strong = true)
-        card.addView(currentStatus)
-        currentUpdated = label("", 12f, muted = true).apply { setPadding(0, dp(2), 0, dp(6)) }
-        card.addView(currentUpdated)
-
-        val refreshRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.END }
-        refreshRow.addView(actionButton("↻ Atualizar") { refreshRemote(silent = false) }.apply {
+        }.apply { textSize = 11.5f; minWidth = 0; setPadding(dp(4), 0, dp(4), 0) }
+        actionColumn.addView(currentConnectButton, LinearLayout.LayoutParams(dp(116), dp(42)))
+        actionColumn.addView(View(this), LinearLayout.LayoutParams(1, dp(8)))
+        actionColumn.addView(actionButton("↻ Atualizar") { refreshRemote(silent = false) }.apply {
             background = shape(secondaryAccent, 12)
             setTextColor(Color.WHITE)
-            textSize = 12f
-        }, LinearLayout.LayoutParams(dp(108), dp(43)))
-        card.addView(refreshRow)
-        sectionGap(card, 12)
+            textSize = 11.5f
+            minWidth = 0
+            setPadding(dp(4), 0, dp(4), 0)
+        }, LinearLayout.LayoutParams(dp(116), dp(42)))
+        heading.addView(actionColumn)
+        card.addView(heading)
+        sectionGap(card, 10)
 
         resultBox = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         card.addView(resultBox)
@@ -1017,10 +1032,24 @@ class MainActivity : Activity() {
         currentUpdated?.text = when {
             !hasKey -> "Selecione uma forma de conexão no botão Conectar"
             lastSuccessfulMs > 0 && lastResultHost == host ->
-                "Última atualização: ${formatDate(lastSuccessfulMs)}" +
+                "Atualizado: ${formatDate(lastSuccessfulMs)}" +
                     if (actualState == "offline") " · dados anteriores" else ""
             else -> connectionMessage ?: "Aguardando resposta de $host"
         }
+    }
+
+    private fun networkIcon(host: String): String = when {
+        host.isBlank() -> "○"
+        localWifiPrefix()?.let { host.startsWith(it) } == true -> "📶"
+        PairingCode.isPrivateIpv4(host) -> "📡"
+        else -> "🛡"
+    }
+
+    private fun connectionKind(host: String): String = when {
+        host.isBlank() -> "Sem aparelho"
+        localWifiPrefix()?.let { host.startsWith(it) } == true -> "Mesmo Wi‑Fi"
+        PairingCode.isPrivateIpv4(host) -> "Rede local"
+        else -> "VPN/Internet"
     }
 
     /** Apenas o IP da interface de rede Wi-Fi ativa; sem supor prefixos de outras redes. */
@@ -1407,65 +1436,228 @@ class MainActivity : Activity() {
         val panel = resultBox ?: return
         panel.removeAllViews()
         val battery = root.optJSONObject("battery") ?: return
+        val events = root.optJSONArray("events")
+        val host = SettingsStore.getRemoteHost(this)
         val level = if (battery.isNull("levelPercent")) "—" else "${battery.optDouble("levelPercent").toInt()}%"
-        val charging = if (battery.optBoolean("charging")) "Carregando" else "Descarregando"
-
-        val topRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        val batteryCard = panel(14).apply {
-            addView(label("Bateria", 12f, muted = true))
-            addView(label(level, 28f, strong = true))
-            addView(label(charging, 12f, muted = true))
+        val charging = when {
+            battery.optBoolean("full") -> "Cheia"
+            battery.optBoolean("charging") -> "Carregando"
+            else -> "Descarregando"
         }
-        topRow.addView(batteryCard, LinearLayout.LayoutParams(0, -2, 1f).apply { rightMargin = dp(8) })
-        val tempCard = panel(14).apply {
-            addView(label("Temperatura", 12f, muted = true))
-            addView(label(if (battery.isNull("temperatureC")) "—" else
-                String.format(Locale.getDefault(), "%.1f °C", battery.optDouble("temperatureC")), 22f, strong = true))
-            addView(label("Estado térmico", 12f, muted = true))
-        }
-        topRow.addView(tempCard, LinearLayout.LayoutParams(0, -2, 1f))
-        panel.addView(topRow)
-        sectionGap(panel, 10)
-
         fun current(name: String): String = if (battery.isNull(name)) "—" else
             String.format(Locale.getDefault(), "%.0f mA", battery.optDouble(name))
+        val temp = if (battery.isNull("temperatureC")) "—" else String.format(Locale.getDefault(), "%.1f °C", battery.optDouble("temperatureC"))
         val voltage = if (battery.isNull("voltageMv")) "—" else "${battery.optInt("voltageMv")} mV"
-        val grid = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        listOf(
-            "Tensão" to voltage,
-            "Corrente instantânea" to current("currentMa"),
-            "Corrente média" to current("averageMa")
-        ).forEach { (name, value) ->
-            val metric = panel(13).apply {
-                addView(label(name, 11.5f, muted = true))
-                addView(label(value, 16f, strong = true))
-            }
-            grid.addView(metric, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(8) })
+        val eventCount = events?.length() ?: 0
+        val metricCards = listOf(
+            compactMetricCard("🔋", "Bateria", level, charging, accent = true),
+            compactMetricCard("🌡", "Temperatura", temp, "Térmica"),
+            compactMetricCard("⚡", "Corrente", current("currentMa"), "Agora"),
+            compactMetricCard("∿", "Média", current("averageMa"), "Consumo"),
+            compactMetricCard("🔌", "Tensão", voltage, "Bateria"),
+            compactMetricCard("🔔", "Eventos", eventCount.toString(), if (eventCount == 1) "1 evento" else "$eventCount eventos")
+        )
+        addMetricGrid(panel, metricCards)
+        sectionGap(panel, 10)
+
+        val networkRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+        networkRow.addView(infoChip("${networkIcon(host)} ${connectionKind(host)}"))
+        networkRow.addView(View(this), LinearLayout.LayoutParams(dp(6), 1))
+        networkRow.addView(infoChip("🌐 ${if (host.isBlank()) "Sem IP" else host}"))
+        networkRow.addView(View(this), LinearLayout.LayoutParams(dp(6), 1))
+        networkRow.addView(infoChip("⏱ ${if (lastSuccessfulMs > 0L) formatDate(lastSuccessfulMs) else "agora"}"))
+        panel.addView(networkRow)
+        sectionGap(panel, 10)
+
+        panel.addView(label("Funções remotas", 15f, strong = true).apply { setPadding(0, 0, 0, dp(2)) })
+        panel.addView(label("Toque para abrir dados atuais ou funções futuras.", 11f, muted = true).apply { setPadding(0, 0, 0, dp(4)) })
+        val tiles = listOf(
+            actionTile("🔔", "Notificações", if (eventCount == 0) "Sem alertas" else "$eventCount capturadas", emphasis = true) { showRemoteNotifications(root) },
+            actionTile("📋", "Copiar", "Resumo atual") { copyRemoteSnapshot(root) },
+            actionTile("ℹ", "Detalhes", "Bateria e rede") { showRemoteDetailsDialog(root) },
+            actionTile("💬", "Mensagens", "Em breve") { showFeatureSoon("Mensagens", "A visualização direta de mensagens ainda depende de um fluxo separado e de permissões específicas.") },
+            actionTile("🖥", "Ver tela", "Em breve") { showFeatureSoon("Ver tela", "A visualização da tela remota exigirá autorização explícita no aparelho monitorado.") },
+            actionTile("📍", "Localização", "Em breve") { showFeatureSoon("Localização", "A localização remota será exibida quando houver permissão e coleta dedicada desse dado.") }
+        )
+        addActionGrid(panel, tiles)
+
+        if (fromCache && connectionState == "offline") {
+            sectionGap(panel, 8)
+            panel.addView(label("Mostrando a última leitura disponível porque o aparelho não respondeu agora.", 11.5f, muted = true))
         }
-        panel.addView(grid)
-        panel.addView(label("Correntes são as leituras disponíveis do Android e podem variar conforme o aparelho.", 11f, muted = true))
-        if (fromCache && connectionState == "offline")
-            panel.addView(label("Dados anteriores exibidos por falta de resposta atual.", 12f, muted = true))
-        sectionGap(panel, 8)
-        val events = root.optJSONArray("events")
-        panel.addView(label("Últimos eventos (${events?.length() ?: 0})", 16f, true))
-        if (events == null || events.length() == 0) {
+
+        sectionGap(panel, 10)
+        panel.addView(label(if (eventCount > 0) "Último evento" else "Eventos", 14f, strong = true))
+        if (eventCount == 0) {
             panel.addView(label("Nenhuma notificação autorizada capturada.", 12f, muted = true))
+        } else {
+            val event = events?.optJSONObject(eventCount - 1)
+            if (event != null) {
+                val item = panel(12)
+                item.addView(label("${event.optString("type").uppercase(Locale.getDefault())} · ${event.optString("app")}", 11f, muted = true))
+                item.addView(label(event.optString("title"), 14f, strong = true))
+                if (event.optString("preview").isNotBlank()) item.addView(label(event.optString("preview"), 12f))
+                item.addView(label(formatDate(event.optLong("whenMs")), 11f, muted = true))
+                panel.addView(item)
+            }
+        }
+    }
+
+    private fun compactMetricCard(icon: String, title: String, value: String, subtitle: String = "", accent: Boolean = false): LinearLayout =
+        panel(12).apply {
+            background = shape(if (accent) highlight else fieldColor, 16, !accent)
+            addView(label(icon, 15f).apply { setPadding(0, 0, 0, 0) })
+            addView(label(title, 11f, muted = !accent).apply {
+                setTextColor(if (accent) highlightText else dim)
+                setPadding(0, 0, 0, 0)
+            })
+            addView(label(value, 17f, strong = true).apply {
+                setTextColor(if (accent) highlightText else ink)
+                setPadding(0, 0, 0, 0)
+            })
+            if (subtitle.isNotBlank()) addView(label(subtitle, 10.5f, muted = !accent).apply {
+                setTextColor(if (accent) Color.argb(205, 255, 255, 255) else dim)
+                setPadding(0, 0, 0, 0)
+            })
+        }
+
+    private fun addMetricGrid(parent: LinearLayout, cards: List<LinearLayout>) {
+        val rows = cards.chunked(3)
+        rows.forEachIndexed { rowIndex, rowCards ->
+            val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+            rowCards.forEachIndexed { index, card ->
+                row.addView(card, LinearLayout.LayoutParams(0, -2, 1f).apply {
+                    if (index < rowCards.lastIndex) rightMargin = dp(8)
+                })
+            }
+            while (row.childCount < 3) {
+                row.addView(View(this), LinearLayout.LayoutParams(0, 1, 1f).apply {
+                    if (row.childCount < 3) rightMargin = dp(8)
+                })
+            }
+            parent.addView(row)
+            if (rowIndex < rows.lastIndex) sectionGap(parent, 8)
+        }
+    }
+
+    private fun actionTile(icon: String, title: String, subtitle: String, emphasis: Boolean = false, onClick: () -> Unit): LinearLayout =
+        LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = shape(if (emphasis) highlight else fieldColor, 16, !emphasis)
+            setPadding(dp(12), dp(11), dp(12), dp(11))
+            isClickable = true
+            isFocusable = true
+            setOnClickListener { onClick() }
+            addView(label("$icon  $title", 13f, strong = true).apply {
+                setTextColor(if (emphasis) highlightText else ink)
+                setPadding(0, 0, 0, 0)
+            })
+            addView(label(subtitle, 10.5f, muted = !emphasis).apply {
+                setTextColor(if (emphasis) Color.argb(205, 255, 255, 255) else dim)
+                setPadding(0, dp(2), 0, 0)
+                maxLines = 2
+                ellipsize = android.text.TextUtils.TruncateAt.END
+            })
+        }
+
+    private fun addActionGrid(parent: LinearLayout, tiles: List<LinearLayout>) {
+        val rows = tiles.chunked(3)
+        rows.forEachIndexed { rowIndex, rowTiles ->
+            val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+            rowTiles.forEachIndexed { index, tile ->
+                row.addView(tile, LinearLayout.LayoutParams(0, -2, 1f).apply {
+                    if (index < rowTiles.lastIndex) rightMargin = dp(8)
+                })
+            }
+            while (row.childCount < 3) {
+                row.addView(View(this), LinearLayout.LayoutParams(0, 1, 1f).apply {
+                    if (row.childCount < 3) rightMargin = dp(8)
+                })
+            }
+            parent.addView(row)
+            if (rowIndex < rows.lastIndex) sectionGap(parent, 8)
+        }
+    }
+
+    private fun showFeatureSoon(name: String, description: String) {
+        AlertDialog.Builder(this)
+            .setTitle(name)
+            .setMessage("$description\n\nEsse atalho já está previsto no painel, mas ainda será implementado em uma versão futura.")
+            .setPositiveButton("OK", null)
+            .show()
+    }
+
+    private fun showRemoteNotifications(root: JSONObject) {
+        val events = root.optJSONArray("events")
+        val (wrapper, layout) = dialogWrapper()
+        dialogIntro(layout, "Eventos autorizados recebidos do aparelho remoto.")
+        if (events == null || events.length() == 0) {
+            layout.addView(label("Nenhuma notificação autorizada capturada.", 12.5f, muted = true))
         } else {
             for (index in events.length() - 1 downTo 0) {
                 val event = events.optJSONObject(index) ?: continue
-                val item = LinearLayout(this).apply {
-                    orientation = LinearLayout.VERTICAL
-                    background = shape(fieldColor, 12, true)
-                    setPadding(dp(12), dp(8), dp(12), dp(8))
-                }
+                val item = panel(12)
                 item.addView(label("${event.optString("type").uppercase(Locale.getDefault())} · ${event.optString("app")}", 11f, muted = true))
                 item.addView(label(event.optString("title"), 14f, strong = true))
-                item.addView(label(event.optString("preview"), 12f))
+                if (event.optString("preview").isNotBlank()) item.addView(label(event.optString("preview"), 12f))
                 item.addView(label(formatDate(event.optLong("whenMs")), 11f, muted = true))
-                panel.addView(item, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(8) })
+                layout.addView(item)
+                sectionGap(layout, 7)
             }
         }
+        AlertDialog.Builder(this)
+            .setTitle("Notificações")
+            .setView(wrapper)
+            .setPositiveButton("Fechar", null)
+            .show()
+    }
+
+    private fun copyRemoteSnapshot(root: JSONObject) {
+        val battery = root.optJSONObject("battery") ?: return
+        val host = SettingsStore.getRemoteHost(this)
+        val summary = buildString {
+            append(currentDeviceTitle?.text ?: "Monitor Remoto")
+            append("\nIP: ").append(host)
+            append("\nRede: ").append(connectionKind(host))
+            append("\nMétodo: ").append(selectedConnectionMethod)
+            append("\nAtualizado: ").append(if (lastSuccessfulMs > 0L) formatDate(lastSuccessfulMs) else "agora")
+            append("\n\n").append(batterySummary(battery))
+        }
+        val clip = ClipData.newPlainText("Monitor Remoto: resumo do aparelho", summary)
+        if (Build.VERSION.SDK_INT >= 33) {
+            clip.description.extras = PersistableBundle().apply {
+                putBoolean(ClipDescription.EXTRA_IS_SENSITIVE, true)
+            }
+        }
+        (getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(clip)
+        message("Resumo atual copiado para a área de transferência.")
+    }
+
+    private fun showRemoteDetailsDialog(root: JSONObject) {
+        val battery = root.optJSONObject("battery") ?: return
+        val host = SettingsStore.getRemoteHost(this)
+        val (wrapper, layout) = dialogWrapper()
+        dialogIntro(layout, "Resumo técnico do aparelho remoto.")
+        val card = panel(14)
+        card.addView(dialogMetricRow("Aparelho", currentDeviceTitle?.text?.toString() ?: host))
+        card.addView(dialogMetricRow("Rede", connectionKind(host)))
+        card.addView(dialogMetricRow("IP", host.ifBlank { "—" }))
+        card.addView(dialogMetricRow("Método", selectedConnectionMethod))
+        card.addView(dialogMetricRow("Atualização", if (lastSuccessfulMs > 0L) formatDate(lastSuccessfulMs) else "Sem leitura recente"))
+        card.addView(dialogMetricRow("Bateria", if (battery.isNull("levelPercent")) "—" else "${battery.optDouble("levelPercent").toInt()}%"))
+        card.addView(dialogMetricRow("Estado", if (battery.optBoolean("charging")) "Carregando" else "Descarregando"))
+        card.addView(dialogMetricRow("Temperatura", if (battery.isNull("temperatureC")) "—" else String.format(Locale.getDefault(), "%.1f °C", battery.optDouble("temperatureC"))))
+        card.addView(dialogMetricRow("Tensão", if (battery.isNull("voltageMv")) "—" else "${battery.optInt("voltageMv")} mV"))
+        card.addView(dialogMetricRow("Corrente atual", if (battery.isNull("currentMa")) "—" else String.format(Locale.getDefault(), "%.0f mA", battery.optDouble("currentMa"))))
+        card.addView(dialogMetricRow("Corrente média", if (battery.isNull("averageMa")) "—" else String.format(Locale.getDefault(), "%.0f mA", battery.optDouble("averageMa"))))
+        card.addView(dialogMetricRow("Eventos", "${root.optJSONArray("events")?.length() ?: 0}"))
+        layout.addView(card)
+        layout.addView(label("Correntes são leituras fornecidas pelo Android e podem variar conforme o aparelho.", 11f, muted = true))
+        AlertDialog.Builder(this)
+            .setTitle("Detalhes do aparelho")
+            .setView(wrapper)
+            .setPositiveButton("Fechar", null)
+            .show()
     }
 
     private fun batterySummary(battery: JSONObject): String {

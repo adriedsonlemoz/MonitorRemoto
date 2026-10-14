@@ -1,5 +1,13 @@
 # Histórico de versões
 
+## 0.1.0-alpha.19 (13/10/2026)
+
+- Painel do aparelho conectado redesenhado com cabeçalho compacto, status visível, IP, método de conexão e botões **Desconectar/Reconectar** e **↻ Atualizar** no topo à direita.
+- Resumo visual do aparelho remoto em grade 3x2 com ícones para bateria, temperatura, correntes, tensão e contador de eventos.
+- Inclusão de grade de **Funções remotas** com atalhos compactos: Notificações, Copiar, Detalhes, Mensagens, Ver tela e Localização. Os três últimos permanecem sinalizados como recursos futuros.
+- Diálogo de **Notificações** exibe os eventos autorizados recentes; **Copiar** agora leva um resumo sensível do aparelho remoto para a área de transferência; **Detalhes** mostra dados técnicos e de rede.
+- Mantidos fluxo Home separado, pareamento QR/manual, KeyStore, polling de 15 segundos e retorno à Home ao desconectar.
+
 ## 0.1.0-alpha.18 (13/10/2026)
 
 - Compactação do menu Conectar: QR | Manual horizontal, sem opção Inserir código QR. Aparelhos recentes exibem Conectar | Renomear | Esquecer na mesma linha.

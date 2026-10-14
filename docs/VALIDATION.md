@@ -215,3 +215,11 @@
 - Riscos ainda a validar em dois aparelhos: atualização de tela ao primeiro snapshot, latência real de atualização, atualização de estado após 45 s sem consulta, identificação informada pelo controlador, rotação global de credencial.
 - Limitação deliberada: sem sessão TCP contínua nem revogação individual; nomes enviados pelo cliente não são atestados.
 - Build Android / teste físico: não executados localmente se ferramentas/SDK ausentes.
+
+## alpha.19: painel remoto compacto (13/10/2026)
+
+- [x] Reorganização da tela do aparelho conectado com cabeçalho compacto, IP, método e ações à direita.
+- [x] Grade visual com ícones para leituras de bateria e contador de eventos.
+- [x] Grade de funções remotas e pop-ups para notificações, cópia de resumo e detalhes técnicos.
+- [ ] Compilação Android/Gradle completa e testes físicos de layout, rotação e densidades.
+- [ ] Validação visual em aparelhos menores e confirmação de contraste/legibilidade em tema claro/escuro.

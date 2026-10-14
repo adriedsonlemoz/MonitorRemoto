@@ -12,7 +12,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.18" and code.group(1) == "18", "Versões incompatíveis"
+assert version == "0.1.0-alpha.19" and code.group(1) == "19", "Versões incompatíveis"
 assert version in ui, "Tela de versão desatualizada"
 assert f"versionCode={code.group(1)}" in (root / 'docs/ARCHITECTURE.md').read_text(), "Arquitetura com versionCode desatualizado"
 # alpha.9 remove a Activity antiga do ZXing Embedded; Camera2 + ZXing Core offline.
@@ -108,7 +108,7 @@ print('PASSOU: UI alpha.15, migração única, Keystore por host, tema e sugest�
 assert 'private fun connectSavedDevice(' in ui and 'private fun renameSavedDevice(' in ui
 assert 'private fun forgetSavedDevice(' in ui and 'private fun showConnectionChooser()' in ui
 assert 'showManualConnectionDialog()' in ui and 'setTitle("Confirmar aparelho")' in ui
-assert 'actionButton("↻ Atualizar")' in ui and 'LinearLayout.LayoutParams(dp(100), dp(44))' in ui
+assert 'actionButton("↻ Atualizar")' in ui and 'LinearLayout.LayoutParams(dp(116), dp(42))' in ui
 assert '@android:style/Theme.Material.Light.Dialog.NoActionBar' in manifest
 assert 'window.setLayout(' in scan and 'Aponte para o QR Code' in scan
 print('PASSOU: fluxo alpha.15, confirmação QR, botões de ação, scanner pop-up')
@@ -156,3 +156,13 @@ assert 'addInfoAction(actionButton("Compartilhar"' in ui
 assert 'private fun renderIncomingAccess()' in ui and 'private fun showIncomingAccessActions(' in ui
 assert (root / 'app/src/test/java/br/dev/monitorremoto/transport/AuthenticatedAccessTest.kt').exists()
 print('PASSOU: alpha.18, menus compactos, Home após desconexão, alertas autenticados e tempo de expiração')
+
+# alpha.19: painel remoto compacto com grid e atalhos.
+assert 'private fun networkIcon(host: String)' in ui and 'private fun connectionKind(host: String)' in ui
+assert 'private fun compactMetricCard(' in ui and 'private fun addMetricGrid(' in ui
+assert 'private fun actionTile(' in ui and 'private fun addActionGrid(' in ui
+assert 'private fun showRemoteNotifications(root: JSONObject)' in ui
+assert 'private fun copyRemoteSnapshot(root: JSONObject)' in ui
+assert 'private fun showRemoteDetailsDialog(root: JSONObject)' in ui
+assert 'Funções remotas' in ui and 'Mensagens' in ui and 'Ver tela' in ui and 'Localização' in ui
+print('PASSOU: alpha.19, painel remoto compacto, atalhos e detalhes dedicados')

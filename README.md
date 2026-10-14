@@ -1,6 +1,6 @@
 # Monitor Remoto
 
-**v0.1.0-alpha.18 / versionCode 18** · Android 8.0+ · Kotlin 2.2.21 · AGP 8.13.2 · Gradle 8.13
+**v0.1.0-alpha.19 / versionCode 19** · Android 8.0+ · Kotlin 2.2.21 · AGP 8.13.2 · Gradle 8.13
 
 Dois modos no mesmo APK: **Monitorado** (servidor) e **Controle** (cliente).
 
@@ -20,7 +20,7 @@ Dois modos no mesmo APK: **Monitorado** (servidor) e **Controle** (cliente).
 
 ## Como utilizar
 
-1. Execute GitHub Actions > **Gerar APK e Release** > Run workflow. Para baixar **APK sem ZIP**, use Releases > `v0.1.0-alpha.18` > Assets > **`MonitorRemoto-v0.1.0-alpha.18.apk`**. Em Actions > Artifacts, um APK de contingência (quando presente) continua vindo em ZIP por comportamento padrão do GitHub. Instale o mesmo APK nos dois aparelhos.
+1. Execute GitHub Actions > **Gerar APK e Release** > Run workflow. Para baixar **APK sem ZIP**, use Releases > `v0.1.0-alpha.19` > Assets > **`MonitorRemoto-v0.1.0-alpha.19.apk`**. Em Actions > Artifacts, um APK de contingência (quando presente) continua vindo em ZIP por comportamento padrão do GitHub. Instale o mesmo APK nos dois aparelhos.
 2. No telefone secundário: na nova **Home**, toque em **Monitorar este aparelho > Abrir tela do aparelho**; autorize a notificação de serviço e ative o monitoramento. Em Configurações, conceda apenas as permissões necessárias e selecione os aplicativos cujas notificações deseja compartilhar.
 3. Na página Monitorado, toque em **Gerar QR** no lado direito do cartão. Escolha o IP privado acessível. O QR expira em 2 minutos e é válido para um único pareamento.
 4. No telefone principal: na **Home**, toque em **Conectar novo aparelho > QR Code**, aponte a câmera na janela compacta e confirme os dados do aparelho antes do pareamento. Para um aparelho salvo, use **Aparelhos anteriores > Conectar**. A digitação manual de IP e chave continua disponível.
@@ -47,7 +47,7 @@ Requer Android SDK API 36, Java 17, Gradle 8.13. O repositório ainda não inclu
 gradle :app:testDebugUnitTest :app:assembleDebug
 ```
 
-APK local de teste: `app/build/outputs/apk/debug/app-debug.apk`. O workflow copia esse arquivo ou o Release assinado como **`MonitorRemoto-v0.1.0-alpha.18.apk`**. Baixe diretamente na aba GitHub **Releases**. **O APK não está incluído neste ZIP de código-fonte.** Veja `docs/PAIRING_QR.md` para segurança do QR.
+APK local de teste: `app/build/outputs/apk/debug/app-debug.apk`. O workflow copia esse arquivo ou o Release assinado como **`MonitorRemoto-v0.1.0-alpha.19.apk`**. Baixe diretamente na aba GitHub **Releases**. **O APK não está incluído neste ZIP de código-fonte.** Veja `docs/PAIRING_QR.md` para segurança do QR.
 
 Opcional: configure os quatro Secrets de assinatura para gerar APK Release assinado e AAB. Ver `docs/APK_DOWNLOAD.md`. Preservar a mesma keystore entre builds é essencial para atualizações sem reinstalação.
 
@@ -157,6 +157,13 @@ A tela Monitorado apresenta o estado real do serviço e IP local. Ativar, gerar 
 - O ícone **Home** e a ação **Voltar** nas telas de monitoramento/controle retornam à escolha inicial sem encerrar serviços, apagar dados ou revogar credenciais.
 - As telas detalhadas de controle remoto e de aparelho monitorado serão refinadas em versão posterior; a alpha.17 só reorganiza a navegação e as ações locais.
 
+
+## Mudanças da alpha.19: painel remoto compacto
+
+- Tela do aparelho conectado reorganizada como painel compacto, com nome, status, IP, método e ações principais no topo.
+- Resumo remoto em grade com ícones para bateria, temperatura, corrente atual, corrente média, tensão e quantidade de eventos.
+- Grade de funções remotas com atalhos compactos: Notificações, Copiar, Detalhes, Mensagens, Ver tela e Localização.
+- Notificações autorizadas e detalhes técnicos passaram a abrir em pop-ups; copiar monta um resumo sensível do aparelho atual.
 
 ## Mudanças da alpha.18: conectividade e acesso recebido
 
