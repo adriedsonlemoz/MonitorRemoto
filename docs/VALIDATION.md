@@ -1,3 +1,12 @@
+## Alpha.43 — validação desta edição (14/10/2026)
+
+- O código-fonte foi alterado para melhorar o modo ADB e o modo de tela conforme CHANGELOG.
+- Build Gradle e testes físicos: PENDENTES nesta edição; não reutilizar o resultado positivo da alpha.42 como prova de build da alpha.43.
+- `python3 tools/check_distribution.py`: aprovado com novas verificações alpha.43.
+- Parser PSI Kotlin 1.9.0: 76 arquivos do app, 0 erros sintáticos (não verifica resolução de símbolos Android).
+- Teste Kotlin/JVM isolado de `VideoFrameStore` com `SystemClock` substituído por stub: aprovado para fila longa, novo IDR, quadros contíguos e expiração de demanda AVC.
+- Validação estrutural do ZIP e CRC: pendente antes do empacotamento final.
+
 # Validação e riscos conhecidos
 
 ## Alpha.42 — validação executada em 14/10/2026

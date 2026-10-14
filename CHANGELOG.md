@@ -1,3 +1,11 @@
+## 0.1.0-alpha.43 (14/10/2026)
+
+- O **Modo avançado ADB** permite capturar imagens das instruções, campos comuns e diagnóstico. Enquanto um QR de pareamento ADB está visível, aplica `FLAG_SECURE` para proteger a senha temporária; removido ao fechar, expirar ou sair.
+- Instruções na tela distinguem controlador (gera QR) e monitorado (lê QR nas Configurações de Depuração sem fios), e portas de pareamento/conexão. mDNS passa a alertar que IP não confirma identidade do aparelho.
+- Conexão ADB bem-sucedida consulta modelo e versão Android reportados pelo próprio aparelho e mostra esses dados no topo; indisponibilidade não é apresentada como identidade verificada. ADB continua sem transmitir vídeo.
+- Visualizador **Ver tela** inicia em JPEG para priorizar menor atraso e oferece alternância manual para H.264 experimental. Enquanto o usuário usa JPEG, o monitorado suspende a pesada codificação H.264 (após 2 s sem requisições de vídeo), mantendo somente a prévia JPEG. Fila de H.264 longa deixa de entregar sequências antigas e aguarda/solicita um quadro-chave recente para sincronizar.
+- Mantidos MediaProjection consentida, TLS do ADB, limites de rede, autorização local para comandos e dados sensíveis. Testes físicos de desempenho/funcionamento e build Android devem ser registrados separadamente.
+
 # 0.1.0-alpha.42 — Modo avançado ADB por Wi-Fi
 
 - Cliente ADB TLS real em módulo isolado, com pareamento SPAKE2 via QR/código, mDNS e credencial RSA cifrada pelo Android Keystore.

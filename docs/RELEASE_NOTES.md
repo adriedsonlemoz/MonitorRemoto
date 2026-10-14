@@ -1,4 +1,11 @@
-# Monitor Remoto v0.1.0-alpha.42
+# Monitor Remoto v0.1.0-alpha.43
+
+## Ajustes de pareamento ADB e transmissão de tela (alpha.43)
+
+- Capturas de tela liberadas no modo ADB quando não há QR com segredo visível; QR ainda é protegido.
+- Guia de pareamento dentro da tela, com papéis dos dois telefones, IP e portas; indicação do modelo informado pelo Android após conectar.
+- JPEG passa a ser modo inicial de Ver tela, H.264 experimental pode ser selecionado; fila AVC com atraso descarta quadros antigos e pede nova sincronização. A codificação AVC no monitorado deixa de consumir CPU após 2 segundos sem solicitações específicas de vídeo.
+- Ainda pendente: medições em dois celulares e build Android da alpha.43.
 
 ## Modo avançado ADB por Wi-Fi (alpha.42)
 

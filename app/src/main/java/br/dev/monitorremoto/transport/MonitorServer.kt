@@ -183,6 +183,7 @@ class MonitorServer(private val context: Context) {
                     if (regular.optString("op") == "videoFrame") {
                         // Somente sessão MediaProjection já consentida: nenhuma captura remota oculta.
                         ScreenFrameStore.viewerPing()
+                        VideoFrameStore.viewerPing()
                         val after = regular.optLong("after", 0L).coerceAtLeast(0L)
                         if (after == 0L) VideoFrameStore.requestKeyFrame()
                         val frame = if (ScreenFrameStore.sharing) VideoFrameStore.next(after) else null

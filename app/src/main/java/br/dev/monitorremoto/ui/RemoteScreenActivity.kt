@@ -101,6 +101,8 @@ class RemoteScreenActivity : Activity() {
     private var videoDecoder: AvcDecoder? = null
     private var videoSize: Pair<Int, Int>? = null
     private var videoFailUntil = 0L
+    @Volatile private var preferJpeg = true
+    private lateinit var streamModeButton: TextView
     private var videoMode = false
     private var videoWaitingSince = 0L
     private var videoFirstPictureAt = 0L
@@ -277,7 +279,7 @@ class RemoteScreenActivity : Activity() {
                     val key = RecentDevices.key(applicationContext, host)
                         ?: error("Chave não encontrada. Conecte novamente.")
                     val queryStart = SystemClock.elapsedRealtime()
-                    val tryVideo = SystemClock.elapsedRealtime() >= videoFailUntil
+                    val tryVideo = !preferJpeg && SystemClock.elapsedRealtime() >= videoFailUntil
                     val result = if (tryVideo) RemoteClient.videoFrame(host, key, applicationContext,
                         method, videoSeq) else RemoteClient.screenFrame(host, key, applicationContext, method)
                     val networkRoundTrip = SystemClock.elapsedRealtime() - queryStart
@@ -456,6 +458,22 @@ class RemoteScreenActivity : Activity() {
             maxLines = 2; setPadding(dp(3), dp(9), 0, dp(11))
         }
         normal.addView(status)
+        streamModeButton = text("Transmissão: JPEG (menor atraso) · tocar para testar H.264", 12.5f, accent, true).apply {
+            contentDescription = "Alternar JPEG e H.264 experimental"
+            setPadding(dp(6), dp(7), dp(6), dp(10))
+            isClickable = true; isFocusable = true
+            setOnClickListener {
+                preferJpeg = !preferJpeg
+                videoFailUntil = 0L
+                closeVideo()
+                clearFrame()
+                text = if (preferJpeg) "Transmissão: JPEG (menor atraso) · tocar para testar H.264"
+                    else "Transmissão: H.264 experimental · tocar para voltar ao JPEG"
+                status.text = if (preferJpeg) "Alterado para JPEG; aguardando quadro novo."
+                    else "Testando H.264. Se ficar lento, volte ao JPEG."
+            }
+        }
+        normal.addView(streamModeButton)
 
         stageSlot = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         stage = FrameLayout(this).apply {

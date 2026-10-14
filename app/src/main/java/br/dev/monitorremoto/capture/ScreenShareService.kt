@@ -200,11 +200,12 @@ class ScreenShareService : Service() {
                     if (!ScreenFrameStore.sharing) return@setOnImageAvailableListener
                     val stillId = ScreenFrameStore.pendingStill()
                     val powerSave = getSystemService(PowerManager::class.java).isPowerSaveMode
+                    val wantsVideo = VideoFrameStore.videoRequestedRecent()
                     val interval = if (powerSave) 700L else
-                        if (VideoFrameStore.supported) 1_500L else FRAME_INTERVAL_MS
+                        if (wantsVideo && VideoFrameStore.supported) 1_500L else FRAME_INTERVAL_MS
                     val viewer = ScreenFrameStore.viewerActive()
                     val now = SystemClock.elapsedRealtime()
-                    val needVideo = viewer && !powerSave && now - lastAvcAt >= 100L
+                    val needVideo = viewer && wantsVideo && !powerSave && now - lastAvcAt >= 100L
                     val needPreview = viewer && now - lastFrameAt >= interval
                     if (!needPreview && !needVideo && stillId == 0L) return@setOnImageAvailableListener
                     if (needPreview) lastFrameAt = now

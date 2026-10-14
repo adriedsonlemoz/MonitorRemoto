@@ -1,4 +1,4 @@
-# Arquitetura (0.1.0-alpha.42)
+# Arquitetura (0.1.0-alpha.43)
 
 ```text
 MONITORADO                                      CONTROLE
@@ -17,6 +17,10 @@ O FGS `connectedDevice` mantém o socket de escuta durante monitoramento ativo. 
 
 **Limites:** TCP não faz NAT traversal; internet depende da VPN, rede de dispositivos ou infraestrutura futura. O monitor não envia push para o controlador; este consulta quando aberto. OS/fabricantes podem encerrar/restringir o serviço. Testes reais em Android 13–17 são pendentes. Esquemas de sincronização e políticas granulares ainda não estão implementados.
 
+## Modo de vídeo alpha.43
+
+Ver tela começa em JPEG por responsividade. H.264 depende de seleção explícita: a captura usa MediaProjection + ImageReader e converte RGBA→YUV na CPU antes do MediaCodec; a decodificação AVC reconstrói Bitmap na CPU. A codificação AVC só permanece ativa enquanto houver consultas autenticadas `videoFrame` recentes (janela de 2 s), evitando degradar o JPEG por CPU e intervalo de captura maior. A troca de quadros passa por consultas TCP/AES-GCM individuais (não streaming persistente), razão pela qual H.264 pode ser mais lento que JPEG em aparelhos específicos. Ao exceder 5 quadros de distância, não envia sequencialmente quadros ultrapassados; espera ou pede IDR recente. Necessários dados reais de tempo de captura/codificação/rede/decodificação/desenho para otimização estrutural.
+
 ## Compartilhamento de tela (alpha.34)
 
 `MainActivity` no Monitorado solicita `MediaProjectionManager.createScreenCaptureIntent()` e inicia `ScreenShareService` (foregroundServiceType `mediaProjection`) **somente** após autorização na interface do Android. Um `MediaProjection` novo corresponde a exatamente uma chamada `createVirtualDisplay`. Listener `onStop` limpa quadro e encerra serviço; `onCapturedContentResize` redimensiona a superfície sem criar outra projeção. Nenhum receiver reinicia o ScreenShareService em segundo plano.
@@ -25,9 +29,9 @@ A captura usa `ImageReader` RGBA, `Bitmap` JPEG com largura máxima 540 px, taxa
 
 ## Distribuição e assinatura
 
-O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.42` e `versionCode=42`.
+O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.43` e `versionCode=43`.
 
-- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.42.apk`.
+- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.43.apk`.
 - `upload-artifact` sempre distribui um ZIP; GitHub Releases recebe o **arquivo APK direto**.
 - Com quatro Secrets, Gradle gera APK Release assinado e AAB. Sem Secrets, o arquivo é Debug de teste e não preserva necessariamente a assinatura entre execuções.
 - Releases são prévias, não substituem a futura revisão da Google Play e nem os ensaios reais.

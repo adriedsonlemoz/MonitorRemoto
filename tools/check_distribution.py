@@ -16,7 +16,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.42" and code.group(1) == "42", "Versões incompatíveis"
+assert version == "0.1.0-alpha.43" and code.group(1) == "43", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -603,3 +603,19 @@ assert 'private static SSLContext sslContext' not in (vendor / 'SslUtils.java').
 assert (root / 'app/src/test/java/br/dev/monitorremoto/adb/AdbPolicyTest.kt').is_file()
 assert (root / 'docs/ADB.md').is_file()
 print('PASSOU: alpha.42, módulo ADB real, identidade cifrada, QR temporário e transporte TLS obrigatório')
+
+# Alpha.43: janela de ADB protegida somente durante QR; JPEG inicial e carga AVC sob demanda.
+ui43 = (root / 'app/src/main/java/br/dev/monitorremoto/ui/AdbActivity.kt').read_text()
+viewer43 = (root / 'app/src/main/java/br/dev/monitorremoto/ui/RemoteScreenActivity.kt').read_text()
+store43 = (root / 'app/src/main/java/br/dev/monitorremoto/video/VideoFrameStore.kt').read_text()
+service43 = (root / 'app/src/main/java/br/dev/monitorremoto/capture/ScreenShareService.kt').read_text()
+server43 = (root / 'app/src/main/java/br/dev/monitorremoto/transport/MonitorServer.kt').read_text()
+assert 'window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)' in ui43
+assert 'window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)' in ui43
+assert 'clearQr()' in ui43 and 'Emparelhar dispositivo com código QR' in ui43
+assert 'Telefone conectado:' in ui43 and 'DIAGNOSTIC' in ui43
+assert '@Volatile private var preferJpeg = true' in viewer43 and '!preferJpeg &&' in viewer43
+assert 'MAX_LAG_FRAMES = 5' in store43 and 'requestSync = true' in store43
+assert 'VideoFrameStore.videoRequestedRecent()' in service43
+assert 'VideoFrameStore.viewerPing()' in server43
+print('PASSOU: alpha.43, janela de QR protegida, instruções ADB e JPEG/AVC sem fila obsoleta')
