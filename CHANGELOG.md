@@ -1,3 +1,10 @@
+## 0.1.0-alpha.45 (14/10/2026)
+
+- Implementada primeira etapa funcional de Recuperar dados com compartilhamento somente leitura de uma pasta SAF escolhida no monitorado, revogável nas Configurações.
+- Nova navegação de arquivos no controlador e salvamento individual via ACTION_CREATE_DOCUMENT, com progresso, cancelamento, limites 32 MiB/150 itens/12 níveis e limpeza tentativa de destino parcial.
+- Novas operações autenticadas `dataList` e `dataChunk` sobre o canal AES-GCM atual; verificação SHA-256 por bloco, validação de caminho e tamanho, checagem dos metadados para detectar alterações durante a cópia; nenhum novo serviço/porta ou permissão de armazenamento amplo.
+- README, AGENTS, notas, arquitetura, verificador e versionamento atualizados. Build Gradle Android completo e transferência física ainda pendentes.
+
 ## 0.1.0-alpha.44 (14/10/2026)
 
 - Corrigida falha de compilação `:app:compileDebugKotlin` do workflow 43: quatro lambdas de `runOperation` em `AdbActivity` se associavam indevidamente ao callback `onSuccess(String)`, gerando referências `pair`/`execute` não resolvidas.

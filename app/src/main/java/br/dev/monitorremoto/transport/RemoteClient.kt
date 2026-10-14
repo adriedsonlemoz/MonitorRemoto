@@ -45,6 +45,52 @@ object RemoteClient {
         }
     }
 
+    /** Lista somente a árvore SAF autorizada localmente no telefone monitorado. */
+    fun dataList(host: String, key: ByteArray, context: Context, method: String,
+        path: List<String>): JSONObject = dataRequest(host, key, context, method, "dataList", path, 0L, 0L, 0L)
+
+    fun dataChunk(host: String, key: ByteArray, context: Context, method: String,
+        path: List<String>, size: Long, modified: Long, offset: Long): ByteArray {
+        val count = br.dev.monitorremoto.core.RemoteFilePolicy.nextChunkLength(size, offset)
+        require(count > 0) { "Bloco de arquivo inválido." }
+        val response = dataRequest(host, key, context, method, "dataChunk", path, size, modified, offset)
+        check(response.optLong("offset", -1L) == offset && response.optLong("size", -1L) == size &&
+            response.optLong("modified", -1L) == modified) { "Arquivo de origem mudou durante a cópia." }
+        val data = Base64.decode(response.getString("bytes"), Base64.NO_WRAP)
+        check(data.size == count) { "Bloco incompleto." }
+        val hash = java.security.MessageDigest.getInstance("SHA-256").digest(data)
+            .joinToString("") { "%02x".format(it.toInt() and 255) }
+        check(hash == response.optString("sha256")) { "Falha de integridade do arquivo." }
+        return data
+    }
+
+    private fun dataRequest(host: String, key: ByteArray, context: Context, method: String,
+        op: String, path: List<String>, size: Long, modified: Long, offset: Long): JSONObject {
+        require(host.isNotBlank() && host.length <= 253 && !host.contains('/') &&
+            !host.contains(':') && !host.contains(' '))
+        require(br.dev.monitorremoto.core.RemoteFilePolicy.validPath(path)) { "Caminho inválido." }
+        val parts = org.json.JSONArray()
+        path.forEach { parts.put(it) }
+        val request = JSONObject().put("v", WireProtocol.VERSION).put("op", op)
+            .put("path", parts).put("appVersion", AppVersion.NAME)
+            .put("ts", System.currentTimeMillis())
+            .put("clientId", SettingsStore.controllerId(context))
+            .put("clientName", listOf(Build.MANUFACTURER, Build.MODEL).joinToString(" ").take(72))
+            .put("accessMethod", method)
+        if (op == "dataChunk") request.put("size", size).put("modified", modified).put("offset", offset)
+        return Socket().use { socket ->
+            socket.connect(InetSocketAddress(host, WireProtocol.PORT), 4500)
+            socket.soTimeout = 10_000
+            WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(key, request))
+            val result = WireProtocol.decode(key, WireProtocol.receive(socket.getInputStream(), 180 * 1024))
+            if (result.optString("op") == "versionMismatch") error(AppVersion.incompatibility(result.optString("appVersion")))
+            check(result.optString("op") == op && result.optInt("v") == WireProtocol.VERSION &&
+                AppVersion.compatible(result.optString("appVersion"))) { "Resposta de arquivos inválida." }
+            check(result.optBoolean("ok")) { result.optString("message", "Acesso aos arquivos recusado no monitorado.") }
+            result
+        }
+    }
+
     /** Aviso explícito: encerra apenas o registro deste controlador no servidor. */
     fun disconnect(host: String, key: ByteArray, context: Context) {
         require(host.isNotBlank() && host.length <= 253 &&

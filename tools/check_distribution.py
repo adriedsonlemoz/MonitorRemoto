@@ -16,7 +16,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.44" and code.group(1) == "44", "Versões incompatíveis"
+assert version == "0.1.0-alpha.45" and code.group(1) == "45", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -633,3 +633,20 @@ assert 'adb.pair(endpoint.first, endpoint.second, password)' in ui43
 assert 'adb.pair(endpoint.host, endpoint.port, session.password)' in ui43
 assert 'adb.execute(AdbPolicy.Command.DIAGNOSTIC)' in ui43 and 'adb.execute(cmd)' in ui43
 print('PASSOU: alpha.44, lambdas ADB vinculadas ao parâmetro operation(AdbClient), não a onSuccess(String)')
+
+# Alpha.45: não regredir para uma opção ilustrativa nem contornar o SAF.
+remote_files = (root / 'app/src/main/java/br/dev/monitorremoto/ui/RemoteFilesActivity.kt').read_text()
+shared_folder = (root / 'app/src/main/java/br/dev/monitorremoto/core/SharedDataFolder.kt').read_text()
+file_policy = (root / 'app/src/main/java/br/dev/monitorremoto/core/RemoteFilePolicy.kt').read_text()
+assert 'Recuperar dados", "Pasta autorizada", enabled = true' in (root / 'app/src/main/java/br/dev/monitorremoto/ui/RemoteDashboardUi.kt').read_text()
+assert 'ACTION_OPEN_DOCUMENT_TREE' in (root / 'app/src/main/java/br/dev/monitorremoto/ui/SettingsScreenUi.kt').read_text()
+assert 'takePersistableUriPermission' in shared_folder and 'releasePersistableUriPermission' in shared_folder
+assert 'DocumentsContract.buildChildDocumentsUriUsingTree' in shared_folder and 'fun resolve(' in shared_folder
+assert 'RemoteFilePolicy.validPath(path)' in client and 'RemoteFilePolicy.validPath(path)' in shared_folder
+assert 'dataList' in server and 'dataChunk' in server and 'SharedDataFolder.handle(context, regular)' in server
+assert 'ACTION_CREATE_DOCUMENT' in remote_files and 'RemoteClient.dataChunk(' in remote_files and 'cancel.set(true)' in remote_files
+assert 'MessageDigest.getInstance("SHA-256")' in client and 'MAX_FILE_BYTES = 32L * 1024L * 1024L' in file_policy
+assert 'MANAGE_EXTERNAL_STORAGE' not in manifest and 'READ_EXTERNAL_STORAGE' not in manifest
+assert 'android:name=".ui.RemoteFilesActivity" android:exported="false"' in manifest
+assert (root / 'app/src/test/java/br/dev/monitorremoto/core/RemoteFilePolicyTest.kt').exists()
+print('PASSOU: alpha.45, recuperação restrita à árvore SAF consentida, criptografia, limites e cancelamento')

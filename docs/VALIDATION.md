@@ -1,3 +1,10 @@
+## Alpha.45 — Recuperar dados (14/10/2026)
+
+- Implementados picker SAF local e revogação, operações autenticadas `dataList` e `dataChunk`, UI de navegação/salvamento, limites e SHA-256 por bloco.
+- O acesso é limitado à árvore selecionada localmente, resolvendo cada segmento por enumeração e sem aceitar IDs brutos de documentos pela rede. Android 11+ pode proibir pastas no seletor.
+- Verificações locais: `python3 tools/check_distribution.py` aprovado (inclui invariantes alpha.45, manifesto sem permissão de armazenamento amplo, operação autenticada e revogação); parser Kotlin PSI em 79 arquivos principais sem erros sintáticos; teste isolado JVM de `RemoteFilePolicy` aprovado (caminho/limites/blocos); 41 XML válidos.
+- Compilação Gradle Android completa e transferência real em 2 celulares **não executadas neste ambiente**. O teste JVM isolado não substitui os testes JUnit instrumentados nem comprova o funcionamento do provedor SAF em um Android real.
+
 ## Alpha.44 — correção do workflow 43 (14/10/2026)
 
 - Logs recebidos: workflow 43 falhou em `:app:compileDebugKotlin` com `Unresolved reference pair` (linhas 104 e 177) e `execute` (130 e 135) em `AdbActivity.kt`. Causa: uso de trailing lambda associado ao último parâmetro `onSuccess: ((String) -> Unit)?`, em vez de `operation: (AdbClient) -> String`.

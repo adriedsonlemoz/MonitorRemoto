@@ -361,10 +361,10 @@ class MainActivity : Activity() {
             }
         }
     }
-
     @Deprecated("Compatibilidade com a Activity Android nativa")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == 4321) return handleRecoveryPickerResult(resultCode, data)
         if (requestCode == screenCaptureRequest) {
             if (resultCode == Activity.RESULT_OK && data != null &&
                 SettingsStore.isMonitorEnabled(this) && MonitorService.isRunning) {

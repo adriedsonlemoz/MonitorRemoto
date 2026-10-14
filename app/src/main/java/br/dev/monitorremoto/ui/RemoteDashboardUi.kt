@@ -31,8 +31,11 @@ internal fun MainActivity.displayResult(root: JSONObject, fromCache: Boolean = f
     container.addView(label("Funções remotas", 17f, strong = true).apply { setPadding(0, 0, 0, dp(12)) })
     val eventCount = root.optJSONArray("events")?.length() ?: 0
     val cards = listOf(
-        actionTile(R.drawable.ic_folder_download, "Recuperar dados", "Em breve") {
-            showFeatureSoon("Recuperar dados", "O resgate de arquivos exigirá autorização das pastas no celular monitorado e transferência criptografada. Ainda não está disponível.")
+        actionTile(R.drawable.ic_folder_download, "Recuperar dados", "Pasta autorizada", enabled = true) {
+            startActivity(Intent(this, RemoteFilesActivity::class.java).apply {
+                putExtra(RemoteFilesActivity.EXTRA_HOST, br.dev.monitorremoto.core.SettingsStore.getRemoteHost(this@displayResult))
+                putExtra(RemoteFilesActivity.EXTRA_METHOD, remoteConnection.method)
+            })
         },
         actionTile(R.drawable.ic_phone, "Detalhes", "", enabled = true) { showRemoteDetailsDialog(root) },
         actionTile(R.drawable.ic_bell, "Notificações", if (eventCount > 0) "$eventCount evento(s)" else "", enabled = true) {

@@ -142,6 +142,12 @@ object SettingsStore {
         return generated
     }
 
+    /** Somente a árvore SAF explicitamente concedida no monitorado; vazia = desativado. */
+    fun sharedDataTree(context: Context): String =
+        prefs(context).getString("shared_data_tree", "").orEmpty()
+    fun setSharedDataTree(context: Context, uri: String) =
+        prefs(context).edit().putString("shared_data_tree", uri).apply()
+
     fun getRemoteHost(context: Context) = prefs(context).getString("remote_host", "").orEmpty()
     fun setRemoteHost(context: Context, host: String) = prefs(context).edit().putString("remote_host", host).apply()
 }

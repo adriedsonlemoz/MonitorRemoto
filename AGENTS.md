@@ -1,4 +1,4 @@
-# Monitor Remoto 0.1.0-alpha.44
+# Monitor Remoto 0.1.0-alpha.45
 # Convenções permanentes do projeto Monitor Remoto
 
 - Toda alteração de código incrementa sequencialmente `versionCode` e `versionName` (ex.: `0.1.0-alpha.8` -> `0.1.0-alpha.9`). Sincronizar tela, README, CHANGELOG, RELEASE_NOTES e documentação.
@@ -21,7 +21,7 @@
 - Alpha.10: manter tema **claro padrão**, as opções da engrenagem, janela Conectar, botão de atualização compacto, lista de até 5 aparelhos recentes e os dados do Controle no topo. Não reintroduzir formulário longo na tela principal.
 - Credenciais por dispositivo usam `RecentDevices` + `SecretVault.profileKeyName`, com migração única da alpha.9. Não reaproveitar `CONTROLLER_KEY` antigo para IPs novos nem gravar segredo em preferências sem criptografia. Esquecer apaga o segredo correspondente.
 - Respostas HTTP/TCP não são conexão persistente. Exibir "Conectado" apenas após consulta autenticada bem-sucedida e "Sem resposta" após erro. Não inventar tempos de atualização.
-- Próxima versão sequencial: `0.1.0-alpha.45`, `versionCode 45`.
+- Próxima versão sequencial: `0.1.0-alpha.46`, `versionCode 46`.
 
 - Alpha.15: preservar a seleção Conectar → QR/Manual/Salvos, confirmação do QR antes de parear, cartões salvos com três ações e o scanner em Activity com tema Dialog.
 
@@ -88,3 +88,5 @@
 - Alpha.43: telas de diagnóstico ADB permitem screenshots sem QR temporário; proteger QR com FLAG_SECURE apenas enquanto visível. Instruir direção de leitura (monitorado lê QR do controlador), diferenciar portas de pareamento/conexão e mostrar modelo reportado pelo telefone após ADB conectado. Em Ver tela, JPEG é padrão de menor atraso, H.264 é opção experimental; ao perder fila AVC, saltar para IDR recente sem drenar muitos P-frames antigos. Não declarar latência garantida sem testes em aparelhos.
 
 - Alpha.44: erro `:app:compileDebugKotlin` no workflow 43 por `runOperation("...") { ... }`. Como `onSuccess` é o último parâmetro lambda da função, a lambda final foi inferida como `(String) -> Unit`, e `pair/execute` não pertencem a String. Usar sempre `operation = { adb -> ... }`, inclusive com callback nomeado `onSuccess = { ... }`. Validador confere a regressão; verificar Gradle/Android em CI.
+
+- Alpha.45: Recuperar dados é leitura SAF por pasta autorizada **no próprio monitorado**, com permissão persistida e opção de revogação. Nunca usar `MANAGE_EXTERNAL_STORAGE`, shell ADB, bypass do Android ou varredura de dados de apps. Só controlar arquivos dentro da árvore SAF previamente escolhida, com caminho relativo validado por reenumeração de filhos, AES-GCM/autenticação e versão exata. Transferir blocos de 48 KiB, até 32 MiB por arquivo, máximo 150 itens por pasta/12 níveis; cliente escolhe destino com ACTION_CREATE_DOCUMENT. Verificar integridade dos blocos e alterações do arquivo, cancelar sem deixar gravação intencional no monitorado. Não prometer recuperar dados apagados; build e testes físicos pendentes.

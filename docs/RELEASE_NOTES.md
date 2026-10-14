@@ -1,6 +1,14 @@
-# Monitor Remoto v0.1.0-alpha.44
+# Monitor Remoto v0.1.0-alpha.45
 
-## Correção de compilação do modo avançado ADB (alpha.44)
+## Recuperação de dados por pasta autorizada (alpha.45)
+
+- **Monitorado:** configurações de Arquivos e recuperação permitem selecionar/revogar pasta via seletor Android, somente leitura e desativado até autorização local.
+- **Controlador:** botão Recuperar dados navega no conteúdo da pasta permitida e salva arquivos individuais no local escolhido pelo usuário.
+- Transferência segmentada cifrada/autenticada, hash SHA-256 por bloco, progresso, cancelamento e limites de 32 MiB por arquivo, 150 nomes por pasta e 12 níveis.
+- Não há recuperação de arquivos apagados nem leitura de áreas privadas de aplicativos; não há novos privilégios.
+- Ainda requer compilação Gradle/CI e testes de dois aparelhos.
+
+## Histórico: correção de compilação do modo avançado ADB (alpha.44)
 
 - Corrigidas as quatro referências inválidas `pair` e `execute` da alpha.43 com parâmetro nomeado `operation` em `runOperation`.
 - Mantidos guia ADB/QR, captura protegida somente com QR visível, JPEG inicial e AVC opcional da alpha.43.

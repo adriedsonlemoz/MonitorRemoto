@@ -32,6 +32,7 @@ internal fun MainActivity.renderSettingsModule() {
         "notifications" to "Notificações",
         "sms" to "SMS e telefonia",
         "service" to "Serviço e recuperação",
+        "files" to "Arquivos e recuperação",
         "screen" to "Tela e controle remoto",
         "appearance" to "Aparência",
         "security" to "Segurança",
@@ -57,6 +58,8 @@ internal fun MainActivity.renderSettingsModule() {
             "Escolher aplicativos e permitir respostas", "notifications")
         settingsEntry(groupA, R.drawable.ic_message, "SMS e telefonia",
             "Ler, receber, responder e selecionar chip", "sms")
+        settingsEntry(groupA, R.drawable.ic_folder_download, "Arquivos e recuperação",
+            "Autorizar pasta para cópia em outro celular", "files")
         settingsEntry(groupA, R.drawable.ic_monitor, "Tela e controle remoto",
             "Compartilhar, controlar toque e capturar áudio", "screen")
         content.addView(groupA)
@@ -86,6 +89,7 @@ internal fun MainActivity.renderSettingsModule() {
             "notifications" -> fillNotificationSettings(page)
             "sms" -> fillSmsSettings(page)
             "screen" -> fillScreenSettings(page)
+            "files" -> fillFileRecoverySettings(page)
             "service" -> fillServiceSettings(page)
             "security" -> fillSecuritySettings(page)
             "appearance" -> fillAppearanceSettings(page)
@@ -547,4 +551,55 @@ internal fun MainActivity.selectNotificationApps() {
             SettingsStore.setNotificationAllowlist(this, selected)
             render()
         })
+}
+
+/** Seleção local no próprio monitorado. Nunca solicitar MANAGE_EXTERNAL_STORAGE. */
+private fun MainActivity.fillFileRecoverySettings(layout: LinearLayout) {
+    val chosen = SettingsStore.sharedDataTree(this).isNotBlank()
+    val active = br.dev.monitorremoto.core.SharedDataFolder.available(this)
+    dialogIntro(layout, "No telefone que contém os arquivos, escolha uma pasta pelo seletor do Android. " +
+        "Apenas arquivos dessa pasta e subpastas poderão ser copiados por um aparelho pareado. " +
+        "O acesso fica desativado até essa autorização.")
+    layout.addView(iconMenuRow(R.drawable.ic_folder_download, "Pasta autorizada",
+        if (active) "Leitura ativada · toque para substituir" else if (chosen) "Pasta selecionada · serviço desativado ou permissão expirada" else "Nenhuma pasta ativa · toque para escolher") {
+        showAppConfirm("Autorizar recuperação de arquivos?",
+            "Você deverá selecionar pessoalmente uma pasta neste celular. " +
+            "Controladores que possuem a chave de pareamento poderão listar e baixar os arquivos dessa pasta. " +
+            "Não permite acessar pastas privadas de outros aplicativos, nem recuperar dados apagados. " +
+            "Escolha apenas uma pasta com arquivos que deseja compartilhar.",
+            R.drawable.ic_shield, "Escolher pasta") {
+            startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                    Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+            }, 4321)
+        }
+    })
+    sectionGap(layout, 12)
+    layout.addView(iconMenuRow(R.drawable.ic_shield, "Revogar acesso à pasta",
+        if (active || SettingsStore.sharedDataTree(this).isNotBlank()) "Retirar imediatamente a autorização" else "Sem autorização ativa") {
+        if (SettingsStore.sharedDataTree(this).isBlank()) message("Nenhuma pasta está autorizada.")
+        else showAppConfirm("Revogar recuperação remota?",
+            "O Monitor Remoto deixará de servir novos blocos de arquivos dessa pasta. " +
+            "Cópias já concluídas em outro telefone não serão apagadas.",
+            R.drawable.ic_shield, "Revogar") {
+            br.dev.monitorremoto.core.SharedDataFolder.revoke(this)
+            message("Permissão revogada no monitorado.")
+        }
+    })
+    sectionGap(layout, 12)
+    layout.addView(label("Limites desta etapa: arquivos individuais de até 32 MiB; " +
+        "150 itens por pasta; sem acesso ao armazenamento inteiro ou arquivos excluídos. " +
+        "A transferência exige o serviço Monitor Remoto ativo e a mesma versão nos dois aparelhos.",
+        11.5f, muted = true))
+}
+
+internal fun MainActivity.handleRecoveryPickerResult(resultCode: Int, data: Intent?) {
+    val selectedUri = data?.data
+    if (resultCode == android.app.Activity.RESULT_OK && selectedUri != null) {
+        val outcome = runCatching {
+            br.dev.monitorremoto.core.SharedDataFolder.authorize(this, selectedUri, data?.flags ?: 0)
+        }
+        message(outcome.fold({ "Pasta compartilhada: leitura para aparelhos pareados." },
+            { "Não foi possível autorizar a pasta: ${it.message ?: "permissão recusada"}" }))
+    } else message("Seleção cancelada: nenhuma pasta nova foi autorizada.")
 }

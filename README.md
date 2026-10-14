@@ -1,6 +1,15 @@
 # Monitor Remoto
 
-**v0.1.0-alpha.44 / versionCode 44** · Android 8.0+ · Kotlin 2.2.21 · AGP 8.13.2 · Gradle 8.13
+**v0.1.0-alpha.45 / versionCode 45** · Android 8.0+ · Kotlin 2.2.21 · AGP 8.13.2 · Gradle 8.13
+
+## Recuperar dados (alpha.45)
+
+- **Monitorado:** Configurações → Arquivos e recuperação → Pasta autorizada → Escolher pasta no seletor SAF do Android. Conceda leitura somente da pasta necessária. O servidor precisa estar ativado; a autorização fica salva até você revogar no mesmo menu.
+- **Controlador:** conecte o telefone com QR/chave e toque em **Recuperar dados**. Navegue nas subpastas autorizadas, escolha o arquivo e use o seletor Android **Salvar como** para criar uma cópia no controlador. Não copia nem altera a origem.
+- Tráfego pelo protocolo existente AES-GCM autenticado, com verificação SHA-256 por bloco, 48 KiB por solicitação, proteção de tamanho/caminho e tentativa de remover destino parcial se falhar ou cancelar. Apresenta progresso; controle de cancelamento e mensagens de falha.
+- Limites iniciais: 32 MiB por arquivo, 150 entradas por diretório, até 12 níveis. Arquivos sem tamanho disponível, vazios e pastas inteiras ainda não são suportados. Não há restauração de dados apagados, root, depuração ADB para arquivos, bypass de senha, varredura completa nem leitura de dados privados de outros apps.
+- O Android 11+ restringe escolha de raiz e determinadas pastas. A capacidade depende do provedor SAF e permissões persistidas. Se a rede cair, poderá haver arquivo parcial no destino; revise antes de usar.
+- **Compilação Android e testes entre aparelhos ainda pendentes** nesta entrega; validar no GitHub Actions antes de instalar.
 
 ## Correção alpha.44
 
@@ -132,7 +141,7 @@ A Home, o Modo Monitorado, a escolha de conexão, os submenus de Configurações
 - Detalhes do aparelho agora abre uma tela própria com seções de bateria, Wi-Fi, rede móvel/SIM, armazenamento interno (total, usado, livre), RAM e sistema Android.
 - Servidor autenticado envia `deviceInfo`, `telephony` e informações de rede observadas, sem expor a chave de pareamento; recursos ainda não implementados mostram **Em breve**.
 - Número de linha é opcional, desativado inicialmente e compartilhado apenas após permissão `READ_PHONE_NUMBERS` **e** aceite em **Configurações → Notificações e permissões → Número do chip**, sempre no aparelho monitorado. O número pode não existir no registro da operadora.
-- O atalho **Recuperar dados** foi adicionado visualmente, mas a transferência de arquivos ainda não está implementada; continua prevista para uma versão posterior.
+- O atalho **Recuperar dados** estava apenas visual nas versões anteriores à alpha.45; agora transfere arquivos individuais da pasta SAF autorizada.
 - Atualize os dois aparelhos para alpha.27: a conexão exige versão exata igual.
 
 ## Recursos já implementados no código-fonte
@@ -151,7 +160,7 @@ A Home, o Modo Monitorado, a escolha de conexão, os submenus de Configurações
 
 ## Como utilizar
 
-1. Execute GitHub Actions > **Gerar APK e Release** > Run workflow. Para baixar **APK sem ZIP**, use Releases > `v0.1.0-alpha.44` > Assets > **`MonitorRemoto-v0.1.0-alpha.44.apk`**. Em Actions > Artifacts, um APK de contingência (quando presente) continua vindo em ZIP por comportamento padrão do GitHub. Instale o mesmo APK nos dois aparelhos.
+1. Execute GitHub Actions > **Gerar APK e Release** > Run workflow. Para baixar **APK sem ZIP**, use Releases > `v0.1.0-alpha.45` > Assets > **`MonitorRemoto-v0.1.0-alpha.45.apk`**. Em Actions > Artifacts, um APK de contingência (quando presente) continua vindo em ZIP por comportamento padrão do GitHub. Instale o mesmo APK nos dois aparelhos.
 2. No telefone secundário: na nova **Home**, toque em **Monitorar este aparelho**; autorize a notificação de serviço e ative o monitoramento. Em Configurações, conceda apenas as permissões necessárias e selecione os aplicativos cujas notificações deseja compartilhar.
 3. Na página Monitorado, toque no cartão **Gerar QR**. Escolha o IP privado acessível. O QR expira em 2 minutos e é válido para um único pareamento.
 4. No telefone principal: na **Home**, toque em **Conectar novo aparelho > QR Code**, aponte a câmera na janela compacta e confirme os dados do aparelho antes do pareamento. Para um aparelho salvo, use **Aparelhos anteriores > Conectar**. A digitação manual de IP e chave continua disponível.
@@ -178,7 +187,7 @@ Requer Android SDK API 36, Java 17, Gradle 8.13. O repositório ainda não inclu
 gradle :app:testDebugUnitTest :app:assembleDebug
 ```
 
-APK local de teste: `app/build/outputs/apk/debug/app-debug.apk`. O workflow copia esse arquivo ou o Release assinado como **`MonitorRemoto-v0.1.0-alpha.44.apk`**. Baixe diretamente na aba GitHub **Releases**. **O APK não está incluído neste ZIP de código-fonte.** Veja `docs/PAIRING_QR.md` para segurança do QR.
+APK local de teste: `app/build/outputs/apk/debug/app-debug.apk`. O workflow copia esse arquivo ou o Release assinado como **`MonitorRemoto-v0.1.0-alpha.45.apk`**. Baixe diretamente na aba GitHub **Releases**. **O APK não está incluído neste ZIP de código-fonte.** Veja `docs/PAIRING_QR.md` para segurança do QR.
 
 Opcional: configure os quatro Secrets de assinatura para gerar APK Release assinado e AAB. Ver `docs/APK_DOWNLOAD.md`. Preservar a mesma keystore entre builds é essencial para atualizações sem reinstalação.
 
