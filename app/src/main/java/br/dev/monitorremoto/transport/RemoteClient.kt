@@ -63,7 +63,7 @@ object RemoteClient {
 
     /** Uma instrução iniciada pelo usuário, protegida pela mesma sessão autenticada do snapshot. */
     fun messageCommand(host: String, key: ByteArray, context: Context, method: String,
-        operation: String, destinationOrToken: String, text: String): String {
+        operation: String, destinationOrToken: String, text: String, subscriptionId: Int = -1): String {
         require(operation in setOf("notificationReply", "smsReply"))
         require(host.isNotBlank() && host.length <= 253 && !host.contains('/') && !host.contains(':') && !host.contains(' '))
         require(text.isNotBlank() && text.length <= 500)
@@ -75,7 +75,10 @@ object RemoteClient {
             .put("accessMethod", method)
             .put("body", text)
         if (operation == "notificationReply") request.put("replyToken", destinationOrToken)
-        else request.put("destination", destinationOrToken)
+        else {
+            request.put("destination", destinationOrToken)
+            request.put("subscriptionId", subscriptionId)
+        }
         return Socket().use { socket ->
             socket.connect(InetSocketAddress(host, WireProtocol.PORT), 4500)
             socket.soTimeout = 6500

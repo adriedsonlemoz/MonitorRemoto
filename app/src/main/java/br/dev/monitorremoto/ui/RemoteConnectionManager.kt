@@ -93,7 +93,7 @@ internal class RemoteConnectionManager(context: Context) {
 
     /** A escolha do controlador pode mudar enquanto a resposta remota trafega. */
     fun sendMessage(host: String, operation: String, recipient: String, text: String,
-        onComplete: (Result<String>) -> Unit) {
+        onComplete: (Result<String>) -> Unit, subscriptionId: Int = -1) {
         val key = if (host.isBlank()) null else RecentDevices.key(appContext, host)
         if (key == null || state != "connected" || cachedHost != host) {
             onComplete(Result.failure(IllegalStateException("Atualize a conexão antes de enviar.")))
@@ -102,7 +102,7 @@ internal class RemoteConnectionManager(context: Context) {
         val accessMethod = method
         thread(name = "MonitorRemoto-message") {
             val result = runCatching { RemoteClient.messageCommand(host, key, appContext,
-                accessMethod, operation, recipient, text) }
+                accessMethod, operation, recipient, text, subscriptionId) }
             main.post {
                 if (cachedHost == host && br.dev.monitorremoto.core.SettingsStore.getRemoteHost(appContext) == host) onComplete(result)
             }

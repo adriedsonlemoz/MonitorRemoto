@@ -46,10 +46,10 @@ object NotificationReplyActions {
     }
 
     /** Executar somente após autenticação, autorização de resposta e validação do corpo. */
-    @Synchronized fun reply(context: Context, token: String, text: String, packages: Set<String>): Boolean {
+    @Synchronized fun reply(context: Context, token: String, text: String, packages: Set<String>, allowAll: Boolean = false): Boolean {
         cleanup()
         val entry = entries.remove(token) ?: return false // Token de uso único, sem replay.
-        if (entry.app !in packages || System.currentTimeMillis() - entry.createdMs > EXPIRY_MS) return false
+        if ((!allowAll && entry.app !in packages) || System.currentTimeMillis() - entry.createdMs > EXPIRY_MS) return false
         val inputIntent = Intent()
         val bundle = android.os.Bundle().apply { putCharSequence(entry.input.resultKey, text) }
         RemoteInput.addResultsToIntent(arrayOf(entry.input), inputIntent, bundle)

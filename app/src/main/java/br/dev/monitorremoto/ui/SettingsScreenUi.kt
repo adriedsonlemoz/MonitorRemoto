@@ -134,7 +134,22 @@ private fun MainActivity.showPermissionSettings() {
         ) { startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) }
     })
     sectionGap(layout, 8)
-    layout.addView(iconMenuRow(R.drawable.ic_phone, "Aplicativos autorizados", "$count selecionado(s)") { selectNotificationApps() })
+    val allApps = SettingsStore.allNotifications(this)
+    layout.addView(iconMenuRow(R.drawable.ic_bell, "Todas as notificações elegíveis",
+        if (allApps) "Autorizadas (desativar)" else "Desativadas (ativar)") {
+        if (allApps) {
+            SettingsStore.setAllNotifications(this, false)
+            message("Acesso amplo desativado. Apenas a lista de aplicativos individuais continua valendo.")
+        } else showAppConfirm("Autorizar notificações de todos os apps?",
+            "As notificações de aplicativos não financeiros poderão ser consultadas por aparelhos com a chave. Conteúdo sensível ainda será filtrado, sem garantia absoluta. O acesso pode ser revogado aqui.",
+            R.drawable.ic_bell, "Autorizar todos") {
+            SettingsStore.setAllNotifications(this, true)
+            message("Autorização ampla ativada no monitorado.")
+        }
+    })
+    sectionGap(layout, 8)
+    layout.addView(iconMenuRow(R.drawable.ic_phone, "Aplicativos autorizados",
+        if (allApps) "Todos elegíveis · lista individual ainda disponível" else "$count selecionado(s)") { selectNotificationApps() })
     sectionGap(layout, 8)
     val replyOn = SettingsStore.allowNotificationReplies(this)
     layout.addView(iconMenuRow(R.drawable.ic_message, "Responder notificações", if (replyOn) "Habilitado (desativar)" else "Desativado (ativar)") {
@@ -155,6 +170,7 @@ private fun MainActivity.showPermissionSettings() {
         if (smsRead) {
             SettingsStore.setShareSmsInbox(this, false)
             SettingsStore.setAllowSmsReplies(this, false)
+            SettingsStore.setReceiveSmsEvents(this, false)
             message("Compartilhamento da caixa de SMS e respostas SMS desativados.")
         } else showAppConfirm("Compartilhar SMS recebidos?",
             "Serão consultados sob demanda até 30 SMS recentes, com supressão de conteúdo sensível. O Android pode restringir READ_SMS mesmo fora da Play Store. Apenas aparelhos pareados poderão consultar as mensagens.",
@@ -163,6 +179,25 @@ private fun MainActivity.showPermissionSettings() {
                 SettingsStore.setShareSmsInbox(this, true)
                 message("Compartilhamento de SMS autorizado.")
             } else requestPermissions(arrayOf(Manifest.permission.READ_SMS), smsReadPermissionRequest)
+        }
+    })
+    sectionGap(layout, 8)
+    val smsLive = SettingsStore.receiveSmsEvents(this) &&
+        checkSelfPermission(Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED
+    layout.addView(iconMenuRow(R.drawable.ic_message, "Receber SMS em tempo real",
+        if (smsLive) "Habilitado (desativar)" else "Desativado (ativar)") {
+        if (smsLive) {
+            SettingsStore.setReceiveSmsEvents(this, false)
+            message("Recepção de eventos SMS desativada.")
+        } else if (!SettingsStore.shareSmsInbox(this)) {
+            message("Ative primeiro a leitura da caixa SMS.")
+        } else showAppConfirm("Autorizar recepção de SMS?",
+            "Novos SMS elegíveis serão detectados no monitorado e mantidos temporariamente na memória. Apenas uma nova consulta autenticada os mostrará ao controlador.",
+            R.drawable.ic_message, "Solicitar RECEIVE_SMS") {
+            if (checkSelfPermission(Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED) {
+                SettingsStore.setReceiveSmsEvents(this, true)
+                message("Recepção de novos SMS autorizada.")
+            } else requestPermissions(arrayOf(Manifest.permission.RECEIVE_SMS), smsReceivePermissionRequest)
         }
     })
     sectionGap(layout, 8)
@@ -181,6 +216,17 @@ private fun MainActivity.showPermissionSettings() {
                 SettingsStore.setAllowSmsReplies(this, true)
                 message("Respostas SMS autorizadas.")
             } else requestPermissions(arrayOf(Manifest.permission.SEND_SMS), smsSendPermissionRequest)
+        }
+    })
+    sectionGap(layout, 8)
+    val simAccess = checkSelfPermission(Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED
+    layout.addView(iconMenuRow(R.drawable.ic_sim, "Escolher chip para SMS",
+        if (simAccess) "Autorizado · seleção no controlador" else "Usando chip padrão") {
+        if (simAccess) message("Permissão de SIM já autorizada. A seleção é feita ao responder uma mensagem SMS.")
+        else showAppConfirm("Autorizar seleção de SIM?",
+            "Opcional: identificar apenas SIM 1/SIM 2 para enviar SMS. Nenhum identificador ICCID ou número de linha será transmitido.",
+            R.drawable.ic_sim, "Solicitar READ_PHONE_STATE") {
+            requestPermissions(arrayOf(Manifest.permission.READ_PHONE_STATE), smsSimPermissionRequest)
         }
     })
     sectionGap(layout, 8)
@@ -289,6 +335,10 @@ private fun MainActivity.showDiagnostics() {
     card.addView(dialogMetricRow("Resposta SMS", if (SettingsStore.allowSmsReplies(this) &&
         checkSelfPermission(Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED) "Autorizada" else "Desativada/sem permissão"))
     card.addView(dialogMetricRow("Resposta notificação", if (SettingsStore.allowNotificationReplies(this)) "Ativa" else "Desativada"))
+    card.addView(dialogMetricRow("Notificações de todos apps", if (SettingsStore.allNotifications(this)) "Autorizadas" else "Lista individual"))
+    card.addView(dialogMetricRow("RECEIVE_SMS", if (checkSelfPermission(Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED) "Concedida" else "Ausente"))
+    card.addView(dialogMetricRow("Leitura SMS em tempo real", if (SettingsStore.receiveSmsEvents(this)) "Ativada" else "Desativada"))
+    card.addView(dialogMetricRow("READ_PHONE_STATE", if (checkSelfPermission(Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED) "Concedida" else "Ausente"))
     layout.addView(card)
     AlertDialog.Builder(this)
         .setTitle("Diagnóstico")

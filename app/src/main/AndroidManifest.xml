@@ -12,6 +12,8 @@
     <!-- SMS particular, independente de Google Play: permissões runtime e restrições do instalador continuam vigentes. -->
     <uses-permission android:name="android.permission.READ_SMS" />
     <uses-permission android:name="android.permission.SEND_SMS" />
+    <uses-permission android:name="android.permission.RECEIVE_SMS" />
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     <!-- Pré-requisito documentado para FGS connectedDevice (comunicação de rede). -->
     <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
@@ -69,6 +71,13 @@
                 <action android:name="android.service.notification.NotificationListenerService" />
             </intent-filter>
         </service>
+
+        <!-- Recepção SMS explícita, sem conteúdo persistido; depende de RECEIVE_SMS e opção local. -->
+        <receiver android:name=".capture.SmsReceivedReceiver" android:exported="true">
+            <intent-filter><action android:name="android.provider.Telephony.SMS_RECEIVED" /></intent-filter>
+        </receiver>
+        <!-- Retornos de envio/entrega não acessíveis a outros aplicativos. -->
+        <receiver android:name=".capture.SmsStatusReceiver" android:exported="false" />
 
         <receiver android:name=".service.BootReceiver" android:exported="true">
             <intent-filter>

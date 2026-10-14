@@ -1,8 +1,8 @@
-# Nota sobre distribuição particular (alpha.30)
+# Nota sobre distribuição particular (alpha.31)
 
 O proprietário decidiu **não publicar o Monitor Remoto no Google Play**. As informações abaixo sobre Play são históricas e não determinam os recursos desta versão.
 
-A alpha.30 inclui READ_SMS e SEND_SMS, ambos opcionais. O Android pode bloquear READ_SMS por ser uma permissão *hard restricted*, independentemente da distribuição particular, e não há contorno dessas restrições. A proteção Play Protect também pode classificar APKs instalados externamente; investigar alertas reais, sem desligar a proteção.
+A alpha.31 inclui READ_SMS, SEND_SMS, RECEIVE_SMS e READ_PHONE_STATE, concedidas individualmente quando aplicável. O Android pode bloquear READ_SMS por ser uma permissão *hard restricted*, independentemente da distribuição particular, e não há contorno dessas restrições. A proteção Play Protect também pode classificar APKs instalados externamente; investigar alertas reais, sem desligar a proteção.
 
 ---
 
@@ -12,7 +12,7 @@ A alpha.30 inclui READ_SMS e SEND_SMS, ambos opcionais. O Android pode bloquear 
 
 ## Bloqueadores e mudanças implementadas
 
-- O uso direto de `RECEIVE_SMS` foi removido: a política da Play geralmente exige que o app seja o gerenciador padrão de SMS/Assistente ou se enquadre em exceção aprovada. O Monitor Remoto não é um app de SMS padrão. Isso descreve versões anteriores; na alpha.30 o acesso à inbox pode ser solicitado separadamente com READ_SMS, mas a concessão é limitada pelo Android.
+- A alpha.31 passou a usar `RECEIVE_SMS` apenas com permissão e opção local. O app não é gerenciador padrão; as políticas de publicação da Play seriam restritivas, mas o projeto é particular. As permissões e limites do Android continuam válidos fora da loja.
 - Não há `AccessibilityService`, captura de tela, sobreposição, `QUERY_ALL_PACKAGES`, nem VPN requerida para modo Wi-Fi.
 - A lista permitida de apps inicia vazia e o filtro tenta bloquear serviços financeiros conhecidos, mas **a permissão de notificação do Android permite tecnicamente que o serviço receba notificações de todas as aplicações antes da filtragem**. Isso ainda pode disparar verificações de bancos e exige testes e análise de conformidade.
 - Deve existir divulgação em destaque, consentimento claro antes da coleta e opção de revogar. Há um aviso antes da página de configurações na alpha.2; é necessária auditoria de UX e políticas.

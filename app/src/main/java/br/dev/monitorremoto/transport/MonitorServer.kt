@@ -8,6 +8,10 @@ import br.dev.monitorremoto.core.TelephonyReader
 import br.dev.monitorremoto.core.EventJournal
 import br.dev.monitorremoto.core.SmsInboxReader
 import br.dev.monitorremoto.core.SmsReplySender
+import br.dev.monitorremoto.core.SmsSubscriptions
+import br.dev.monitorremoto.core.SmsLiveJournal
+import br.dev.monitorremoto.core.SmsDeliveryJournal
+import br.dev.monitorremoto.core.MmsMetadataReader
 import br.dev.monitorremoto.core.SensitiveContent
 import br.dev.monitorremoto.capture.NotificationReplyActions
 import br.dev.monitorremoto.core.SettingsStore
@@ -117,10 +121,11 @@ class MonitorServer(private val context: Context) {
                             if (operation == "notificationReply") {
                                 check(SettingsStore.allowNotificationReplies(context)) { "Respostas a notificações desativadas no monitorado." }
                                 check(NotificationReplyActions.reply(context, regular.optString("replyToken"),
-                                    body, SettingsStore.notificationAllowlist(context))) { "Notificação expirada, removida ou sem ação de resposta." }
+                                    body, SettingsStore.notificationAllowlist(context), SettingsStore.allNotifications(context))) { "Notificação expirada, removida ou sem ação de resposta." }
                                 "Ação de resposta acionada. Entrega ao destinatário não confirmada."
                             } else {
-                                SmsReplySender.send(context, regular.optString("destination"), body)
+                                SmsReplySender.send(context, regular.optString("destination"), body,
+                                    regular.optInt("subscriptionId", -1))
                             }
                         }
                         val reply = JSONObject().put("v", WireProtocol.VERSION)
@@ -141,13 +146,23 @@ class MonitorServer(private val context: Context) {
                         put("deviceInfo", DeviceInfoReader.snapshot(context))
                         put("telephony", TelephonyReader.snapshot(context))
                         put("events", if (SettingsStore.isMonitorEnabled(context))
-                            EventJournal.latestJson(SettingsStore.notificationAllowlist(context), SettingsStore.allowNotificationReplies(context))
+                            EventJournal.latestJson(SettingsStore.notificationAllowlist(context),
+                                SettingsStore.allowNotificationReplies(context), SettingsStore.allNotifications(context))
                             else org.json.JSONArray())
                         put("smsInbox", if (regular.optBoolean("includeSms")) SmsInboxReader.snapshot(context) else org.json.JSONArray())
+                        put("smsLive", if (regular.optBoolean("includeSms") && SettingsStore.shareSmsInbox(context) &&
+                            SettingsStore.receiveSmsEvents(context) && SettingsStore.isMonitorEnabled(context)) SmsLiveJournal.snapshot() else org.json.JSONArray())
+                        put("smsStatus", if (regular.optBoolean("includeSms") && SettingsStore.shareSmsInbox(context)) SmsDeliveryJournal.latest() else org.json.JSONArray())
+                        put("mmsMetadata", if (regular.optBoolean("includeSms")) MmsMetadataReader.snapshot(context) else org.json.JSONArray())
+                        put("smsSubscriptions", if (regular.optBoolean("includeSms") && SettingsStore.allowSmsReplies(context)) SmsSubscriptions.options(context) else org.json.JSONArray())
                         put("messagingPermissions", JSONObject().put("smsRead", SettingsStore.shareSmsInbox(context) && SmsInboxReader.hasAccess(context))
                             .put("smsReply", SettingsStore.allowSmsReplies(context) && SmsInboxReader.hasAccess(context) &&
                                 context.checkSelfPermission(android.Manifest.permission.SEND_SMS) == android.content.pm.PackageManager.PERMISSION_GRANTED)
-                            .put("notificationReply", SettingsStore.allowNotificationReplies(context)))
+                            .put("notificationReply", SettingsStore.allowNotificationReplies(context))
+                            .put("allNotifications", SettingsStore.allNotifications(context))
+                            .put("smsRealtime", SettingsStore.receiveSmsEvents(context) &&
+                                context.checkSelfPermission(android.Manifest.permission.RECEIVE_SMS) == android.content.pm.PackageManager.PERMISSION_GRANTED)
+                            .put("smsSimChoice", SmsSubscriptions.hasAccess(context)))
                         put("epoch", EventJournal.epoch)
                     }
                     WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(permanentKey, response))

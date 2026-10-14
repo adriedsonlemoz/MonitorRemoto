@@ -3,7 +3,7 @@
 - [ ] `gradle :app:testDebugUnitTest :app:assembleDebug` em CI (não executado neste ambiente sem Gradle/SDK).
 - [ ] Instalação Android 8 a 16 e permissões solicitadas.
 - [ ] Acesso às notificações: revisar tratamento de configurações restritas em instalações por APK.
-- [ ] Notificações de novos SMS via aplicativo de mensagens autorizado (sem `RECEIVE_SMS`).
+- [ ] Notificações de novos SMS via aplicativo de mensagens autorizado ou receptor `RECEIVE_SMS` com opção local.
 - [ ] Tela bloqueada e duração mínima de 1 hora no monitorado.
 - [ ] Reconexão após alternar Wi-Fi/rede de dados e religar VPN.
 - [ ] Stop/Start e troca de chave bloqueiam clientes antigos.
@@ -335,3 +335,14 @@
 - [ ] Conferir permissão hard-restricted READ_SMS no instalador/ROM.
 - [ ] Testar resposta WhatsApp com notificação existente, expirando token, revogando lista e cancelando a notificação.
 - [ ] Testar SMS com SIM, custo, multi-SIM, mensagens multipartes e confirmação de envio real.
+
+## alpha.31 (14/10/2026)
+
+- [x] Implementação em fonte de RECEIVE_SMS sob autorização local; SMS recentes enviados/recebidos, estados de entrega e seleção de SIM.
+- [x] API de notificações de apps elegíveis opt-in, com Copy/Reply e manutenção de filtros.
+- [x] `FLAG_SECURE` ausente somente de `RemoteMessagesUi`, presente no QR/credenciais.
+- [ ] Compilação real Gradle Android :app:assembleDebug e unit tests Android.
+- [ ] Teste SMS em duas SIMs e com mensagens multipart, recebimento bloqueado e permissões negadas.
+- [ ] Teste em aparelho de retorno PendingIntent para enviado/entregue e falhas de operadora.
+- [ ] Teste MMS em provedores variados (metadados apenas, sem anexos).
+- [ ] Teste WhatsApp e outro aplicativo com RemoteInput ativo, expiração e revogação do listener.

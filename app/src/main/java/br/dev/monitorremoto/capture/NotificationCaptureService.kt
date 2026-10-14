@@ -20,7 +20,8 @@ class NotificationCaptureService : NotificationListenerService() {
         if (sbn == null || !SettingsStore.isMonitorEnabled(this)) return
         NotificationReplyActions.forget(sbn.key)
         if (sbn.packageName == packageName) return
-        if (sbn.packageName !in SettingsStore.notificationAllowlist(this)) return
+        if (!SettingsStore.allNotifications(this) &&
+            sbn.packageName !in SettingsStore.notificationAllowlist(this)) return
         if (SensitiveContent.isBlockedFinancialApp(sbn.packageName, sbn.packageName)) return
         val notification = sbn.notification
         if (notification.visibility == Notification.VISIBILITY_SECRET) return

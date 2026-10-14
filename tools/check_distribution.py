@@ -16,7 +16,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.30" and code.group(1) == "30", "Versões incompatíveis"
+assert version == "0.1.0-alpha.31" and code.group(1) == "31", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -43,7 +43,7 @@ assert 'KEYSTORE_BASE64' in workflow and 'MONITOR_SIGNING_STORE_FILE' in gradle
 for path in ['README.md', 'CHANGELOG.md', 'docs/RELEASE_NOTES.md', 'AGENTS.md']:
     assert version in (root / path).read_text(encoding="utf-8"), f"Versão ausente em {path}"
 manifest = (root / "app/src/main/AndroidManifest.xml").read_text(encoding="utf-8")
-assert 'android.permission.RECEIVE_SMS' not in manifest
+assert 'android.permission.RECEIVE_SMS' in manifest
 assert 'android.accessibilityservice' not in manifest
 print(f"PASSOU: versionName={version}, versionCode={code.group(1)}, nome APK, Release, assinatura, AAB e permissões")
 
@@ -54,7 +54,7 @@ server = (root / 'app/src/main/java/br/dev/monitorremoto/transport/MonitorServer
 assert 'fun clear()' in journal and 'fun retainAllowed(' in journal and 'allowedPackages' in journal
 assert 'if (!enabled || !wasEnabled) {' in settings and 'EventJournal.clear()' in settings and 'NotificationReplyActions.clear()' in settings
 assert 'EventJournal.retainAllowed(packages)' in settings
-assert 'EventJournal.latestJson(SettingsStore.notificationAllowlist(context), SettingsStore.allowNotificationReplies(context))' in server
+assert 'EventJournal.latestJson(SettingsStore.notificationAllowlist(context),' in server
 assert 'ArrayBlockingQueue<Runnable>(12)' in server and 'ThreadPoolExecutor.AbortPolicy()' in server
 print('PASSOU: limpeza por revogação e limite de fila do servidor declarados')
 
@@ -62,7 +62,7 @@ print('PASSOU: limpeza por revogação e limite de fila do servidor declarados')
 assert 'IntentIntegrator' not in ui
 assert 'requestPermissions(arrayOf(Manifest.permission.CAMERA)' in ui
 assert 'android:name=".ui.QrScanActivity"' in manifest and 'android:exported="false"' in manifest
-assert 'fun latest(allowedPackages: Set<String>): List<RecordedEvent>' in journal
+assert 'fun latest(allowedPackages: Set<String>, allApps: Boolean = false): List<RecordedEvent>' in journal
 unit_tests = (root / 'app/src/test/java/br/dev/monitorremoto/core/EventJournalTest.kt').read_text()
 assert 'latestJson(' not in unit_tests, 'Testes JVM não devem depender dos métodos mockados de android.jar/org.json'
 print('PASSOU: scanner nativo independente, permissão explícita, testes EventJournal sem org.json mockado')
@@ -287,7 +287,7 @@ assert 'put("telephony", TelephonyReader.snapshot(context))' in server
 assert 'StatFs(Environment.getDataDirectory().absolutePath)' in device_reader
 assert 'ActivityManager.MemoryInfo()' in device_reader
 assert 'put("wifiDetected"' in network and 'put("cellularDetected"' in network
-assert 'READ_PHONE_NUMBERS' in manifest and 'READ_PHONE_STATE' not in manifest
+assert 'READ_PHONE_NUMBERS' in manifest and 'READ_PHONE_STATE' in manifest
 assert 'getBoolean("share_phone_number", false)' in settings
 assert 'if (optedIn && granted && Build.VERSION.SDK_INT >= 33)' in telephony_reader
 assert 'phoneNumberPermissionRequest ->' in main_ui
@@ -359,9 +359,9 @@ assert '.create().let { showManagedDialog(it) }' not in access_actions, 'Termina
 assert 'showAppConfirm(' in access_actions and 'confirmRotateMonitorKey()' in access_actions
 print('PASSOU: alpha.29, construtor e exibição únicos no diálogo de acesso autenticado')
 
-# alpha.30: consentimentos novos e envio seguro, sem RECEIVER_SMS nem AccessibilityService.
+# alpha.30: consentimentos novos e envio seguro, sem AccessibilityService. Alpha.31 acrescenta RECEIVER SMS consentido.
 assert 'android.permission.READ_SMS' in manifest and 'android.permission.SEND_SMS' in manifest
-assert 'android.permission.RECEIVE_SMS' not in manifest
+assert 'android.permission.RECEIVE_SMS' in manifest
 assert 'android.accessibilityservice' not in manifest
 assert 'getBoolean("share_sms_inbox", false)' in settings
 assert 'getBoolean("allow_sms_replies", false)' in settings
@@ -379,3 +379,20 @@ assert 'loadRemoteMessages()' in module_ui['RemoteDashboardUi.kt']
 assert 'RemoteInput.addResultsToIntent' in (root / 'app/src/main/java/br/dev/monitorremoto/capture/NotificationReplyActions.kt').read_text()
 assert 'showAppConfirm("Confirmar envio remoto?"' in module_ui['RemoteMessagesUi.kt']
 print('PASSOU: alpha.30, consentimentos SMS/RemoteInput, controle remoto autenticado e UI de confirmação')
+
+# alpha.31: SMS opcional, notificação expandida, captura de tela de SMS, sem expor credenciais.
+for name in ['SmsReceivedReceiver.kt', 'SmsStatusReceiver.kt']:
+    assert (root / 'app/src/main/java/br/dev/monitorremoto/capture' / name).exists(), name
+for name in ['SmsLiveJournal.kt', 'SmsDeliveryJournal.kt', 'MmsMetadataReader.kt', 'SmsSubscriptions.kt']:
+    assert (root / 'app/src/main/java/br/dev/monitorremoto/core' / name).exists(), name
+messages = module_ui['RemoteMessagesUi.kt']
+assert 'addFlags(' not in messages, 'Mensagens não devem bloquear captura de tela'
+assert 'copyRemoteMessage(' in messages and '"Responder"' in messages and '"Responder SMS"' in messages
+assert 'ClipData.newPlainText' in messages
+assert 'SettingsStore.allNotifications(context)' in server and 'SettingsStore.allNotifications(this)' in (root / 'app/src/main/java/br/dev/monitorremoto/capture/NotificationCaptureService.kt').read_text()
+assert '"all_notifications", false' in settings and '"receive_sms_events", false' in settings
+assert 'smsReceivePermissionRequest ->' in main_ui and 'smsSimPermissionRequest ->' in main_ui
+assert 'SmsDeliveryJournal.latest()' in server and 'MmsMetadataReader.snapshot(context)' in server
+assert 'SmsSubscriptions.sender(context, subscriptionId)' in (root / 'app/src/main/java/br/dev/monitorremoto/core/SmsReplySender.kt').read_text()
+assert 'WindowManager.LayoutParams.FLAG_SECURE' in module_ui['MonitorCredentialsUi.kt'] and 'FLAG_SECURE' in module_ui['PairingQrUi.kt']
+print('PASSOU: alpha.31, SMS realtime/status/SIM, MMS metadados, notificações opt-in e captura permitida somente em Mensagens')

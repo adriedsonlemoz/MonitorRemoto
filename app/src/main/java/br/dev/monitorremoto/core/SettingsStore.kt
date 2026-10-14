@@ -17,16 +17,34 @@ object SettingsStore {
         if (!enabled || !wasEnabled) {
             EventJournal.clear()
             NotificationReplyActions.clear()
+            SmsLiveJournal.clear()
+            SmsDeliveryJournal.clear()
         }
     }
 
     fun notificationAllowlist(context: Context): Set<String> =
         prefs(context).getStringSet("notification_allowlist", emptySet())?.toSet() ?: emptySet()
+    fun allNotifications(context: Context): Boolean = prefs(context).getBoolean("all_notifications", false)
+    fun setAllNotifications(context: Context, value: Boolean) {
+        if (value == allNotifications(context)) return
+        prefs(context).edit().putBoolean("all_notifications", value).apply()
+        EventJournal.clear()
+        NotificationReplyActions.clear()
+    }
+
+    fun receiveSmsEvents(context: Context): Boolean = prefs(context).getBoolean("receive_sms_events", false)
+    fun setReceiveSmsEvents(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean("receive_sms_events", value).apply()
+        if (!value) SmsLiveJournal.clear()
+    }
+
     fun setNotificationAllowlist(context: Context, packages: Set<String>) {
         // Retirar a autorização também apaga os eventos já capturados desses apps.
         prefs(context).edit().putStringSet("notification_allowlist", packages.toSet()).apply()
-        EventJournal.retainAllowed(packages)
-        NotificationReplyActions.retainAllowed(packages)
+        if (!allNotifications(context)) {
+            EventJournal.retainAllowed(packages)
+            NotificationReplyActions.retainAllowed(packages)
+        }
     }
 
     /** Separadamente consentidas no aparelho monitorado; OFF por padrão. */

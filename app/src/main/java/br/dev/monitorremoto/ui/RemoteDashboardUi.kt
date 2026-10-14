@@ -138,7 +138,17 @@ private fun MainActivity.showRemoteNotifications(root: JSONObject) {
             val item = panel(12)
             item.addView(label("${event.optString("type").uppercase(Locale.getDefault())} · ${event.optString("app")}", 11f, muted = true))
             item.addView(label(event.optString("title"), 14f, strong = true))
-            if (event.optString("preview").isNotBlank()) item.addView(label(event.optString("preview"), 12f))
+            val preview = event.optString("preview")
+            if (preview.isNotBlank()) {
+                item.addView(label(preview, 12f))
+                item.addView(actionButton("Copiar") { copyRemoteMessage(preview) })
+            }
+            val token = event.optString("replyToken")
+            if (token.isNotBlank() && root.optJSONObject("messagingPermissions")?.optBoolean("notificationReply") == true) {
+                item.addView(actionButton("Responder") {
+                    showRemoteMessageEditor("notificationReply", token, "Responder ${event.optString("title")}")
+                })
+            }
             item.addView(label(formatDate(event.optLong("whenMs")), 11f, muted = true))
             layout.addView(item)
             sectionGap(layout, 7)

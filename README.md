@@ -1,6 +1,6 @@
 # Monitor Remoto
 
-**v0.1.0-alpha.30 / versionCode 28** · Android 8.0+ · Kotlin 2.2.21 · AGP 8.13.2 · Gradle 8.13
+**v0.1.0-alpha.31 / versionCode 31** · Android 8.0+ · Kotlin 2.2.21 · AGP 8.13.2 · Gradle 8.13
 
 Dois modos no mesmo APK: **Monitorado** (servidor) e **Controle** (cliente).
 
@@ -51,7 +51,7 @@ A Home, o Modo Monitorado, a escolha de conexão, os submenus de Configurações
 
 ## Como utilizar
 
-1. Execute GitHub Actions > **Gerar APK e Release** > Run workflow. Para baixar **APK sem ZIP**, use Releases > `v0.1.0-alpha.30` > Assets > **`MonitorRemoto-v0.1.0-alpha.30.apk`**. Em Actions > Artifacts, um APK de contingência (quando presente) continua vindo em ZIP por comportamento padrão do GitHub. Instale o mesmo APK nos dois aparelhos.
+1. Execute GitHub Actions > **Gerar APK e Release** > Run workflow. Para baixar **APK sem ZIP**, use Releases > `v0.1.0-alpha.31` > Assets > **`MonitorRemoto-v0.1.0-alpha.31.apk`**. Em Actions > Artifacts, um APK de contingência (quando presente) continua vindo em ZIP por comportamento padrão do GitHub. Instale o mesmo APK nos dois aparelhos.
 2. No telefone secundário: na nova **Home**, toque em **Monitorar este aparelho**; autorize a notificação de serviço e ative o monitoramento. Em Configurações, conceda apenas as permissões necessárias e selecione os aplicativos cujas notificações deseja compartilhar.
 3. Na página Monitorado, toque no cartão **Gerar QR**. Escolha o IP privado acessível. O QR expira em 2 minutos e é válido para um único pareamento.
 4. No telefone principal: na **Home**, toque em **Conectar novo aparelho > QR Code**, aponte a câmera na janela compacta e confirme os dados do aparelho antes do pareamento. Para um aparelho salvo, use **Aparelhos anteriores > Conectar**. A digitação manual de IP e chave continua disponível.
@@ -62,7 +62,7 @@ A Home, o Modo Monitorado, a escolha de conexão, os submenus de Configurações
 
 ## Considerações importantes
 
-- **Distribuição particular**: a alpha.30 declara `READ_SMS` e `SEND_SMS`, nunca `RECEIVE_SMS`. O app não será publicado na Play Store, mas o próprio Android/instalador ainda pode bloquear `READ_SMS` por ser permissão restrita. SMS recebidos podem ser consultados sob demanda somente se autorizados no aparelho monitorado. Envio SMS pode gerar custos e não há garantia de entrega.
+- **Distribuição particular**: a alpha.31 declara `READ_SMS`, `SEND_SMS`, `RECEIVE_SMS` e `READ_PHONE_STATE`. Cada permissão precisa de autorização local do Android e da opção correspondente no app; `READ_SMS` pode continuar restrita mesmo fora da Play Store. O app não é o gerenciador padrão SMS; MMS só expõe assunto/data quando possível. Responder SMS pode gerar custos e a confirmação de entrega depende da operadora.
 - **WhatsApp**: só texto de notificações capturadas e filtradas; resposta apenas se houver ação `RemoteInput` ativa, permitida e válida, com confirmação no controlador. Não acessa histórico interno, mensagens apagadas ou chats sem notificação. A entrega da resposta não pode ser confirmada pela API.
 - **Dados sensíveis**: mensagens e OTP podem escapar dos filtros; não se deve tratar o bloqueio por expressões como infalível. SMS com padrões de autenticação são descartados da consulta. A chave permite acesso aos recursos expressamente autorizados; revogue a chave quando necessário.
 - **Privacidade**: código não inclui nuvem nem telemetria. A VPN (se utilizada) é um serviço externo e tem políticas próprias.
@@ -78,7 +78,7 @@ Requer Android SDK API 36, Java 17, Gradle 8.13. O repositório ainda não inclu
 gradle :app:testDebugUnitTest :app:assembleDebug
 ```
 
-APK local de teste: `app/build/outputs/apk/debug/app-debug.apk`. O workflow copia esse arquivo ou o Release assinado como **`MonitorRemoto-v0.1.0-alpha.30.apk`**. Baixe diretamente na aba GitHub **Releases**. **O APK não está incluído neste ZIP de código-fonte.** Veja `docs/PAIRING_QR.md` para segurança do QR.
+APK local de teste: `app/build/outputs/apk/debug/app-debug.apk`. O workflow copia esse arquivo ou o Release assinado como **`MonitorRemoto-v0.1.0-alpha.31.apk`**. Baixe diretamente na aba GitHub **Releases**. **O APK não está incluído neste ZIP de código-fonte.** Veja `docs/PAIRING_QR.md` para segurança do QR.
 
 Opcional: configure os quatro Secrets de assinatura para gerar APK Release assinado e AAB. Ver `docs/APK_DOWNLOAD.md`. Preservar a mesma keystore entre builds é essencial para atualizações sem reinstalação.
 
@@ -97,11 +97,13 @@ Opcional: configure os quatro Secrets de assinatura para gerar APK Release assin
 - A informação "Conectado" representa a **última consulta autenticada** e não um socket persistentemente conectado; em falha, status troca para "Sem resposta" e dados anteriores permanecem rotulados.
 - QR continua com Camera2 (alpha.9); teste físico e compilação completa ainda pendentes.
 
-## Mensagens remotas (alpha.30)
+## Mensagens remotas (alpha.31)
 
-No **aparelho monitorado**, ative Monitoramento; em **Configurações > Notificações** selecione apps autorizados, conceda acesso de listener pelo Android e, se desejar, habilite separadamente **Responder notificações**, **Ler caixa de SMS** e **Responder SMS**. READ_SMS e SEND_SMS exigem autorização de runtime; o Android pode negar READ_SMS mesmo na distribuição particular. Não há captura por RECEIVE_SMS nem pedido de ser app SMS padrão.
+No **aparelho monitorado**, ative Monitoramento; em **Configurações > Notificações**, conceda acesso ao listener e autorize os apps individualmente ou ative **Todas as notificações elegíveis**. Separadamente, habilite **Responder notificações**, **Ler caixa de SMS**, **Receber SMS em tempo real** e **Responder SMS** conforme desejar. A seleção manual de SIM exige READ_PHONE_STATE. O Android pode negar READ_SMS mesmo em distribuição particular; não é pedido o papel de app SMS padrão. Notificações sigilosas, apps financeiros conhecidos e conteúdos detectados como OTP continuam filtrados em melhor esforço.
 
-No **controlador**, conecte-se à alpha.30 do outro aparelho, atualize o painel, abra **Mensagens**. Serão exibidos até 30 SMS recebidos elegíveis, quando a leitura estiver autorizada, além das notificações recentes dos apps permitidos. **Responder** só aparece para destinatário SMS válido ou notificação com ação de resposta remota. Digite e revise, confirme **Enviar**. O servidor autentica, verifica consentimento atual e rejeita notificações expiradas, textos considerados sensíveis e destinos SMS desconhecidos. O retorno positivo significa que o Android/app recebeu a solicitação de envio, não confirma entrega à outra pessoa.
+No **controlador**, instale a mesma alpha.31, conecte-se, abra **Mensagens** e toque em **Atualizar mensagens**. São apresentados até 60 SMS recebidos e enviados recentes, notificações autorizadas e, quando disponíveis, eventos SMS ao vivo e metadados MMS. **Copiar** copia o texto para a área de transferência. **Responder** aparece quando o SMS possui número regular já presente na caixa recebida ou quando a notificação oferece `RemoteInput` válido. Para SMS, escolha o chip disponível, escreva, revise e confirme. Status *solicitado, enviado, entregue, falhou* ou *entrega não confirmada* refletem callbacks locais na RAM, não garantem leitura pelo destinatário. A ação de responder a uma notificação pode expirar.
+
+A janela **Mensagens** não define `FLAG_SECURE`, permitindo capturas de tela. Janelas com QR e credenciais continuam protegidas. Novas mensagens não são enviadas automaticamente ao controlador: ele precisa abrir/atualizar a tela. Ao desativar o monitoramento, os buffers voláteis são limpos.
 
 As opções estão **desativadas após atualização** e podem ser revogadas no próprio monitorado. Todos os acessos dependem da chave AES-GCM e da versão idêntica em ambos os telefones. Mensagens SMS são obtidas sem salvar banco ou arquivo; os eventos de notificação continuam num buffer volátil. O histórico de WhatsApp e mensagens criptografadas internamente não é acessível pelo Monitor Remoto.
 

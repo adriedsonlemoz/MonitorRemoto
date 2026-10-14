@@ -23,6 +23,15 @@ class EventJournalTest {
         assertEquals("com.exemplo.chat", visible[0].app)
     }
 
+    @Test fun optInAllAppsExposesOnlyEventsAlreadyCapturedAndFiltered() {
+        EventJournal.add("notificacao", "com.exemplo.chat", "Chat", "mensagem permitida")
+        EventJournal.add("notificacao", "com.exemplo.musica", "Musica", "mensagem permitida")
+        assertEquals(0, EventJournal.latest(emptySet()).size)
+        assertEquals(2, EventJournal.latest(emptySet(), allApps = true).size)
+        EventJournal.clear()
+        assertEquals(0, EventJournal.latest(emptySet(), allApps = true).size)
+    }
+
     @Test fun transmissionAppliesCurrentAllowlistEvenIfEventAlreadyQueued() {
         EventJournal.add("notificacao", "com.exemplo.chat", "Chat", "texto")
         assertEquals(0, EventJournal.latest(emptySet()).size)

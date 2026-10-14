@@ -1,4 +1,4 @@
-# Arquitetura (0.1.0-alpha.30)
+# Arquitetura (0.1.0-alpha.31)
 
 ```text
 MONITORADO                                      CONTROLE
@@ -19,9 +19,9 @@ O FGS `connectedDevice` mantém o socket de escuta durante monitoramento ativo. 
 
 ## Distribuição e assinatura
 
-O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.30` e `versionCode=30`.
+O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.31` e `versionCode=31`.
 
-- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.30.apk`.
+- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.31.apk`.
 - `upload-artifact` sempre distribui um ZIP; GitHub Releases recebe o **arquivo APK direto**.
 - Com quatro Secrets, Gradle gera APK Release assinado e AAB. Sem Secrets, o arquivo é Debug de teste e não preserva necessariamente a assinatura entre execuções.
 - Releases são prévias, não substituem a futura revisão da Google Play e nem os ensaios reais.
@@ -153,3 +153,11 @@ O botão de recuperar dados não implementa transferência, acesso a arquivos ou
 ## Alpha.30: canal de mensagens autorizado
 
 `NotificationCaptureService` registra, apenas quando permitido, ações `RemoteInput` no buffer volátil `NotificationReplyActions` (máximo 60, validade 10 minutos, token único). O `EventJournal` só expõe o token quando o consentimento ainda está ativo. `SmsInboxReader` consulta a inbox apenas mediante `includeSms=true` na consulta manual de Mensagens, nunca no polling de 15 segundos, com READ_SMS e sem persistência, bloqueando mensagens com sinais de autenticação. `SmsReplySender` exige READ_SMS, SEND_SMS, opt-ins do monitorado, destinatário recebido anteriormente e limite de taxa. `MonitorServer` aceita `notificationReply` e `smsReply` após os mesmos controles AES-GCM, timestamp, nonce e versão exata de `snapshot`; respostas são `commandResult`, sem alegar entrega final. `RemoteMessagesUi.kt` usa confirmação explícita e `RemoteConnectionManager` invalida respostas de aparelhos trocados.
+
+## Mensagens alpha.31
+
+- `NotificationCaptureService` envia eventos filtrados à RAM `EventJournal`. Lista explícita de apps ou opção ampla opt-in, filtros OTP/financeiros permanecem. Respostas via `RemoteInput` somente com token atual e consentimento.
+- `SmsInboxReader` consulta `Telephony.Sms.CONTENT_URI` sob demanda, limitando SMS recebidos/enviados e eliminando códigos suspeitos. `SmsReceivedReceiver` recebe `SMS_RECEIVED` somente se `RECEIVE_SMS` e opção local ativos; mantém até 20 entradas RAM, lidas na próxima atualização de Mensagens.
+- `SmsReplySender` exige destinatário conhecido, SEND_SMS, consentimento, limite de tamanho e intervalo. `SmsSubscriptions` valida SIM se o usuário autorizar READ_PHONE_STATE. `SmsStatusReceiver` e `SmsDeliveryJournal` acompanham callbacks de envio/entrega em RAM, sem preservar texto.
+- `MmsMetadataReader` consulta somente assunto/data quando o provider permitir, sem downloads de anexos e sem papel de SMS padrão.
+- Snapshots cifrados trazem `smsInbox`, `smsLive`, `smsStatus`, `mmsMetadata`, `smsSubscriptions` **somente** quando `includeSms` foi solicitado; eventos de notificações seguem a seleção local. `FLAG_SECURE` removido dos diálogos de mensagens, preservado em QR/credenciais.

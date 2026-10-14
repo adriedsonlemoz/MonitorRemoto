@@ -1,5 +1,14 @@
 # Histórico de versões
 
+## 0.1.0-alpha.31 (14/10/2026)
+
+- SMS em tempo real mediante autorização `RECEIVE_SMS`, buffer volátil e consulta sob demanda; histórico recente de recebidos e enviados.
+- Callbacks por parte para envio/entrega SMS, identificação opcional de chips com READ_PHONE_STATE e escolha no formulário de resposta.
+- MMS somente assuntos/datas quando autorizados pelo provedor, sem anexos.
+- Seleção opcional de notificações de todos os apps elegíveis, preservando listas individuais e filtros de sensibilidade.
+- Botões Copiar e Responder em SMS e notificações, diálogos de mensagens sem FLAG_SECURE para permitir capturas. QR e chaves continuam protegidos.
+- versionCode 31 / versionName 0.1.0-alpha.31. Compilação Android real permanece pendente.
+
 ## 0.1.0-alpha.30 (14/10/2026)
 
 - Central **Mensagens** no controlador, com SMS recebidos e notificações autorizadas, data/hora e ações de resposta com confirmação.

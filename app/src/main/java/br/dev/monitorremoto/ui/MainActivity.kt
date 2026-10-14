@@ -64,6 +64,8 @@ class MainActivity : Activity() {
     internal val phoneNumberPermissionRequest = 103
     internal val smsReadPermissionRequest = 104
     internal val smsSendPermissionRequest = 105
+    internal val smsReceivePermissionRequest = 106
+    internal val smsSimPermissionRequest = 107
     internal var active = false
     internal var resultBox: LinearLayout? = null
     companion object { const val EXTRA_OPEN_MONITOR = "br.dev.monitorremoto.OPEN_MONITOR" }
@@ -277,6 +279,13 @@ class MainActivity : Activity() {
                 SettingsStore.setAllowSmsReplies(this, granted)
                 message(if (granted) "Respostas SMS habilitadas. Cada envio deverá ser solicitado no controlador."
                     else "SEND_SMS não autorizada no aparelho monitorado.")
+            }
+            smsReceivePermissionRequest -> {
+                SettingsStore.setReceiveSmsEvents(this, granted)
+                message(if (granted) "Recepção SMS habilitada no monitorado." else "RECEIVE_SMS não autorizada pelo Android.")
+            }
+            smsSimPermissionRequest -> {
+                message(if (granted) "Seleção de chip disponível para SMS." else "READ_PHONE_STATE negada. Será usado o chip padrão.")
             }
             phoneNumberPermissionRequest -> {
                 SettingsStore.setSharePhoneNumber(this, granted)
