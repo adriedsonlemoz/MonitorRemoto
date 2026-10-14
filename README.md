@@ -1,6 +1,6 @@
 # Monitor Remoto
 
-**v0.1.0-alpha.25 / versionCode 25** · Android 8.0+ · Kotlin 2.2.21 · AGP 8.13.2 · Gradle 8.13
+**v0.1.0-alpha.26 / versionCode 26** · Android 8.0+ · Kotlin 2.2.21 · AGP 8.13.2 · Gradle 8.13
 
 Dois modos no mesmo APK: **Monitorado** (servidor) e **Controle** (cliente).
 
@@ -18,6 +18,16 @@ Dois modos no mesmo APK: **Monitorado** (servidor) e **Controle** (cliente).
 - Mantidos o protocolo de acesso, a versão exata entre aparelhos, as permissões e o estilo visual. O IP selecionado por QR/manual agora é definido explicitamente antes da primeira consulta.
 - Necessária compilação Android e teste físico nos dois aparelhos. Código-fonte ZIP não inclui APK.
 
+
+## Novidades da alpha.26: painel remoto e detalhes técnicos
+
+- Painel conectado redesenhado em três indicadores visuais (bateria, temperatura e rede) com ícones vetoriais e seis funções remotas em cartões.
+- Detalhes do aparelho agora abre uma tela própria com seções de bateria, Wi-Fi, rede móvel/SIM, armazenamento interno (total, usado, livre), RAM e sistema Android.
+- Servidor autenticado envia `deviceInfo`, `telephony` e informações de rede observadas, sem expor a chave de pareamento; recursos ainda não implementados mostram **Em breve**.
+- Número de linha é opcional, desativado inicialmente e compartilhado apenas após permissão `READ_PHONE_NUMBERS` **e** aceite em **Configurações → Notificações e permissões → Número do chip**, sempre no aparelho monitorado. O número pode não existir no registro da operadora.
+- O atalho **Recuperar dados** foi adicionado visualmente, mas a transferência de arquivos ainda não está implementada; continua prevista para uma versão posterior.
+- Atualize os dois aparelhos para alpha.26: a conexão exige versão exata igual.
+
 ## Recursos já implementados no código-fonte
 
 - Snapshot de nível da bateria, carregamento, temperatura, tensão, corrente instantânea e média (quando o hardware/Android fornecem as propriedades).
@@ -34,7 +44,7 @@ Dois modos no mesmo APK: **Monitorado** (servidor) e **Controle** (cliente).
 
 ## Como utilizar
 
-1. Execute GitHub Actions > **Gerar APK e Release** > Run workflow. Para baixar **APK sem ZIP**, use Releases > `v0.1.0-alpha.25` > Assets > **`MonitorRemoto-v0.1.0-alpha.25.apk`**. Em Actions > Artifacts, um APK de contingência (quando presente) continua vindo em ZIP por comportamento padrão do GitHub. Instale o mesmo APK nos dois aparelhos.
+1. Execute GitHub Actions > **Gerar APK e Release** > Run workflow. Para baixar **APK sem ZIP**, use Releases > `v0.1.0-alpha.26` > Assets > **`MonitorRemoto-v0.1.0-alpha.26.apk`**. Em Actions > Artifacts, um APK de contingência (quando presente) continua vindo em ZIP por comportamento padrão do GitHub. Instale o mesmo APK nos dois aparelhos.
 2. No telefone secundário: na nova **Home**, toque em **Monitorar este aparelho > Abrir tela do aparelho**; autorize a notificação de serviço e ative o monitoramento. Em Configurações, conceda apenas as permissões necessárias e selecione os aplicativos cujas notificações deseja compartilhar.
 3. Na página Monitorado, toque em **Gerar QR** no lado direito do cartão. Escolha o IP privado acessível. O QR expira em 2 minutos e é válido para um único pareamento.
 4. No telefone principal: na **Home**, toque em **Conectar novo aparelho > QR Code**, aponte a câmera na janela compacta e confirme os dados do aparelho antes do pareamento. Para um aparelho salvo, use **Aparelhos anteriores > Conectar**. A digitação manual de IP e chave continua disponível.
@@ -61,7 +71,7 @@ Requer Android SDK API 36, Java 17, Gradle 8.13. O repositório ainda não inclu
 gradle :app:testDebugUnitTest :app:assembleDebug
 ```
 
-APK local de teste: `app/build/outputs/apk/debug/app-debug.apk`. O workflow copia esse arquivo ou o Release assinado como **`MonitorRemoto-v0.1.0-alpha.25.apk`**. Baixe diretamente na aba GitHub **Releases**. **O APK não está incluído neste ZIP de código-fonte.** Veja `docs/PAIRING_QR.md` para segurança do QR.
+APK local de teste: `app/build/outputs/apk/debug/app-debug.apk`. O workflow copia esse arquivo ou o Release assinado como **`MonitorRemoto-v0.1.0-alpha.26.apk`**. Baixe diretamente na aba GitHub **Releases**. **O APK não está incluído neste ZIP de código-fonte.** Veja `docs/PAIRING_QR.md` para segurança do QR.
 
 Opcional: configure os quatro Secrets de assinatura para gerar APK Release assinado e AAB. Ver `docs/APK_DOWNLOAD.md`. Preservar a mesma keystore entre builds é essencial para atualizações sem reinstalação.
 
@@ -191,7 +201,7 @@ A tela Monitorado apresenta o estado real do serviço e IP local. Ativar, gerar 
 - O telefone monitorado exibe uma **tela dedicada** sempre que recebe uma consulta autenticada enquanto o aplicativo está em primeiro plano, inclusive se as Configurações estiverem abertas. A tela informa nome e método *declarados* pelo controlador (não verificados), IP real, horário da última consulta, botão **Quem está?** e **Parar acesso** (interrompe o serviço para todos). A captura continua sendo apenas de dados autorizados; não há controle de tela.
 - Após **Desconectar** no controlador, um aviso autenticado de encerramento remove o registro de acesso correspondente no monitorado, que volta automaticamente à página **Modo monitorado**, pronta para gerar um novo QR; o serviço continua ativo. Caso a rede falhe antes do aviso, o registro expira após 45 segundos.
 - Com o aplicativo monitorado **em segundo plano**, o Android mostra uma notificação de acesso recente, sem forçar a abertura de uma tela sobre outros aplicativos.
-- Desde a alpha.20, exigida **versão exata igual nos dois aparelhos** (para esta entrega, alpha.25): QR, pareamento e consultas autenticadas não aceitam versões anteriores. Os dois dispositivos devem ser atualizados antes de reconectar; isso **não** é uma identidade individual verificada.
+- Desde a alpha.20, exigida **versão exata igual nos dois aparelhos** (para esta entrega, alpha.26): QR, pareamento e consultas autenticadas não aceitam versões anteriores. Os dois dispositivos devem ser atualizados antes de reconectar; isso **não** é uma identidade individual verificada.
 - A interface Configurações foi reconstruída com grade 2x3, ícones vetoriais e cartões adaptados ao tema; a tela de aviso recebido usa layout próprio de destaque. A chave fica oculta no diálogo de informações, com proteção contra capturas.
 - Painel remoto: cartões da bateria mais compactos, ações remotas maiores, redução de informações duplicadas e exibição do tipo de rede do próprio celular monitorado (sem inventar SSID ou rotas).
 - Se um serviço autorizado estiver parado, o aplicativo pode tentar retomá-lo **ao voltar ao primeiro plano**, sem contrariar uma parada explícita do usuário. Restrições do Android/ROM podem impedir recuperação. Sem promessa de reinício persistente após qualquer falha.

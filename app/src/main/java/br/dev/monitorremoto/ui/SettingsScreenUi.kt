@@ -1,6 +1,8 @@
 package br.dev.monitorremoto.ui
 
 import android.app.AlertDialog
+import android.Manifest
+import android.content.pm.PackageManager
 import br.dev.monitorremoto.core.SensitiveContent
 import android.content.res.ColorStateList
 import android.content.Intent
@@ -133,6 +135,26 @@ private fun MainActivity.showPermissionSettings() {
     })
     sectionGap(layout, 8)
     layout.addView(dialogCardRow("Aplicativos autorizados", "$count selecionado(s)", "›") { selectNotificationApps() })
+    sectionGap(layout, 8)
+    val numberEnabled = SettingsStore.sharePhoneNumber(this) &&
+        checkSelfPermission(Manifest.permission.READ_PHONE_NUMBERS) == PackageManager.PERMISSION_GRANTED
+    layout.addView(dialogCardRow("Número do chip", if (numberEnabled) "Compartilhamento ativado" else "Desativado (padrão)", "›") {
+        if (numberEnabled) {
+            SettingsStore.setSharePhoneNumber(this, false)
+            message("Compartilhamento do número desativado. O Android pode manter a permissão concedida, mas o app não transmitirá o número.")
+        } else {
+            AlertDialog.Builder(this)
+                .setTitle("Compartilhar número do chip?")
+                .setMessage("Opcional. O número da linha, quando disponível, será enviado somente a aparelhos pareados e autenticados. Não é necessário para bateria, redes ou armazenamento. Você poderá desativar em Permissões.")
+                .setNegativeButton("Cancelar", null)
+                .setPositiveButton("Autorizar") { _, _ ->
+                    if (checkSelfPermission(Manifest.permission.READ_PHONE_NUMBERS) == PackageManager.PERMISSION_GRANTED) {
+                        SettingsStore.setSharePhoneNumber(this, true)
+                        message("Compartilhamento ativado. Algumas operadoras não informam o número ao Android.")
+                    } else requestPermissions(arrayOf(Manifest.permission.READ_PHONE_NUMBERS), phoneNumberPermissionRequest)
+                }.show()
+        }
+    })
     AlertDialog.Builder(this)
         .setTitle("Permissões e notificações")
         .setView(wrapper)
@@ -220,7 +242,7 @@ internal fun MainActivity.showAboutDialog() {
     card.addView(dialogMetricRow("Modo monitorado", "No mesmo APK"))
     card.addView(dialogMetricRow("Segurança", "Pareamento local e Android Keystore"))
     layout.addView(card)
-    layout.addView(label("O aplicativo prioriza uso local, privacidade, baixo consumo e preparação para futura publicação na Google Play.", 12f, muted = true))
+    layout.addView(label("O aplicativo prioriza uso particular, conexão local, privacidade, baixo consumo e permissões explícitas.", 12f, muted = true))
     AlertDialog.Builder(this)
         .setTitle("Sobre o Monitor Remoto")
         .setView(wrapper)

@@ -58,6 +58,7 @@ class MainActivity : Activity() {
     internal val cameraPermissionRequest = 4317
     internal val qrScanRequest = 4318
     private val notificationPermissionRequest = 101
+    internal val phoneNumberPermissionRequest = 103
     internal var active = false
     internal var resultBox: LinearLayout? = null
     companion object { const val EXTRA_OPEN_MONITOR = "br.dev.monitorremoto.OPEN_MONITOR" }
@@ -262,6 +263,11 @@ class MainActivity : Activity() {
             notificationPermissionRequest -> {
                 if (granted) startServiceExplicitly()
                 else message("Autorize notificações para exibir o monitoramento ativo.")
+            }
+            phoneNumberPermissionRequest -> {
+                SettingsStore.setSharePhoneNumber(this, granted)
+                message(if (granted) "Número da linha autorizado para consultas remotas autenticadas. Pode desativar em Permissões."
+                    else "Número da linha não será compartilhado.")
             }
         }
     }

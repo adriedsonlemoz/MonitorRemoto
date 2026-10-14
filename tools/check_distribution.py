@@ -16,7 +16,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.25" and code.group(1) == "25", "Versões incompatíveis"
+assert version == "0.1.0-alpha.26" and code.group(1) == "26", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -114,7 +114,7 @@ print('PASSOU: UI alpha.15, migração única, Keystore por host, tema e sugest�
 assert 'internal fun MainActivity.connectSavedDevice(' in ui and 'internal fun MainActivity.renameSavedDevice(' in ui
 assert 'internal fun MainActivity.forgetSavedDevice(' in ui and 'internal fun MainActivity.showConnectionChooser()' in ui
 assert 'showManualConnectionDialog()' in ui and 'setTitle("Confirmar aparelho")' in ui
-assert 'actionButton("↻ Atualizar")' in ui and 'LinearLayout.LayoutParams(dp(116), dp(42))' in ui
+assert 'R.drawable.ic_refresh' in ui and 'contentDescription = "Atualizar dados do aparelho"' in ui
 assert '@android:style/Theme.Material.Light.Dialog.NoActionBar' in manifest
 assert 'window.setLayout(' in scan and 'Aponte para o QR Code' in scan
 print('PASSOU: fluxo alpha.15, confirmação QR, botões de ação, scanner pop-up')
@@ -168,7 +168,7 @@ assert 'internal fun MainActivity.networkIcon(host: String)' in ui and 'internal
 assert 'private fun MainActivity.compactMetricCard(' in ui and 'private fun MainActivity.addMetricGrid(' in ui
 assert 'private fun MainActivity.actionTile(' in ui and 'private fun MainActivity.addActionGrid(' in ui
 assert 'private fun MainActivity.showRemoteNotifications(root: JSONObject)' in ui
-assert 'private fun MainActivity.copyRemoteSnapshot(root: JSONObject)' in ui
+assert 'private fun MainActivity.showRemoteDetailsDialog(root: JSONObject)' in ui
 assert 'private fun MainActivity.showRemoteDetailsDialog(root: JSONObject)' in ui
 assert 'Funções remotas' in ui and 'Mensagens' in ui and 'Ver tela' in ui and 'Localização' in ui
 print('PASSOU: alpha.19, painel remoto compacto, atalhos e detalhes dedicados')
@@ -192,7 +192,7 @@ assert 'ACCESS_CHANNEL' in service and 'IMPORTANCE_DEFAULT' in service
 assert 'SettingsStore.isMonitorEnabled(this) && !MonitorService.isRunning' in ui
 assert 'private fun recoverAuthorizedServiceIfStopped()' in ui
 assert 'options.chunked(2)' in ui and 'settingsIcon(' in ui
-assert 'private fun MainActivity.compactMetricCard(' in ui and 'minimumHeight = dp(98)' in ui
+assert 'private fun MainActivity.compactMetricCard(' in ui and 'minimumHeight = dp(115)' in ui
 assert (root / 'app/src/test/java/br/dev/monitorremoto/transport/AppVersionTest.kt').is_file()
 assert len(list((root / 'app/src/main/res/drawable').glob('ic_*.xml'))) >= 10
 print('PASSOU: alpha.20, versão exata, disconnect, notificação, Activity de acesso e UI vetorial')
@@ -274,4 +274,28 @@ assert 'val column = LinearLayout(this@infoMetric).apply' in incoming_screen
 assert 'addView(View(this), LinearLayout.LayoutParams(dp(10), 1))' not in incoming_screen
 assert 'val column = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }' not in incoming_screen
 assert 'assertFalse(AppVersion.compatible("0.1.0-alpha.24"))' in app_version_test
+assert 'assertFalse(AppVersion.compatible("0.1.0-alpha.25"))' in app_version_test
 print('PASSOU: alpha.25, Context correto nos construtores View/LinearLayout e versão sincronizada')
+
+# alpha.26: dashboard, detalhes e coleta somente após autorização explícita do monitorado.
+details = (ui_root / 'RemoteDetailsActivity.kt').read_text()
+device_reader = (root / 'app/src/main/java/br/dev/monitorremoto/core/DeviceInfoReader.kt').read_text()
+telephony_reader = (root / 'app/src/main/java/br/dev/monitorremoto/core/TelephonyReader.kt').read_text()
+assert 'android:name=".ui.RemoteDetailsActivity" android:exported="false"' in manifest
+assert 'put("deviceInfo", DeviceInfoReader.snapshot(context))' in server
+assert 'put("telephony", TelephonyReader.snapshot(context))' in server
+assert 'StatFs(Environment.getDataDirectory().absolutePath)' in device_reader
+assert 'ActivityManager.MemoryInfo()' in device_reader
+assert 'put("wifiDetected"' in network and 'put("cellularDetected"' in network
+assert 'READ_PHONE_NUMBERS' in manifest and 'READ_PHONE_STATE' not in manifest
+assert 'getBoolean("share_phone_number", false)' in settings
+assert 'if (optedIn && granted && Build.VERSION.SDK_INT >= 33)' in telephony_reader
+assert 'phoneNumberPermissionRequest ->' in main_ui
+assert 'SettingsStore.setSharePhoneNumber(this, false)' in ui
+assert 'R.drawable.ic_battery' in ui and 'R.drawable.ic_thermometer' in ui
+assert 'R.drawable.ic_folder_download' in ui and 'Recuperar dados' in ui
+assert 'Em breve' in ui and 'showRemoteDetailsDialog(root)' in ui
+assert 'Armazenamento' in details and 'Rede móvel e chip' in details and 'Sistema e hardware' in details
+assert 'Copiar resumo técnico' in details and 'FLAG_SECURE' in details
+assert len(list((root / 'app/src/main/res/drawable').glob('ic_*.xml'))) >= 25
+print('PASSOU: alpha.26, painel compacto, nova Activity, leitores, consentimento e recursos futuros')

@@ -15,54 +15,56 @@ import java.net.Inet4Address
 
 internal fun MainActivity.renderController() {
     val host = SettingsStore.getRemoteHost(this)
-    val card = panel(18)
-    val savedDevice = RecentDevices.list(this).firstOrNull { it.host == host }
-    val lastDeviceName = remoteConnection.cached?.optJSONObject("battery")?.optString("device")
+    val card = panel(17).apply { background = shape(surface, 24, true) }
+    val saved = RecentDevices.list(this).firstOrNull { it.host == host }
+    val remoteName = remoteConnection.cached?.optJSONObject("battery")?.optString("device")
         ?.takeIf { remoteConnection.cachedHost == host && it.isNotBlank() }
-    val titleText = if (savedDevice?.customName == true) savedDevice.name
-        else lastDeviceName ?: savedDevice?.name ?: "Nenhum aparelho selecionado"
+    val titleText = if (saved?.customName == true) saved.name
+        else remoteName ?: saved?.name ?: "Nenhum aparelho selecionado"
 
-    val heading = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.TOP }
+    val heading = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
     val infoColumn = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-    currentDeviceTitle = label(titleText, 19f, strong = true).apply {
+    currentDeviceTitle = label(titleText, 20f, strong = true).apply {
         maxLines = 2; ellipsize = android.text.TextUtils.TruncateAt.END
+        setPadding(0, 0, 0, dp(5))
     }
     infoColumn.addView(currentDeviceTitle)
-    val statusRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-    currentStatus = label("", 13f, strong = true)
-    statusRow.addView(currentStatus)
-    statusRow.addView(View(this), LinearLayout.LayoutParams(dp(6), 1))
-    statusRow.addView(infoChip("${networkIcon(host)} ${connectionKind(host)}"))
-    infoColumn.addView(statusRow)
-    currentUpdated = label("", 11.5f, muted = true).apply { setPadding(0, dp(1), 0, dp(2)) }
+    currentStatus = label("", 13f, strong = true).apply { setPadding(0, 0, 0, 0) }
+    infoColumn.addView(currentStatus)
+    currentUpdated = label("", 10.5f, muted = true).apply {
+        setPadding(0, dp(6), 0, 0)
+        maxLines = 2
+    }
     infoColumn.addView(currentUpdated)
-
-    val extraRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-    extraRow.addView(infoChip("🌐 ${if (host.isBlank()) "Sem IP" else host}"))
-    extraRow.addView(View(this), LinearLayout.LayoutParams(dp(6), 1))
-    extraRow.addView(infoChip("🔐 ${remoteConnection.method}"))
-    infoColumn.addView(extraRow)
-
     heading.addView(infoColumn, LinearLayout.LayoutParams(0, -2, 1f))
     heading.addView(View(this), LinearLayout.LayoutParams(dp(10), 1))
-    val actionColumn = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-    currentConnectButton = actionButton("Conectar", emphasis = true) {
-        val actualState = effectiveConnectionState()
-        if (actualState == "connected" || actualState == "loading") disconnectCurrent()
-        else showConnectionChooser()
-    }.apply { textSize = 11.5f; minWidth = 0; setPadding(dp(4), 0, dp(4), 0) }
-    actionColumn.addView(currentConnectButton, LinearLayout.LayoutParams(dp(116), dp(42)))
-    actionColumn.addView(View(this), LinearLayout.LayoutParams(1, dp(8)))
-    actionColumn.addView(actionButton("↻ Atualizar") { refreshRemote(silent = false) }.apply {
-        background = shape(secondaryAccent, 12)
-        setTextColor(Color.WHITE)
+
+    val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+    val refresh = android.widget.ImageView(this).apply {
+        setImageResource(br.dev.monitorremoto.R.drawable.ic_refresh)
+        imageTintList = android.content.res.ColorStateList.valueOf(ink)
+        setPadding(dp(11), dp(11), dp(11), dp(11))
+        background = shape(fieldColor, 14, true)
+        isClickable = true; isFocusable = true
+        contentDescription = "Atualizar dados do aparelho"
+        setOnClickListener { refreshRemote(silent = false) }
+    }
+    actions.addView(refresh, LinearLayout.LayoutParams(dp(44), dp(44)))
+    actions.addView(View(this), LinearLayout.LayoutParams(dp(7), 1))
+    currentConnectButton = actionButton("Sair") {
+        when (effectiveConnectionState()) {
+            "connected", "loading" -> disconnectCurrent()
+            else -> showConnectionChooser()
+        }
+    }.apply {
         textSize = 11.5f
         minWidth = 0
         setPadding(dp(4), 0, dp(4), 0)
-    }, LinearLayout.LayoutParams(dp(116), dp(42)))
-    heading.addView(actionColumn)
+    }
+    actions.addView(currentConnectButton, LinearLayout.LayoutParams(dp(59), dp(44)))
+    heading.addView(actions)
     card.addView(heading)
-    sectionGap(card, 10)
+    sectionGap(card, 18)
 
     resultBox = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
     card.addView(resultBox)
@@ -93,9 +95,11 @@ internal fun MainActivity.updateConnectionLabels() {
     currentStatus?.text = text
     currentStatus?.setTextColor(if (actualState == "connected") highlight else
         if (actualState == "offline") Color.rgb(190, 88, 61) else dim)
+    currentConnectButton?.contentDescription = if (actualState == "connected" || actualState == "loading")
+        "Desconectar e voltar à Home" else "Conectar ou escolher aparelho"
     currentConnectButton?.text = when (actualState) {
-        "connected", "loading" -> "Desconectar"
-        "offline" -> "Reconectar"
+        "connected", "loading" -> "Sair"
+        "offline" -> "Tentar"
         else -> "Conectar"
     }
     currentUpdated?.text = when {

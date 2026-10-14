@@ -7,6 +7,8 @@
     <!-- Solicitada somente ao abrir o leitor QR; câmera não transmite imagens. -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Opcional: somente após autorização explícita no aparelho monitorado. -->
+    <uses-permission android:name="android.permission.READ_PHONE_NUMBERS" />
     <!-- Pré-requisito documentado para FGS connectedDevice (comunicação de rede). -->
     <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
@@ -36,6 +38,8 @@
             android:name=".ui.QrScanActivity"
             android:theme="@android:style/Theme.Material.Light.Dialog.NoActionBar"
             android:exported="false" />
+
+        <activity android:name=".ui.RemoteDetailsActivity" android:exported="false" />
 
         <activity
             android:name=".ui.IncomingAccessActivity"

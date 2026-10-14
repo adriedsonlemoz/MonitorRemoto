@@ -24,6 +24,11 @@ object SettingsStore {
         EventJournal.retainAllowed(packages)
     }
 
+    /** Ativação explícita, separada da permissão de sistema para acesso ao número da linha. */
+    fun sharePhoneNumber(context: Context) = prefs(context).getBoolean("share_phone_number", false)
+    fun setSharePhoneNumber(context: Context, enabled: Boolean) =
+        prefs(context).edit().putBoolean("share_phone_number", enabled).apply()
+
     fun autoStartEnabled(context: Context) = prefs(context).getBoolean("autostart", false)
     fun setAutoStart(context: Context, enabled: Boolean) = prefs(context).edit().putBoolean("autostart", enabled).apply()
 

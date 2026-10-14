@@ -280,3 +280,15 @@
 - [x] Parser PSI: zero erros sintáticos em Kotlin; 14 XML válidos; typecheck Kotlin isolado de `IncomingAccessScreenUi.kt` com stubs mínimos Android/Activity sem erros de tipo.
 - [ ] Compilação Android real e testes instrumentados ainda pendentes da CI.
 - [ ] Teste físico do alerta de acesso com múltiplos dispositivos.
+
+
+## alpha.26: painel e telemetria (14/10/2026)
+
+- [x] Gradle, AppVersion e documentação apontam para 0.1.0-alpha.26/versionCode 26.
+- [x] Painel remoto reduzido a três cartões com ícones, seis funções e detalhes movidos para Activity própria.
+- [x] Recursos futuros distinguíveis dos operacionais; Recuperar dados ainda não implementado.
+- [x] Leitores de sistema, armazenamento, telephony e rede integrados no servidor autenticado.
+- [x] Número de telefone desligado por padrão, com permissão e autorização explícitas.
+- [ ] Compilação Android completa por Gradle/CI.
+- [ ] Testes visuais em tema claro/escuro e em telas compactas.
+- [ ] Testes físicos de SIM único, dual SIM, sem chip, Android 8-16 e VPN.

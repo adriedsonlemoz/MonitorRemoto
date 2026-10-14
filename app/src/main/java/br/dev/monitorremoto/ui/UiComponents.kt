@@ -1,6 +1,8 @@
 package br.dev.monitorremoto.ui
 
 import android.graphics.Typeface
+import android.content.res.ColorStateList
+import android.widget.ImageView
 import android.graphics.drawable.GradientDrawable
 import android.text.InputType
 import android.view.Gravity
@@ -142,3 +144,12 @@ internal fun MainActivity.dialogMetricRow(name: String, value: String): LinearLa
 }
 
 
+
+/** Ícones vetoriais nativos com tinta temática e descrição definida pelo cartão. */
+internal fun MainActivity.vectorIcon(resource: Int, size: Int, tint: Int = ink): ImageView = ImageView(this).apply {
+    setImageResource(resource)
+    imageTintList = ColorStateList.valueOf(tint)
+    contentDescription = null
+    scaleType = ImageView.ScaleType.FIT_CENTER
+    layoutParams = LinearLayout.LayoutParams(dp(size), dp(size))
+}

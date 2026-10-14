@@ -1,16 +1,18 @@
-# Monitor Remoto v0.1.0-alpha.25
+# Monitor Remoto v0.1.0-alpha.26
 
-## Correção da alpha.25
+## Novidades
 
-- Ajuste dos dois erros `Argument type mismatch: actual type is LinearLayout, but Context was expected` do workflow 25, encontrados em `IncomingAccessScreenUi.kt:113` e `:114`.
-- Os construtores de `View` e `LinearLayout` dentro do helper `infoMetric` agora recebem explicitamente a Activity como contexto (`this@infoMetric`), em vez do receptor implícito `LinearLayout.apply`.
-- Mantidos o visual atual do alerta de acesso recebido, o aviso de autenticação, os dados e as permissões existentes.
-- Exigida alpha.25 nos **dois celulares** pela política de versão exata.
+- Novo painel conectado, com três indicadores e seis atalhos em grade, próximos ao estilo visual solicitado.
+- **Detalhes do aparelho** abre tela própria organizada em cartões: bateria, Wi-Fi/conexão, rede móvel e chip, armazenamento, RAM e sistema.
+- Dados técnicos coletados do aparelho monitorado e enviados por canal autenticado criptografado. Informações indisponíveis são mostradas como tal.
+- Opção de compartilhar número da linha disponível no aparelho monitorado, **desligada por padrão**. Exige autorização explícita e permissão de sistema; operadora pode não informar número.
+- **Recuperar dados** aparece em funções remotas como **Em breve**. Ainda não permite navegar nem copiar arquivos.
+- Copiar resumo permanece disponível na nova tela de detalhes.
 
-## Ainda não implementado
+## Instalação
 
-A futura reorganização de Detalhes do aparelho (bateria, armazenamento e redes) e a função Recuperar dados não fazem parte desta correção.
+Instale a alpha.26 nos dois aparelhos; versões diferentes não são aceitas pelo pareamento e pelas consultas.
 
 ## Validação pendente
 
-Executar novamente `:app:compileDebugKotlin`, testes JVM e criação do APK pelo GitHub Actions. O ZIP contém somente o código-fonte.
+Ainda é necessário compilar o APK pelo GitHub Actions e testar a interface e as leituras em aparelhos reais. Este ZIP contém apenas código-fonte.

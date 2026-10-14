@@ -3,6 +3,8 @@ package br.dev.monitorremoto.transport
 import android.content.Context
 import br.dev.monitorremoto.core.BatteryReader
 import br.dev.monitorremoto.core.NetworkReader
+import br.dev.monitorremoto.core.DeviceInfoReader
+import br.dev.monitorremoto.core.TelephonyReader
 import br.dev.monitorremoto.core.EventJournal
 import br.dev.monitorremoto.core.SettingsStore
 import br.dev.monitorremoto.security.CryptoBox
@@ -100,6 +102,8 @@ class MonitorServer(private val context: Context) {
                         put("serverMs", now)
                         put("battery", BatteryReader.snapshot(context))
                         put("network", NetworkReader.snapshot(context))
+                        put("deviceInfo", DeviceInfoReader.snapshot(context))
+                        put("telephony", TelephonyReader.snapshot(context))
                         put("events", if (SettingsStore.isMonitorEnabled(context))
                             EventJournal.latestJson(SettingsStore.notificationAllowlist(context))
                             else org.json.JSONArray())

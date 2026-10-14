@@ -1,5 +1,14 @@
 # Histórico de versões
 
+## 0.1.0-alpha.26 (14/10/2026)
+
+- Painel de controle redesenhado seguindo o layout aprovado: cartões de Bateria, Temperatura e Rede em linha, ícones vetoriais e grade de seis atalhos. Removidos os indicadores redundantes e chips de IP/chave da tela principal.
+- Nova `RemoteDetailsActivity` com seções de bateria, Wi-Fi, conexão, rede móvel, chip, armazenamento, RAM, Android e hardware; progresso de uso do armazenamento calculado do aparelho monitorado.
+- Novos leitores locais `DeviceInfoReader` e `TelephonyReader`; informações transmitidas somente dentro das consultas criptografadas existentes e quando o serviço está autorizado. `NetworkReader` acrescenta indicadores efetivamente observados pelo Android.
+- `READ_PHONE_NUMBERS` e opção de compartilhamento do número da linha desligada por padrão; autorização explícita no aparelho monitorado, revogável no app e informação "Não disponível" quando não fornecida.
+- Atalho **Recuperar dados** marcado Em breve; função de transferência remota ainda não implementada. Ação Copiar resumo técnico passou à tela Detalhes.
+- Contrato de versão sincronizado para 0.1.0-alpha.26/versionCode 26, validadores e documentação atualizados. Testes físicos e compilação Android em CI pendentes.
+
 ## 0.1.0-alpha.25 (14/10/2026)
 
 - Corrigidos dois erros de compilação Kotlin do workflow **Gerar APK e Release 25** na tela de acesso recebido (`IncomingAccessScreenUi.kt`, linhas 113 e 114), onde o receiver de `LinearLayout.apply` era passado como `Context` para `View` e `LinearLayout`.

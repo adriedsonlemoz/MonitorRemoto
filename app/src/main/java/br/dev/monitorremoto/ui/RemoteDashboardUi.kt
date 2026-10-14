@@ -1,188 +1,139 @@
 package br.dev.monitorremoto.ui
 
 import android.app.AlertDialog
-import android.content.ClipData
-import android.content.ClipDescription
-import android.content.ClipboardManager
-import android.content.Context
+import android.content.Intent
 import android.graphics.Color
-import android.os.Build
-import android.os.PersistableBundle
 import android.view.Gravity
 import android.view.View
 import android.widget.LinearLayout
-import br.dev.monitorremoto.core.SettingsStore
 import org.json.JSONObject
 import java.util.Locale
+import br.dev.monitorremoto.R
 
-/** Alpha.22: módulo de interface extraído de MainActivity. Sem estado de conexão próprio. */
-
+/** Painel deliberadamente enxuto. Informações técnicas detalhadas ficam em RemoteDetailsActivity. */
 internal fun MainActivity.displayResult(root: JSONObject, fromCache: Boolean = false) {
-    val panel = resultBox ?: return
-    panel.removeAllViews()
+    val container = resultBox ?: return
+    container.removeAllViews()
     val battery = root.optJSONObject("battery") ?: return
-    val events = root.optJSONArray("events")
-    val host = SettingsStore.getRemoteHost(this)
-    val level = if (battery.isNull("levelPercent")) "—" else "${battery.optDouble("levelPercent").toInt()}%"
-    val charging = when {
-        battery.optBoolean("full") -> "Cheia"
-        battery.optBoolean("charging") -> "Carregando"
-        else -> "Descarregando"
-    }
-    fun current(name: String): String = if (battery.isNull(name)) "—" else
-        String.format(Locale.getDefault(), "%.0f mA", battery.optDouble(name))
-    val temp = if (battery.isNull("temperatureC")) "—" else String.format(Locale.getDefault(), "%.1f °C", battery.optDouble("temperatureC"))
-    val voltage = if (battery.isNull("voltageMv")) "—" else "${battery.optInt("voltageMv")} mV"
-    val eventCount = events?.length() ?: 0
-    val metricCards = listOf(
-        compactMetricCard("🔋", "Bateria", level, charging, accent = true),
-        compactMetricCard("🌡", "Temperatura", temp, "Térmica"),
-        compactMetricCard("⚡", "Corrente", current("currentMa"), "Agora"),
-        compactMetricCard("∿", "Média", current("averageMa"), "Consumo"),
-        compactMetricCard("🔌", "Tensão", voltage, "Bateria"),
-        compactMetricCard("🔔", "Eventos", eventCount.toString(), if (eventCount == 1) "1 evento" else "$eventCount eventos")
+    val network = root.optJSONObject("network")
+    val percentage = if (battery.isNull("levelPercent")) "—" else "${battery.optDouble("levelPercent").toInt()}%"
+    val temperature = if (battery.isNull("temperatureC")) "—" else
+        String.format(Locale.getDefault(), "%.1f °C", battery.optDouble("temperatureC"))
+    val networkType = network?.optString("type")?.ifBlank { "Indisponível" } ?: "Indisponível"
+    val items = listOf(
+        compactMetricCard(R.drawable.ic_battery, "Bateria", percentage),
+        compactMetricCard(R.drawable.ic_thermometer, "Temperatura", temperature),
+        compactMetricCard(R.drawable.ic_wifi, "Rede", networkType),
     )
-    addMetricGrid(panel, metricCards)
-    sectionGap(panel, 10)
+    addMetricGrid(container, items)
+    sectionGap(container, 19)
 
-    val remoteNetwork = root.optJSONObject("network")?.optString("type").orEmpty()
-    val quickStates = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-    quickStates.addView(infoChip("🔋 $charging").apply {
-        maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
-    }, LinearLayout.LayoutParams(0, -2, 1f))
-    if (remoteNetwork.isNotBlank()) {
-        quickStates.addView(View(this), LinearLayout.LayoutParams(dp(8), 1))
-        quickStates.addView(infoChip("📶 Rede: $remoteNetwork").apply {
-            maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
-        }, LinearLayout.LayoutParams(0, -2, 1f))
-    }
-    panel.addView(quickStates)
-    sectionGap(panel, 10)
-
-    panel.addView(label("Funções remotas", 15f, strong = true).apply { setPadding(0, 0, 0, dp(2)) })
-    panel.addView(label("Toque para abrir dados atuais ou funções futuras.", 11f, muted = true).apply { setPadding(0, 0, 0, dp(4)) })
-    val tiles = listOf(
-        actionTile("🔔", "Notificações", if (eventCount == 0) "Sem alertas" else "$eventCount capturadas", emphasis = true) { showRemoteNotifications(root) },
-        actionTile("📋", "Copiar", "Resumo atual") { copyRemoteSnapshot(root) },
-        actionTile("ℹ", "Detalhes", "Bateria e rede") { showRemoteDetailsDialog(root) },
-        actionTile("💬", "Mensagens", "Em breve") { showFeatureSoon("Mensagens", "A visualização direta de mensagens ainda depende de um fluxo separado e de permissões específicas.") },
-        actionTile("🖥", "Ver tela", "Em breve") { showFeatureSoon("Ver tela", "A visualização da tela remota exigirá autorização explícita no aparelho monitorado.") },
-        actionTile("📍", "Localização", "Em breve") { showFeatureSoon("Localização", "A localização remota será exibida quando houver permissão e coleta dedicada desse dado.") }
+    container.addView(label("Funções remotas", 17f, strong = true).apply { setPadding(0, 0, 0, dp(12)) })
+    val eventCount = root.optJSONArray("events")?.length() ?: 0
+    val cards = listOf(
+        actionTile(R.drawable.ic_folder_download, "Recuperar dados", "Em breve") {
+            showFeatureSoon("Recuperar dados", "O resgate de arquivos exigirá autorização das pastas no celular monitorado e transferência criptografada. Ainda não está disponível.")
+        },
+        actionTile(R.drawable.ic_phone, "Detalhes", "", enabled = true) { showRemoteDetailsDialog(root) },
+        actionTile(R.drawable.ic_bell, "Notificações", if (eventCount > 0) "$eventCount evento(s)" else "", enabled = true) {
+            showRemoteNotifications(root)
+        },
+        actionTile(R.drawable.ic_message, "Mensagens", "Em breve") {
+            showFeatureSoon("Mensagens", "Não existe leitura direta de mensagens nesta versão.")
+        },
+        actionTile(R.drawable.ic_monitor, "Ver tela", "Em breve") {
+            showFeatureSoon("Ver tela", "A transmissão exigirá permissão de captura concedida no aparelho monitorado.")
+        },
+        actionTile(R.drawable.ic_pin, "Localização", "Em breve") {
+            showFeatureSoon("Localização", "A localização remota dependerá de permissão explícita no aparelho monitorado.")
+        },
     )
-    addActionGrid(panel, tiles)
-
+    addActionGrid(container, cards)
     if (fromCache && remoteConnection.state != "connected") {
-        sectionGap(panel, 8)
-        panel.addView(label("Leitura anterior: aguarde confirmação de uma nova consulta antes de considerar estes dados atuais.", 11.5f, muted = true))
+        sectionGap(container, 12)
+        container.addView(label("Exibindo a última leitura armazenada. Aguarde nova consulta para confirmar os dados.", 11f, muted = true))
     }
-
 }
 
-private fun MainActivity.compactMetricCard(icon: String, title: String, value: String, subtitle: String = "", accent: Boolean = false): LinearLayout =
-    panel(8).apply {
-        background = shape(if (accent) highlight else fieldColor, 15, !accent)
-        val caption = LinearLayout(this@compactMetricCard).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-        }
-        caption.addView(label(icon, 13f).apply { setPadding(0, 0, dp(4), 0) })
-        caption.addView(label(title, 10f, muted = !accent).apply {
-            setTextColor(if (accent) highlightText else dim)
-            maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
-            setPadding(0, 0, 0, 0)
-        })
-        addView(caption)
-        addView(label(value, 16f, strong = true).apply {
-            setTextColor(if (accent) highlightText else ink)
-            setPadding(0, dp(4), 0, 0)
+private fun MainActivity.compactMetricCard(icon: Int, title: String, value: String): LinearLayout =
+    LinearLayout(this).apply {
+        orientation = LinearLayout.VERTICAL
+        gravity = Gravity.CENTER
+        background = shape(fieldColor, 18)
+        setPadding(dp(3), dp(13), dp(3), dp(12))
+        minimumHeight = dp(115)
+        addView(vectorIcon(icon, 28), LinearLayout.LayoutParams(dp(28), dp(28)))
+        addView(label(title, 11.5f, muted = true).apply {
+            gravity = Gravity.CENTER
             maxLines = 1
-            ellipsize = android.text.TextUtils.TruncateAt.END
+            setPadding(0, dp(10), 0, dp(3))
+        })
+        addView(label(value, 16f, strong = true).apply {
+            gravity = Gravity.CENTER
+            maxLines = 2
+            setPadding(0, 0, 0, 0)
         })
     }
 
 private fun MainActivity.addMetricGrid(parent: LinearLayout, cards: List<LinearLayout>) {
-    val rows = cards.chunked(3)
-    rows.forEachIndexed { rowIndex, rowCards ->
-        val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        rowCards.forEachIndexed { index, card ->
-            row.addView(card, LinearLayout.LayoutParams(0, -2, 1f).apply {
-                if (index < rowCards.lastIndex) rightMargin = dp(8)
-            })
-        }
-        while (row.childCount < 3) {
-            row.addView(View(this), LinearLayout.LayoutParams(0, 1, 1f).apply {
-                if (row.childCount < 3) rightMargin = dp(8)
-            })
-        }
-        parent.addView(row)
-        if (rowIndex < rows.lastIndex) sectionGap(parent, 8)
+    val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+    cards.forEachIndexed { index, card ->
+        row.addView(card, LinearLayout.LayoutParams(0, -2, 1f).apply {
+            if (index < cards.lastIndex) rightMargin = dp(8)
+        })
     }
+    parent.addView(row)
 }
 
-private fun MainActivity.actionTile(icon: String, title: String, subtitle: String, emphasis: Boolean = false, onClick: () -> Unit): LinearLayout =
+private fun MainActivity.actionTile(icon: Int, title: String, subtitle: String, enabled: Boolean = false, onClick: () -> Unit): LinearLayout =
     LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
-        gravity = Gravity.CENTER_HORIZONTAL
-        background = shape(if (emphasis) highlight else fieldColor, 16, !emphasis)
-        setPadding(dp(7), dp(13), dp(7), dp(13))
-        minimumHeight = dp(98)
+        gravity = Gravity.CENTER
+        background = shape(surface, 18, true)
+        setPadding(dp(6), dp(14), dp(6), dp(10))
+        minimumHeight = dp(105)
         isClickable = true
         isFocusable = true
-        contentDescription = "$title: $subtitle"
+        contentDescription = "$title${if (!enabled) ", em desenvolvimento" else ""}"
         setOnClickListener { onClick() }
-        addView(label(icon, 22f).apply {
+        addView(vectorIcon(icon, 28), LinearLayout.LayoutParams(dp(28), dp(28)))
+        addView(label(title, 12f, strong = enabled).apply {
             gravity = Gravity.CENTER
-            setPadding(0, 0, 0, dp(4))
+            maxLines = 2
+            setPadding(0, dp(10), 0, 0)
         })
-        addView(label(title, 12f, strong = true).apply {
+        if (subtitle.isNotBlank()) addView(label(subtitle, 10f, muted = true).apply {
             gravity = Gravity.CENTER
-            setTextColor(if (emphasis) highlightText else ink)
-            setPadding(0, 0, 0, 0)
             maxLines = 1
-            ellipsize = android.text.TextUtils.TruncateAt.END
-        })
-        addView(label(subtitle, 10f, muted = !emphasis).apply {
-            gravity = Gravity.CENTER
-            setTextColor(if (emphasis) Color.argb(216, 255, 255, 255) else dim)
-            setPadding(0, dp(3), 0, 0)
-            maxLines = 1
-            ellipsize = android.text.TextUtils.TruncateAt.END
+            setPadding(0, dp(2), 0, 0)
         })
     }
 
 private fun MainActivity.addActionGrid(parent: LinearLayout, tiles: List<LinearLayout>) {
-    val rows = tiles.chunked(3)
-    rows.forEachIndexed { rowIndex, rowTiles ->
+    tiles.chunked(3).forEachIndexed { index, segment ->
         val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        rowTiles.forEachIndexed { index, tile ->
+        segment.forEachIndexed { column, tile ->
             row.addView(tile, LinearLayout.LayoutParams(0, -2, 1f).apply {
-                if (index < rowTiles.lastIndex) rightMargin = dp(8)
-            })
-        }
-        while (row.childCount < 3) {
-            row.addView(View(this), LinearLayout.LayoutParams(0, 1, 1f).apply {
-                if (row.childCount < 3) rightMargin = dp(8)
+                if (column != segment.lastIndex) rightMargin = dp(8)
             })
         }
         parent.addView(row)
-        if (rowIndex < rows.lastIndex) sectionGap(parent, 8)
+        if (index == 0) sectionGap(parent, 9)
     }
 }
 
 private fun MainActivity.showFeatureSoon(name: String, description: String) {
-    AlertDialog.Builder(this)
-        .setTitle(name)
-        .setMessage("$description\n\nEsse atalho já está previsto no painel, mas ainda será implementado em uma versão futura.")
-        .setPositiveButton("OK", null)
-        .show()
+    AlertDialog.Builder(this).setTitle(name)
+        .setMessage("$description\n\nEste recurso ainda não está implementado.")
+        .setPositiveButton("Entendi", null).show()
 }
 
 private fun MainActivity.showRemoteNotifications(root: JSONObject) {
     val events = root.optJSONArray("events")
     val (wrapper, layout) = dialogWrapper()
-    dialogIntro(layout, "Eventos autorizados recebidos do aparelho remoto.")
+    dialogIntro(layout, "Notificações novas e autorizadas no outro aparelho.")
     if (events == null || events.length() == 0) {
-        layout.addView(label("Nenhuma notificação autorizada capturada.", 12.5f, muted = true))
+        layout.addView(label("Nenhum evento autorizado registrado.", 13f, muted = true))
     } else {
         for (index in events.length() - 1 downTo 0) {
             val event = events.optJSONObject(index) ?: continue
@@ -195,71 +146,18 @@ private fun MainActivity.showRemoteNotifications(root: JSONObject) {
             sectionGap(layout, 7)
         }
     }
-    AlertDialog.Builder(this)
-        .setTitle("Notificações")
-        .setView(wrapper)
-        .setPositiveButton("Fechar", null)
-        .show()
-}
-
-private fun MainActivity.copyRemoteSnapshot(root: JSONObject) {
-    val battery = root.optJSONObject("battery") ?: return
-    val host = SettingsStore.getRemoteHost(this)
-    val summary = buildString {
-        append(currentDeviceTitle?.text ?: "Monitor Remoto")
-        append("\nIP: ").append(host)
-        append("\nAcesso: ").append(connectionKind(host))
-        append("\nRede remota: ").append(root.optJSONObject("network")?.optString("type") ?: "Não informada")
-        append("\nMétodo: ").append(remoteConnection.method)
-        append("\nAtualizado: ").append(if (remoteConnection.lastSuccessMs > 0L) formatDate(remoteConnection.lastSuccessMs) else "agora")
-        append("\n\n").append(batterySummary(battery))
-    }
-    val clip = ClipData.newPlainText("Monitor Remoto: resumo do aparelho", summary)
-    if (Build.VERSION.SDK_INT >= 33) {
-        clip.description.extras = PersistableBundle().apply {
-            putBoolean(ClipDescription.EXTRA_IS_SENSITIVE, true)
-        }
-    }
-    (getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(clip)
-    message("Resumo atual copiado para a área de transferência.")
+    AlertDialog.Builder(this).setTitle("Notificações")
+        .setView(wrapper).setPositiveButton("Fechar", null).show()
 }
 
 private fun MainActivity.showRemoteDetailsDialog(root: JSONObject) {
-    val battery = root.optJSONObject("battery") ?: return
-    val host = SettingsStore.getRemoteHost(this)
-    val (wrapper, layout) = dialogWrapper()
-    dialogIntro(layout, "Resumo técnico do aparelho remoto.")
-    val card = panel(14)
-    card.addView(dialogMetricRow("Aparelho", currentDeviceTitle?.text?.toString() ?: host))
-    card.addView(dialogMetricRow("Acesso", connectionKind(host)))
-    card.addView(dialogMetricRow("Rede do celular", root.optJSONObject("network")?.optString("type") ?: "Não informada"))
-    card.addView(dialogMetricRow("IP", host.ifBlank { "—" }))
-    card.addView(dialogMetricRow("Método", remoteConnection.method))
-    card.addView(dialogMetricRow("Atualização", if (remoteConnection.lastSuccessMs > 0L) formatDate(remoteConnection.lastSuccessMs) else "Sem leitura recente"))
-    card.addView(dialogMetricRow("Bateria", if (battery.isNull("levelPercent")) "—" else "${battery.optDouble("levelPercent").toInt()}%"))
-    card.addView(dialogMetricRow("Estado", if (battery.optBoolean("charging")) "Carregando" else "Descarregando"))
-    card.addView(dialogMetricRow("Temperatura", if (battery.isNull("temperatureC")) "—" else String.format(Locale.getDefault(), "%.1f °C", battery.optDouble("temperatureC"))))
-    card.addView(dialogMetricRow("Tensão", if (battery.isNull("voltageMv")) "—" else "${battery.optInt("voltageMv")} mV"))
-    card.addView(dialogMetricRow("Corrente atual", if (battery.isNull("currentMa")) "—" else String.format(Locale.getDefault(), "%.0f mA", battery.optDouble("currentMa"))))
-    card.addView(dialogMetricRow("Corrente média", if (battery.isNull("averageMa")) "—" else String.format(Locale.getDefault(), "%.0f mA", battery.optDouble("averageMa"))))
-    card.addView(dialogMetricRow("Eventos", "${root.optJSONArray("events")?.length() ?: 0}"))
-    layout.addView(card)
-    layout.addView(label("Correntes são leituras fornecidas pelo Android e podem variar conforme o aparelho.", 11f, muted = true))
-    AlertDialog.Builder(this)
-        .setTitle("Detalhes do aparelho")
-        .setView(wrapper)
-        .setPositiveButton("Fechar", null)
-        .show()
+    val name = currentDeviceTitle?.text?.toString().orEmpty()
+    val selectedHost = br.dev.monitorremoto.core.SettingsStore.getRemoteHost(this)
+    startActivity(Intent(this, RemoteDetailsActivity::class.java).apply {
+        putExtra(RemoteDetailsActivity.EXTRA_SNAPSHOT, root.toString())
+        putExtra(RemoteDetailsActivity.EXTRA_DEVICE, name)
+        putExtra(RemoteDetailsActivity.EXTRA_HOST, selectedHost)
+        putExtra(RemoteDetailsActivity.EXTRA_METHOD, remoteConnection.method)
+        putExtra(RemoteDetailsActivity.EXTRA_UPDATED, remoteConnection.lastSuccessMs)
+    })
 }
-
-private fun MainActivity.batterySummary(battery: JSONObject): String {
-    fun number(name: String, suffix: String, digits: Int = 1): String = if (battery.isNull(name)) "indisponível" else
-        String.format(Locale.getDefault(), "% .${digits}f", battery.optDouble(name)).trim() + suffix
-    val charge = if (battery.optBoolean("charging")) "carregando" else "descarregando"
-    return "Bateria: ${number("levelPercent", "%", 0)} ($charge)\n" +
-        "Temperatura: ${number("temperatureC", " °C")}\n" +
-        "Tensão: ${if (battery.isNull("voltageMv")) "indisponível" else "${battery.optInt("voltageMv")} mV"}\n" +
-        "Corrente instantânea: ${number("currentMa", " mA", 0)}\n" +
-        "Corrente média: ${number("averageMa", " mA", 0)}"
-}
-
