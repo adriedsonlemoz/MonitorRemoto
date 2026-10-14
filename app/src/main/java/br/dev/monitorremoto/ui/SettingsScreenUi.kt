@@ -68,6 +68,9 @@ internal fun MainActivity.renderSettingsModule() {
             "Inicialização, retomada e funcionamento", "service")
         settingsEntry(groupB, R.drawable.ic_activity, "Diagnóstico",
             "Conexão, permissões e estado do servidor", "diagnostics")
+        groupB.addView(iconMenuRow(R.drawable.ic_shield, "Modo avançado ADB", "Pareamento Wi-Fi, conexão e diagnóstico") {
+            startActivity(Intent(this, AdbActivity::class.java))
+        })
         content.addView(groupB)
         sectionGap(content, 12)
         val groupC = panel(15)

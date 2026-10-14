@@ -1,4 +1,11 @@
-# Monitor Remoto v0.1.0-alpha.41
+# Monitor Remoto v0.1.0-alpha.42
+
+## Modo avançado ADB por Wi-Fi (alpha.42)
+
+Configurações → Modo avançado ADB oferece QR de 2 minutos, pareamento por código, descoberta mDNS, IP/portas manuais, conexão TLS, diagnóstico de modelo/Android e comandos Voltar/Início/Recentes com confirmação.
+A Depuração sem fios deve ser habilitada manualmente no monitorado (Android 11+ ou ROM compatível). O controlador continua Android 8+. O QR é do protocolo ADB (`WIFI:T:ADB`), distinto do QR normal do Monitor Remoto.
+A identidade RSA é protegida pelo cofre AES-GCM/Android Keystore. Não é preciso Termux/PC em tempo de uso. Ao sair da tela, a conexão é encerrada; a identidade permanece. Portas não são persistidas e devem ser redescobertas ou informadas novamente.
+Esta versão **não implementa espelhamento via ADB, tela física apagada via ADB, desbloqueio, reconexão em segundo plano ou shell livre**. Leia [arquitetura, dependências e testes ADB](ADB.md). Validação física permanece pendente.
 
 ## Controles transparentes no modo tela cheia (alpha.41)
 
@@ -6,7 +13,7 @@
 - Barra inferior flutuante: Voltar, Início, Recentes, Notificações, Toque e Acender tela.
 - Os botões permanecem visíveis e discretos, com leitura acessível; fora da faixa de controles os toques continuam na imagem.
 - Indicador discreto do estado real do streaming, rede e FPS de quadros exibidos; respeito ao recorte da tela; opção de tela cheia preservada ao recriar a Activity.
-- Mecanismos existentes de autenticação e autorização preservados. FPS/latência em aparelho e compilação Gradle pendentes. v0.1.0-alpha.41 / versionCode 41.
+- Mecanismos existentes de autenticação e autorização preservados. FPS/latência em aparelho e compilação Gradle pendentes naquela entrega. v0.1.0-alpha.41 / versionCode 41.
 
 ## AVC/H.264 experimental, JPEG reserva e comando Acender tela (alpha.40)
 

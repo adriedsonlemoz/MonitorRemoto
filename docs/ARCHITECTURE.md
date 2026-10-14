@@ -1,4 +1,4 @@
-# Arquitetura (0.1.0-alpha.41)
+# Arquitetura (0.1.0-alpha.42)
 
 ```text
 MONITORADO                                      CONTROLE
@@ -25,9 +25,9 @@ A captura usa `ImageReader` RGBA, `Bitmap` JPEG com largura máxima 540 px, taxa
 
 ## Distribuição e assinatura
 
-O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.41` e `versionCode=41`.
+O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.42` e `versionCode=42`.
 
-- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.41.apk`.
+- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.42.apk`.
 - `upload-artifact` sempre distribui um ZIP; GitHub Releases recebe o **arquivo APK direto**.
 - Com quatro Secrets, Gradle gera APK Release assinado e AAB. Sem Secrets, o arquivo é Debug de teste e não preserva necessariamente a assinatura entre execuções.
 - Releases são prévias, não substituem a futura revisão da Google Play e nem os ensaios reais.
@@ -193,3 +193,6 @@ Projeção única consentida por sessão no monitorado usa `ImageReader` RGBA. Q
 ## Interface imersiva alpha.41
 
 A `RemoteScreenActivity` mantém o vídeo como camada de fundo do `FrameLayout` e desenha barras de ação com fundo translúcido na parte superior/inferior, visíveis somente no modo fullscreen. Os botões usam a mesma API remota e autorização local; não enviam comandos pela simples visualização. Os toques no `ImageView` seguem `RemoteGesturePolicy.fitCenterPoint/centerCropPoint`, respeitando recortes e barras que interceptam apenas toques diretamente sobre seus próprios botões. Exibir estado H.264/JPEG e tempo de rede somente quando recebidos do servidor.
+
+## ADB alpha.42
+`adb-core` contém protocolo ADB/TLS/SPAKE2 de libadb; `adb/AdbClient` limita operações; `AdbIdentity` protege identidade persistente; `AdbDiscovery` resolve mDNS em série; `AdbPolicy` valida endpoints/QR e comandos; `ui/AdbActivity` controla sessão foreground e invalidação de callbacks. O servidor TCP/AES-GCM existente não encaminha comandos ADB. Ver ADB.md.

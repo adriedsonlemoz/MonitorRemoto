@@ -1,3 +1,11 @@
+# 0.1.0-alpha.42 — Modo avançado ADB por Wi-Fi
+
+- Cliente ADB TLS real em módulo isolado, com pareamento SPAKE2 via QR/código, mDNS e credencial RSA cifrada pelo Android Keystore.
+- Tela própria em Configurações: IP/portas dinâmicos, conexão, desconexão, diagnóstico e navegação confirmada.
+- Apenas IPv4 privado, sem ADB legado/5555 automático, sem execução livre de shell, sem serviço oculto ou mudança no espelhamento.
+- Fonte de libadb 3.1.1 incluída com licença e alterações de TLS/lifecycle/timeout documentadas. Dependências nativas ainda exigem teste em aparelho.
+- Testes e limitações em docs/VALIDATION.md; protocolo ADB e roteiro em docs/ADB.md.
+
 ## 0.1.0-alpha.41 (14/10/2026)
 
 - Adicionadas barras flutuantes semitransparentes em Ver tela, visíveis no modo imersivo, com navegação remota (Voltar/Início/Recentes/Notificações), Toque, Acender tela, Print, Áudio, Foto HD, Ajustar/Preencher e Sair. Todas as ações usam os comandos e permissões existentes.

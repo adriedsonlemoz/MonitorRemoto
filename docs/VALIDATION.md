@@ -1,5 +1,19 @@
 # Validação e riscos conhecidos
 
+## Alpha.42 — validação executada em 14/10/2026
+
+- Build Android completo **APROVADO**: `gradle :app:testDebugUnitTest :app:assembleDebug` com JDK 17, Gradle 8.13, AGP 8.13.2, SDK 36 e Build Tools 35.0.0. A última execução terminou com `BUILD SUCCESSFUL`; avisos de APIs deprecated permanecem.
+- **54 testes JUnit passaram**, zero falhas/erros/ignorados, em 17 classes. Seis testes novos de AdbPolicy cobrem IPv4 privado, rejeição de endereços públicos/nomes, limites de portas, código com zero inicial, formato/entropia/expiração do QR e lista fixa de comandos. Não são testes de handshake em aparelho.
+- APK Debug produzido e manifesto inspecionado: `br.dev.monitorremoto`, versionName `0.1.0-alpha.42`, versionCode `42`, minSdk 26, targetSdk 36. Assinatura local Debug temporária, não assinatura Release estável; não presumir atualização sobre APK assinado com outra chave.
+- Verificador estrutural do projeto aprovado; XML e YAML parseados; ZIP completo com CRC conferido no empacotamento.
+- Comparação com ZIP alpha.41: entre os arquivos Kotlin existentes, somente AppVersion.kt e SettingsScreenUi.kt mudaram. Captura, vídeo, SMS, servidor e criptografia existentes permaneceram byte a byte iguais. Novos módulos isolados não substituem testes de regressão física.
+- Bibliotecas nativas SPAKE2/Conscrypt contêm armeabi-v7a, arm64-v8a, x86 e x86_64. Isso não é prova de compatibilidade em cada aparelho/ROM ou modo de páginas de memória.
+- **Pendente:** pareamento real por QR/código, mDNS, revogação, persistência Keystore, navegação MIUI/HyperOS, interface/rotação e interrupção durante operação. Nenhum celular/emulador foi usado; não foram medidas latência, temperatura ou autonomia. Espelhamento/tela física apagada via ADB não implementados.
+- Dependências foram realmente resolvidas e Java/Kotlin compilados. Durante o desenvolvimento houve correção de uso de API interna de libadb; a versão final usa as APIs públicas de chave/certificado.
+
+As seções abaixo são registros históricos de versões anteriores, não o status atual de build.
+
+
 - [ ] `gradle :app:testDebugUnitTest :app:assembleDebug` em CI (não executado neste ambiente sem Gradle/SDK).
 - [ ] Instalação Android 8 a 16 e permissões solicitadas.
 - [ ] Acesso às notificações: revisar tratamento de configurações restritas em instalações por APK.

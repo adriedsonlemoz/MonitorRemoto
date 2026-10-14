@@ -16,7 +16,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.41" and code.group(1) == "41", "Versões incompatíveis"
+assert version == "0.1.0-alpha.42" and code.group(1) == "42", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -585,3 +585,21 @@ print('PASSOU: alpha.41, overlay translúcido, navegação, foto/áudio/desperta
 
 assert 'DisplayedFrameRate' in viewer and (root / 'app/src/test/java/br/dev/monitorremoto/core/DisplayedFrameRateTest.kt').exists()
 print('PASSOU: alpha.41, cálculo de FPS medido com testes JVM')
+
+# Alpha.42: ADB real, separado e sem fallback para transporte em texto claro.
+adb = root / 'app/src/main/java/br/dev/monitorremoto/adb'
+assert all((adb / name).is_file() for name in ['AdbClient.kt','AdbIdentity.kt','AdbPolicy.kt','AdbDiscovery.kt'])
+adb_client = (adb / 'AdbClient.kt').read_text()
+assert 'PairingConnectionCtx(' in adb_client and 'next.connect(' in adb_client
+assert 'SecretVault.save' in (adb / 'AdbIdentity.kt').read_text()
+assert 'WIFI:T:ADB;S:' in (adb / 'AdbPolicy.kt').read_text()
+assert '_adb-tls-pairing._tcp.' in (adb / 'AdbDiscovery.kt').read_text()
+adb_ui = (root / 'app/src/main/java/br/dev/monitorremoto/ui/AdbActivity.kt').read_text()
+assert 'FLAG_SECURE' in adb_ui and 'override fun onStop()' in adb_ui
+vendor = root / 'adb-core/src/main/java/io/github/muntashirakon/adb'
+assert 'Legacy ADB AUTH rejected' in (vendor / 'AdbConnection.java').read_text()
+assert 'Unencrypted ADB rejected' in (vendor / 'AdbConnection.java').read_text()
+assert 'private static SSLContext sslContext' not in (vendor / 'SslUtils.java').read_text()
+assert (root / 'app/src/test/java/br/dev/monitorremoto/adb/AdbPolicyTest.kt').is_file()
+assert (root / 'docs/ADB.md').is_file()
+print('PASSOU: alpha.42, módulo ADB real, identidade cifrada, QR temporário e transporte TLS obrigatório')

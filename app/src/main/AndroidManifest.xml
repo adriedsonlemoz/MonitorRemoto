@@ -45,6 +45,7 @@
         android:supportsRtl="true">
 
         <!-- Camera2 local; nenhuma Activity de câmera externa ou componente exportado. -->
+        <activity android:name=".ui.AdbActivity" android:exported="false" />
         <activity
             android:name=".ui.QrScanActivity"
             android:theme="@android:style/Theme.Material.Light.Dialog.NoActionBar"

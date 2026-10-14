@@ -1,4 +1,4 @@
-# Monitor Remoto 0.1.0-alpha.41
+# Monitor Remoto 0.1.0-alpha.42
 # Convenções permanentes do projeto Monitor Remoto
 
 - Toda alteração de código incrementa sequencialmente `versionCode` e `versionName` (ex.: `0.1.0-alpha.8` -> `0.1.0-alpha.9`). Sincronizar tela, README, CHANGELOG, RELEASE_NOTES e documentação.
@@ -21,7 +21,7 @@
 - Alpha.10: manter tema **claro padrão**, as opções da engrenagem, janela Conectar, botão de atualização compacto, lista de até 5 aparelhos recentes e os dados do Controle no topo. Não reintroduzir formulário longo na tela principal.
 - Credenciais por dispositivo usam `RecentDevices` + `SecretVault.profileKeyName`, com migração única da alpha.9. Não reaproveitar `CONTROLLER_KEY` antigo para IPs novos nem gravar segredo em preferências sem criptografia. Esquecer apaga o segredo correspondente.
 - Respostas HTTP/TCP não são conexão persistente. Exibir "Conectado" apenas após consulta autenticada bem-sucedida e "Sem resposta" após erro. Não inventar tempos de atualização.
-- Próxima versão sequencial: `0.1.0-alpha.42`, `versionCode 42`.
+- Próxima versão sequencial: `0.1.0-alpha.43`, `versionCode 43`.
 
 - Alpha.15: preservar a seleção Conectar → QR/Manual/Salvos, confirmação do QR antes de parear, cartões salvos com três ações e o scanner em Activity com tema Dialog.
 
@@ -82,3 +82,5 @@
 - Alpha.40: AVC via MediaCodec somente após sessão MediaProjection visível e autorizada. Ring de no máximo 30 quadros AVC em RAM, pacotes máximos de 128 KiB, alvo 10 FPS sem promessa de desempenho ou transporte persistente, retorno a JPEG em codecs incompatíveis. Uma única VirtualDisplay por projeção; imagens HD sob demanda e áudio mantidos. `wakeScreen` somente com chave AES-GCM pareada, opção `allowRemoteWake` local OFF, 12 s entre tentativas e wake lock 1,5 s; nunca remover Keyguard, PIN, biometria ou consentimento. Build Android/ensaio físico pendentes.
 
 - Alpha.41: tela cheia de Ver tela mantém barra flutuante superior (Sair, Ajustar/Preencher, Print, Áudio, Foto HD) e inferior (Voltar, Início, Recentes, Notificações, Toque, Acender), fundo translúcido sem bloquear gestos fora do controle. Ações reutilizam autorização local e AES-GCM; exibir status de codec e rede real sem fingir FPS, restaurar fullscreen após rotação, respeitar cutout/insets e preservar toque coordenado em FIT_CENTER/CENTER_CROP. Compilar e testar em aparelho antes de afirmar fluidez/compatibilidade.
+
+- Alpha.42: ADB é cliente TLS separado do protocolo AES-GCM. Usar somente IPv4 privado e Depuração sem fios consentida localmente. QR ADB leva serviço e segredo, expira em 2 minutos e não é o QR normal do app. Nunca habilitar fallback A_AUTH/CNXN sem TLS. Não persistir códigos/QR nem registrar segredos; identidade RSA cifrada pelo SecretVault. Preservar licenças e alterações do adb-core. Sem shell livre, boot, captura ADB ou bypass de bloqueio. Ao sair da tela, encerrar sessão; teste físico obrigatório antes de declarar pareamento validado.

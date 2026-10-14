@@ -18,8 +18,8 @@ android {
         applicationId = "br.dev.monitorremoto"
         minSdk = 26
         targetSdk = 36
-        versionCode = 41
-        versionName = "0.1.0-alpha.41"
+        versionCode = 42
+        versionName = "0.1.0-alpha.42"
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -47,6 +47,9 @@ android {
 }
 
 dependencies {
+    implementation(project(":adb-core"))
+    implementation("org.conscrypt:conscrypt-android:2.5.3")
+    implementation("org.bouncycastle:bcpkix-jdk15to18:1.81")
     implementation("com.google.zxing:core:3.5.4")
     testImplementation("junit:junit:4.13.2")
 }

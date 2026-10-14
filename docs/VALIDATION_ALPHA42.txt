@@ -1,0 +1,22 @@
+Build: BUILD SUCCESSFUL
+Command: gradle :app:testDebugUnitTest :app:assembleDebug
+APK: br.dev.monitorremoto 0.1.0-alpha.42 (42), minSdk 26, targetSdk 36
+Tests: 54; failures: 0; errors: 0; skipped: 0
+
+br.dev.monitorremoto.core.DisplayedFrameRateTest: 4 tests
+br.dev.monitorremoto.core.ScreenCapturePolicyTest: 2 tests
+br.dev.monitorremoto.security.CryptoBoxTest: 3 tests
+br.dev.monitorremoto.transport.AuthenticatedAccessTest: 6 tests
+br.dev.monitorremoto.transport.AppVersionTest: 1 tests
+br.dev.monitorremoto.service.RecoveryDecisionTest: 1 tests
+br.dev.monitorremoto.service.RecoveryPolicyTest: 2 tests
+br.dev.monitorremoto.core.Ipv4SuggestionTest: 4 tests
+br.dev.monitorremoto.adb.AdbPolicyTest: 6 tests
+br.dev.monitorremoto.ui.QrFrameDecoderTest: 2 tests
+br.dev.monitorremoto.core.SensitiveContentTest: 3 tests
+br.dev.monitorremoto.core.MessagePolicyTest: 2 tests
+br.dev.monitorremoto.core.RemoteGesturePolicyTest: 4 tests
+br.dev.monitorremoto.core.EventJournalTest: 4 tests
+br.dev.monitorremoto.transport.PairingCodeTest: 4 tests
+br.dev.monitorremoto.ui.ConnectionIssueTest: 3 tests
+br.dev.monitorremoto.video.VideoStreamPolicyTest: 3 tests
