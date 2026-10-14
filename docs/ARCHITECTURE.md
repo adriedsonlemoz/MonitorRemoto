@@ -1,4 +1,4 @@
-# Arquitetura (0.1.0-alpha.22)
+# Arquitetura (0.1.0-alpha.23)
 
 ```text
 MONITORADO                                      CONTROLE
@@ -19,9 +19,9 @@ O FGS `connectedDevice` mantém o socket de escuta durante monitoramento ativo. 
 
 ## Distribuição e assinatura
 
-O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.22` e `versionCode=22`.
+O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.23` e `versionCode=23`.
 
-- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.22.apk`.
+- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.23.apk`.
 - `upload-artifact` sempre distribui um ZIP; GitHub Releases recebe o **arquivo APK direto**.
 - Com quatro Secrets, Gradle gera APK Release assinado e AAB. Sem Secrets, o arquivo é Debug de teste e não preserva necessariamente a assinatura entre execuções.
 - Releases são prévias, não substituem a futura revisão da Google Play e nem os ensaios reais.
@@ -85,7 +85,7 @@ Autenticação prova **posse da chave compartilhada**, não identidade do dispos
 
 Na alpha.21 foi corrigida a resolução de `background` no escopo de `ScrollView.apply` da tela `IncomingAccessActivity`, com receptor explícito da propriedade `Int` definida na Activity.
 
-## Extração de interfaces alpha.22
+## Extração de interfaces alpha.23
 
 ```text
 MainActivity.kt              Activity / eventos / navegação / pareamento
@@ -101,3 +101,8 @@ preservar a interface existente nesta primeira etapa. Essa estratégia é transi
 uma refatoração posterior poderá separar estado e efeitos de apresentação em
 controladores dedicados, após build Android e testes físicos. Não há novos endpoints
 no `MonitorServer`, nem alteração de permissões, chaves ou autorização.
+
+
+## Ajuste alpha.23
+
+A tela dedicada de acesso recebido passou a delegar sua composição visual para `IncomingAccessScreenUi.kt`, deixando `IncomingAccessActivity.kt` responsável apenas pelo ciclo de vida, polling, observação dos acessos autenticados e ação de parada do monitoramento.

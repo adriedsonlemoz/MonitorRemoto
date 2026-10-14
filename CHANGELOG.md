@@ -1,13 +1,13 @@
 # Histórico de versões
 
-## 0.1.0-alpha.22 (13/10/2026)
+## 0.1.0-alpha.23 (13/10/2026)
 
-- Primeira etapa de refatoração modular da interface, partindo da alpha.21 e preservando layout e recursos existentes.
-- Separados os renderizadores Home, Monitorado, Configurações e Painel remoto em quatro arquivos Kotlin dedicados; elementos visuais compartilhados em `UiComponents.kt`.
-- `MainActivity.kt` passou a concentrar navegação, permissão, conexão, QR e ciclo de vida, reduzindo significativamente o tamanho do arquivo principal.
-- Mantidos contrato `AppVersion.NAME`, versão exata em ambos os aparelhos, criptografia, chaves, serviço foreground, QR e atualização a cada 15 segundos.
-- Verificações de distribuição adaptadas à nova organização e adicionados testes estruturais para garantir que não haja duplicação de implementações e que a versão permaneça sincronizada.
-- Compilação Android completa e testes em celulares permanecem pendentes.
+- Continuidade da refatoração da interface: a tela de acesso recebido foi separada em um módulo próprio (`IncomingAccessScreenUi.kt`), reduzindo a responsabilidade direta da `IncomingAccessActivity`.
+- Tela **Acesso remoto detectado** redesenhada: ícone centralizado, cartão principal com informações completas já na primeira tela (nome do aparelho, IP, método, primeira e última consulta) e indicação de acessos adicionais.
+- Removido o pop-up **Quem está?**. Quando houver mais de um aparelho recente, todos passam a ser exibidos diretamente na mesma tela, evitando uma segunda interface desnecessária.
+- Mantido o botão **Parar acesso** e o retorno automático ao modo Monitorado quando o acesso expira ou o serviço é interrompido.
+- Versionamento e documentação sincronizados para `0.1.0-alpha.23` / `versionCode 23`; verificador atualizado para exigir o novo módulo de UI e impedir o retorno do botão/diálogo removido.
+- Compilação Android completa e testes físicos em dois celulares permanecem pendentes.
 
 ## 0.1.0-alpha.21 (13/10/2026)
 

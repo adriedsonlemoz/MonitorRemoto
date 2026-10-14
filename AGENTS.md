@@ -1,4 +1,4 @@
-# Monitor Remoto 0.1.0-alpha.22
+# Monitor Remoto 0.1.0-alpha.23
 # Convenções permanentes do projeto Monitor Remoto
 
 - Toda alteração de código incrementa sequencialmente `versionCode` e `versionName` (ex.: `0.1.0-alpha.8` -> `0.1.0-alpha.9`). Sincronizar tela, README, CHANGELOG, RELEASE_NOTES e documentação.
@@ -21,7 +21,7 @@
 - Alpha.10: manter tema **claro padrão**, as opções da engrenagem, janela Conectar, botão de atualização compacto, lista de até 5 aparelhos recentes e os dados do Controle no topo. Não reintroduzir formulário longo na tela principal.
 - Credenciais por dispositivo usam `RecentDevices` + `SecretVault.profileKeyName`, com migração única da alpha.9. Não reaproveitar `CONTROLLER_KEY` antigo para IPs novos nem gravar segredo em preferências sem criptografia. Esquecer apaga o segredo correspondente.
 - Respostas HTTP/TCP não são conexão persistente. Exibir "Conectado" apenas após consulta autenticada bem-sucedida e "Sem resposta" após erro. Não inventar tempos de atualização.
-- Próxima versão sequencial: `0.1.0-alpha.23`, `versionCode 23`.
+- Próxima versão sequencial: `0.1.0-alpha.24`, `versionCode 24`.
 
 - Alpha.15: preservar a seleção Conectar → QR/Manual/Salvos, confirmação do QR antes de parear, cartões salvos com três ações e o scanner em Activity com tema Dialog.
 
@@ -41,3 +41,6 @@
 - Alpha.21: correção de compilação do workflow 21: no `ScrollView.apply` de `IncomingAccessActivity`, qualificar `this@IncomingAccessActivity.background` para impedir colisão com `View.background: Drawable`; exigir teste de regressão no validador antes de distribuir. Sem alteração de protocolo além da versão obrigatoriamente sincronizada.
 
 - Alpha.22: interface dividida em `UiComponents`, `HomeScreenUi`, `MonitorScreenUi`, `SettingsScreenUi` e `RemoteDashboardUi`, usando extensões internas de `MainActivity`. Manter uma implementação por função e expandir `tools/check_distribution.py` para verificar também módulos externos. Não reintroduzir funções visuais extraídas na Activity sem justificativa. Preservar identidade visual, protocolos, consentimento e comportamento de acessos antes de mudanças arquiteturais mais profundas.
+
+
+- Alpha.23: `IncomingAccessActivity` deve permanecer enxuta; a UI da tela de acesso recebido fica em `IncomingAccessScreenUi.kt`. Não reintroduzir o pop-up “Quem está?” se as informações puderem aparecer na tela principal; preferir lista/stack inline para acessos adicionais.
