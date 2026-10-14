@@ -1,0 +1,3 @@
+<resources>
+    <string name="remote_touch_description">Permite executar toques remotos durante sessão de tela autorizada e quando o controle remoto estiver habilitado neste aparelho. Não lê o conteúdo de elementos da tela.</string>
+</resources>

@@ -3,6 +3,7 @@ package br.dev.monitorremoto.transport
 import android.content.Context
 import android.os.Build
 import br.dev.monitorremoto.core.SettingsStore
+import br.dev.monitorremoto.core.RemoteGesturePolicy
 import br.dev.monitorremoto.security.CryptoBox
 import org.json.JSONObject
 import java.net.InetSocketAddress
@@ -114,6 +115,47 @@ object RemoteClient {
                 result.optInt("v") == WireProtocol.VERSION &&
                 AppVersion.compatible(result.optString("appVersion"))) { "Resposta de tela inválida." }
             result
+        }
+    }
+
+    /** Comando de toque solicitado diretamente pelo controlador, no canal autenticado. */
+    fun touch(host: String, key: ByteArray, context: Context, method: String,
+        action: String, x: Float = 0.5f, y: Float = 0.5f,
+        endX: Float = x, endY: Float = y, duration: Long = 240L): Boolean {
+        require(RemoteGesturePolicy.valid(action, x, y, endX, endY, duration))
+        return remoteScreenCommand(host, key, context, method, "remoteTouch") {
+            put("gesture", action).put("x", x.toDouble()).put("y", y.toDouble())
+                .put("endX", endX.toDouble()).put("endY", endY.toDouble())
+                .put("duration", duration)
+        }.optBoolean("ok")
+    }
+
+    fun requestScreen(host: String, key: ByteArray, context: Context, method: String): Boolean =
+        remoteScreenCommand(host, key, context, method, "requestScreen") { }.optBoolean("ok")
+
+    /** PCM mono efêmero, sem áudio de chamadas ou microfone. */
+    fun audioChunk(host: String, key: ByteArray, context: Context, method: String): JSONObject =
+        remoteScreenCommand(host, key, context, method, "audioChunk") { }
+
+    private fun remoteScreenCommand(host: String, key: ByteArray, context: Context,
+        method: String, op: String, extras: JSONObject.() -> Unit): JSONObject {
+        require(host.isNotBlank() && host.length <= 253 && !host.contains('/') &&
+            !host.contains(':') && !host.contains(' '))
+        val request = JSONObject().put("v", WireProtocol.VERSION).put("op", op)
+            .put("appVersion", AppVersion.NAME).put("ts", System.currentTimeMillis())
+            .put("clientId", SettingsStore.controllerId(context))
+            .put("clientName", listOf(Build.MANUFACTURER, Build.MODEL).joinToString(" ").take(72))
+            .put("accessMethod", method).apply(extras)
+        return Socket().use { socket ->
+            socket.connect(InetSocketAddress(host, WireProtocol.PORT), 4500)
+            socket.soTimeout = 6500
+            WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(key, request))
+            val response = WireProtocol.decode(key, WireProtocol.receive(socket.getInputStream(), 64 * 1024))
+            if (response.optString("op") == "versionMismatch")
+                error(AppVersion.incompatibility(response.optString("appVersion")))
+            check(response.optString("op") == op && response.optInt("v") == WireProtocol.VERSION &&
+                AppVersion.compatible(response.optString("appVersion"))) { "Resposta remota inválida" }
+            response
         }
     }
 

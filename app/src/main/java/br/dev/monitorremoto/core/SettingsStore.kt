@@ -62,6 +62,15 @@ object SettingsStore {
         if (!value) NotificationReplyActions.clear()
     }
 
+    /** Opções locais para sessão de tela: OFF por padrão e independentes do pareamento. */
+    fun allowRemoteTouch(context: Context) = prefs(context).getBoolean("remote_touch", false)
+    fun setAllowRemoteTouch(context: Context, enabled: Boolean) =
+        prefs(context).edit().putBoolean("remote_touch", enabled).apply()
+
+    fun captureInternalAudio(context: Context) = prefs(context).getBoolean("internal_audio", false)
+    fun setCaptureInternalAudio(context: Context, enabled: Boolean) =
+        prefs(context).edit().putBoolean("internal_audio", enabled).apply()
+
     /** Ativação explícita, separada da permissão de sistema para acesso ao número da linha. */
     fun sharePhoneNumber(context: Context) = prefs(context).getBoolean("share_phone_number", false)
     fun setSharePhoneNumber(context: Context, enabled: Boolean) =

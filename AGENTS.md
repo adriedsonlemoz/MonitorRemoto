@@ -1,4 +1,4 @@
-# Monitor Remoto 0.1.0-alpha.34
+# Monitor Remoto 0.1.0-alpha.35
 # Convenções permanentes do projeto Monitor Remoto
 
 - Toda alteração de código incrementa sequencialmente `versionCode` e `versionName` (ex.: `0.1.0-alpha.8` -> `0.1.0-alpha.9`). Sincronizar tela, README, CHANGELOG, RELEASE_NOTES e documentação.
@@ -21,7 +21,7 @@
 - Alpha.10: manter tema **claro padrão**, as opções da engrenagem, janela Conectar, botão de atualização compacto, lista de até 5 aparelhos recentes e os dados do Controle no topo. Não reintroduzir formulário longo na tela principal.
 - Credenciais por dispositivo usam `RecentDevices` + `SecretVault.profileKeyName`, com migração única da alpha.9. Não reaproveitar `CONTROLLER_KEY` antigo para IPs novos nem gravar segredo em preferências sem criptografia. Esquecer apaga o segredo correspondente.
 - Respostas HTTP/TCP não são conexão persistente. Exibir "Conectado" apenas após consulta autenticada bem-sucedida e "Sem resposta" após erro. Não inventar tempos de atualização.
-- Próxima versão sequencial: `0.1.0-alpha.35`, `versionCode 35`.
+- Próxima versão sequencial: `0.1.0-alpha.36`, `versionCode 36`.
 
 - Alpha.15: preservar a seleção Conectar → QR/Manual/Salvos, confirmação do QR antes de parear, cartões salvos com três ações e o scanner em Activity com tema Dialog.
 
@@ -68,3 +68,5 @@
 - Alpha.33: Mensagens é uma página de controle (`mode=4`) com abas SMS/Notificações, sem AlertDialog gigante. Não persistir mensagem recebida em Bundle/disco. Respostas continuam exigindo confirmação. A fonte deve filtrar OTP em PT/EN (incluindo “authentication code”), EventJournal revalida antes de transmitir e a UI filtra novamente antes de mostrar/copiar. Não remover FLAG_SECURE de QR/credenciais.
 
 - Alpha.34: `Ver tela` somente após consentimento do Android no dispositivo monitorado. Um token MediaProjection por sessão, foregroundServiceType `mediaProjection`, notificação e botão Parar local. Sem capturar/retomar no boot ou depois de parada; não adicionar Accessibility nem injeção de toque. `ScreenFrameStore` é volátil e limitado a 1 quadro/s / 110 KiB / expiração 3 s; `screenFrame` usa a mesma chave, AES-GCM, nonce antirreplay e versão exata. O controlador só consulta enquanto a Activity estiver visível. Sem áudio, gravação ou persistência. Testar no Android 14+ (token único e consentimento por sessão), rotação e bloqueio da tela.
+
+- Alpha.35: permissão de toque pelo AccessibilityService somente depois de habilitação **manual** e preferência explícita, sem varredura de UI. A sessão MediaProjection aprovada permanece entre reconexões, mas nunca se reinicia após ser encerrada ou bloqueada. AudioPlaybackCapture interno opt-in, RECORD_AUDIO, sem microfone ou captura de chamadas, em chunks PCM em RAM. A notificação de pedido de tela não substitui consentimento e é limitada por taxa. Comandos por AES-GCM+nonce/replay e versão exata, sem nova porta aberta. Parada local encerra a projeção. Testes físicos e build Android ainda necessários.

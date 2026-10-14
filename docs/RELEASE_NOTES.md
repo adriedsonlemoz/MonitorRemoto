@@ -1,11 +1,18 @@
-# Monitor Remoto v0.1.0-alpha.34
+# Monitor Remoto v0.1.0-alpha.35
 
-## Principal novidade: Ver tela com consentimento
+## Principal novidade: controle por toque, áudio interno e reconexões
 
-- **Controlador**: botão Ver tela abre visualização autenticada em página própria. Prévia de 1 imagem/s, sem áudio ou comandos de toque.
+- `Ver tela` agora solicita a autorização de forma visível no monitorado quando não existe sessão de captura, mas o usuário ainda precisa confirmar no Android.
+- A sessão MediaProjection autorizada pode sobreviver a desconexões do controlador. Parar, reiniciar ou expirar pelo Android exige autorização nova.
+- Toques e gestos (tap/swipe/Voltar/Início) por serviço de acessibilidade manualmente habilitado e opção local separada; áudio interno por AudioPlaybackCapture opcional, Android 10+ e RECORD_AUDIO. Sem microfone, gravação ou chamadas protegidas.
+- Controlador apresenta botões compactos e áudio PCM 16 kHz mono experimental e JPEG de ~1-2 quadros/s sob demanda, sem garantia de fluidez. Testes Android/compilação completa pendentes.
+
+## Histórico: Ver tela com consentimento (alpha.34)
+
+- **Controlador**: botão Ver tela abre visualização autenticada em página própria. Prévia original da alpha.34: 1 imagem/s, sem áudio ou comandos de toque; alpha.35 inclui ambos opcionalmente.
 - **Monitorado**: Compartilhar tela solicita autorização MediaProjection do Android em cada sessão; serviço foreground notifica continuamente e permite parar. Sem captura furtiva nem retomada após reboot ou force-stop.
 - Imagem comprimida até 540 px/110 KiB, quadro efêmero RAM (3 segundos) e resposta protegida por AES-GCM/replay. Rotação tratada por redimensionamento e parada por callback da projeção.
-- Compilação Android e testes com aparelhos reais pendentes; versão exata alpha.34 em ambos.
+- Compilação Android e testes com aparelhos reais pendentes; versão exata alpha.35 em ambos.
 
 ## Central de mensagens (alpha.33)
 
@@ -26,7 +33,7 @@
 - Opção explícita para notificações de todos os aplicativos elegíveis ou lista individual. Filtros de aplicativos financeiros, notificações secretas e códigos suspeitos continuam.
 - Botões **Copiar** e **Responder** nas telas de SMS/notificações. Responder via `RemoteInput` ou SMS com revisão/confirmacão e autorização separadas.
 - Remoção de `FLAG_SECURE` somente dos diálogos de Mensagens e respostas, para capturas de tela. QR e credenciais continuam protegidos.
-- `versionCode 34` e versão exata exigida em ambos os aparelhos.
+- `versionCode 35` e versão exata exigida em ambos os aparelhos.
 
 ## Limites e testes pendentes
 

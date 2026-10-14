@@ -3,6 +3,8 @@ package br.dev.monitorremoto.ui
 import android.Manifest
 import android.app.AlertDialog
 import android.content.Intent
+import br.dev.monitorremoto.capture.RemoteTouchService
+import br.dev.monitorremoto.capture.ScreenFrameStore
 import android.content.pm.PackageManager
 import android.os.Build
 import android.provider.Settings
@@ -30,6 +32,7 @@ internal fun MainActivity.renderSettingsModule() {
         "notifications" to "Notificações",
         "sms" to "SMS e telefonia",
         "service" to "Serviço e recuperação",
+        "screen" to "Tela e controle remoto",
         "appearance" to "Aparência",
         "security" to "Segurança",
         "diagnostics" to "Diagnóstico",
@@ -54,6 +57,8 @@ internal fun MainActivity.renderSettingsModule() {
             "Escolher aplicativos e permitir respostas", "notifications")
         settingsEntry(groupA, R.drawable.ic_message, "SMS e telefonia",
             "Ler, receber, responder e selecionar chip", "sms")
+        settingsEntry(groupA, R.drawable.ic_monitor, "Tela e controle remoto",
+            "Compartilhar, controlar toque e capturar áudio", "screen")
         content.addView(groupA)
         sectionGap(content, 12)
         val groupB = panel(15)
@@ -77,6 +82,7 @@ internal fun MainActivity.renderSettingsModule() {
         when (section) {
             "notifications" -> fillNotificationSettings(page)
             "sms" -> fillSmsSettings(page)
+            "screen" -> fillScreenSettings(page)
             "service" -> fillServiceSettings(page)
             "security" -> fillSecuritySettings(page)
             "appearance" -> fillAppearanceSettings(page)
@@ -228,6 +234,52 @@ private fun MainActivity.fillSmsSettings(layout: LinearLayout) {
             }
         }
     })
+}
+
+private fun MainActivity.fillScreenSettings(layout: LinearLayout) {
+    dialogIntro(layout, "A tela requer aprovação do Android a cada nova sessão. Reconectar o controlador reutiliza a sessão ainda ativa, sem nova autorização.")
+    layout.addView(iconMenuRow(R.drawable.ic_monitor, "Compartilhamento de tela",
+        if (ScreenFrameStore.sharing) "Sessão ativa · disponível para reconexões" else "Inativo · iniciar no Modo monitorado") {
+        message(if (ScreenFrameStore.sharing) "A projeção já está ativa. Use Parar compartilhamento no Modo monitorado para encerrá-la."
+            else "Abra o Modo monitorado e toque em Compartilhar tela para aprovar pelo Android.")
+    })
+    sectionGap(layout, 9)
+    val touch = SettingsStore.allowRemoteTouch(this)
+    layout.addView(iconMenuRow(R.drawable.ic_phone, "Controle por toque",
+        when { !touch -> "Desativado (ativar)"; RemoteTouchService.isReady() -> "Autorizado e serviço ativo";
+            else -> "Ativado · habilite a Acessibilidade no Android" }) {
+        if (touch) {
+            SettingsStore.setAllowRemoteTouch(this, false)
+            message("Controle por toque desativado neste aparelho.")
+        } else showAppConfirm("Permitir toque remoto?",
+            "Durante uma sessão de tela ativa, aparelhos que possuem a chave de pareamento poderão tocar, deslizar e usar Voltar/Início neste celular. Acessibilidade deverá ser habilitada manualmente. Não lê textos nem senhas da interface.",
+            R.drawable.ic_shield, "Permitir e configurar") {
+            SettingsStore.setAllowRemoteTouch(this, true)
+            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+        }
+    })
+    sectionGap(layout, 9)
+    val audio = SettingsStore.captureInternalAudio(this)
+    layout.addView(iconMenuRow(R.drawable.ic_bell, "Capturar áudio interno",
+        if (audio) "Habilitado · sessão nova necessária se já compartilhar" else "Desativado (ativar)") {
+        if (audio) {
+            SettingsStore.setCaptureInternalAudio(this, false)
+            if (ScreenFrameStore.sharing) startService(Intent(this, br.dev.monitorremoto.capture.ScreenShareService::class.java)
+                .setAction(br.dev.monitorremoto.capture.ScreenShareService.ACTION_AUDIO_STOP))
+            message("Compartilhamento de áudio desativado. Não afeta a imagem.")
+        } else if (android.os.Build.VERSION.SDK_INT < 29) {
+            message("Áudio de reprodução exige Android 10 ou superior.")
+        } else showAppConfirm("Permitir áudio interno?",
+            "Capta reprodução de músicas, vídeos e jogos que autorizem captura. Não capta microfone nem chamadas protegidas. Exige RECORD_AUDIO e captura de tela autorizada. Para começar após a alteração, inicie uma nova sessão de tela.",
+            R.drawable.ic_bell, "Solicitar autorização") {
+            if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                SettingsStore.setCaptureInternalAudio(this, true)
+                message("Áudio interno ativado. Inicie uma nova sessão de tela para capturar som.")
+            } else requestPermissions(arrayOf(Manifest.permission.RECORD_AUDIO), audioPermissionRequest)
+        }
+    })
+    sectionGap(layout, 9)
+    layout.addView(label("O acesso à tela não reinicia automaticamente após encerramento da projeção, bloqueio pelo Android ou reinício do aparelho. O monitorado sempre pode parar pela notificação.", 11.5f, muted = true))
 }
 
 private fun MainActivity.fillSecuritySettings(layout: LinearLayout) {

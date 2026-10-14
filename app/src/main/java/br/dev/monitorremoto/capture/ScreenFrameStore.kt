@@ -5,6 +5,10 @@ object ScreenFrameStore {
     data class Frame(val sequence: Long, val width: Int, val height: Int, val jpeg: ByteArray)
     @Volatile var sharing = false
         private set
+    @Volatile private var viewerAtMs = 0L
+    fun viewerPing() { viewerAtMs = android.os.SystemClock.elapsedRealtime() }
+    fun viewerActive(): Boolean = sharing && viewerAtMs != 0L &&
+        android.os.SystemClock.elapsedRealtime() - viewerAtMs < 5_000L
     private var current: Frame? = null
     private var savedAtMs = 0L
     private var sequence = 0L
@@ -15,6 +19,7 @@ object ScreenFrameStore {
         current = null
         savedAtMs = 0L
         sharing = true
+        viewerAtMs = 0L
         sequence++
     }
     @Synchronized fun publish(width: Int, height: Int, bytes: ByteArray) {
@@ -29,6 +34,7 @@ object ScreenFrameStore {
     }
     @Synchronized fun stop() {
         sharing = false
+        viewerAtMs = 0L
         current = null
         savedAtMs = 0L
         sequence++

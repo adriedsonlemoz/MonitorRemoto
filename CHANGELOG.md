@@ -1,11 +1,11 @@
 # Histórico de versões
 
-## 0.1.0-alpha.34 (14/10/2026)
+## 0.1.0-alpha.35 (14/10/2026)
 
 - Implementado **Ver tela** no painel remoto, com página própria, atualizações JPEG compactadas pela rede e pelo protocolo AES-GCM com autenticação e proteção contra replay.
 - No monitorado, botão local **Compartilhar tela** abre autorização nativa MediaProjection. Serviço foreground independente (`mediaProjection`) exibe notificação com **Parar tela**; sem captura em segundo plano sem consentimento e sem retomada automática após encerramento, bloqueio ou reinício.
 - Buffer estritamente em memória, quadro de no máximo 110 KiB, 1 FPS, limite de idade 3 s, sem áudio, gravação ou controle remoto por toque. Callback de parada e redimensionamento/rotação liberam recursos.
-- Manter versão exata nos dois celulares: `versionName=0.1.0-alpha.34`, `versionCode=34`. Build e testes físicos pendentes.
+- Manter versão exata nos dois celulares: `versionName=0.1.0-alpha.35`, `versionCode=34`. Build e testes físicos pendentes.
 
 ## 0.1.0-alpha.33 (14/10/2026)
 

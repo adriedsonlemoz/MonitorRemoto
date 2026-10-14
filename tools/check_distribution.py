@@ -16,7 +16,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.34" and code.group(1) == "34", "Versões incompatíveis"
+assert version == "0.1.0-alpha.35" and code.group(1) == "35", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -44,7 +44,7 @@ for path in ['README.md', 'CHANGELOG.md', 'docs/RELEASE_NOTES.md', 'AGENTS.md']:
     assert version in (root / path).read_text(encoding="utf-8"), f"Versão ausente em {path}"
 manifest = (root / "app/src/main/AndroidManifest.xml").read_text(encoding="utf-8")
 assert 'android.permission.RECEIVE_SMS' in manifest
-assert 'android.accessibilityservice' not in manifest
+assert 'android.accessibilityservice.AccessibilityService' in manifest and 'android:exported="true"' in manifest
 print(f"PASSOU: versionName={version}, versionCode={code.group(1)}, nome APK, Release, assinatura, AAB e permissões")
 
 # Privacidade: limpeza efetiva e verificação na hora da transmissão.
@@ -362,7 +362,7 @@ print('PASSOU: alpha.29, construtor e exibição únicos no diálogo de acesso a
 # alpha.30: consentimentos novos e envio seguro, sem AccessibilityService. Alpha.31 acrescenta RECEIVER SMS consentido.
 assert 'android.permission.READ_SMS' in manifest and 'android.permission.SEND_SMS' in manifest
 assert 'android.permission.RECEIVE_SMS' in manifest
-assert 'android.accessibilityservice' not in manifest
+assert 'android.accessibilityservice.AccessibilityService' in manifest and 'android:exported="true"' in manifest
 assert 'getBoolean("share_sms_inbox", false)' in settings
 assert 'getBoolean("allow_sms_replies", false)' in settings
 assert 'getBoolean("allow_notification_replies", false)' in settings
@@ -452,3 +452,26 @@ assert 'createVirtualDisplay(' in screen and 'createVirtualDisplay(' not in view
 assert 'MediaProjectionManager' not in viewer
 assert 'ScreenShareService.stop(this)' in monitor_service
 print('PASSOU: alpha.34, projeção autorizada, FGS visível, frame criptografado/volátil, sem reinício oculto')
+
+# alpha.35: acesso explícito e independente. Protocolo AES-GCM sem portas extras.
+touch = (root / 'app/src/main/java/br/dev/monitorremoto/capture/RemoteTouchService.kt').read_text()
+audio = (root / 'app/src/main/java/br/dev/monitorremoto/capture/AudioChunkStore.kt').read_text()
+request = (root / 'app/src/main/java/br/dev/monitorremoto/capture/ScreenShareRequest.kt').read_text()
+ui_screen = (root / 'app/src/main/java/br/dev/monitorremoto/ui/RemoteScreenActivity.kt').read_text()
+assert 'android.permission.RECORD_AUDIO' in manifest
+assert 'android.permission.BIND_ACCESSIBILITY_SERVICE' in manifest
+assert 'android:canRetrieveWindowContent="false"' in (root / 'app/src/main/res/xml/remote_touch_accessibility.xml').read_text()
+assert 'android:canPerformGestures="true"' in (root / 'app/src/main/res/xml/remote_touch_accessibility.xml').read_text()
+assert 'getBoolean("remote_touch", false)' in settings and 'getBoolean("internal_audio", false)' in settings
+assert 'ScreenFrameStore.sharing' in touch and 'SettingsStore.allowRemoteTouch(service)' in touch
+assert 'AudioPlaybackCaptureConfiguration.Builder(grantedProjection)' in screen
+assert 'checkSelfPermission(Manifest.permission.RECORD_AUDIO)' in screen
+assert 'AudioChunkStore.stop()' in screen and 'MAX_CHUNK = 16_000' in audio
+assert '"remoteTouch"' in server and '"audioChunk"' in server and '"requestScreen"' in server
+assert 'ScreenShareRequest.notifyLocal(context)' in server and '60_000L' in request
+assert 'RemoteClient.touch(' in ui_screen and 'RemoteClient.audioChunk(' in ui_screen
+assert 'setOnTouchListener' in ui_screen and 'Touch: ligado' not in ui_screen
+assert 'touchReady' in server and 'audioReady' in server
+assert 'ACTION_AUDIO_STOP' in screen and 'ScreenShareService.stop(this)' in module_ui['MonitorScreenUi.kt']
+assert (root / 'app/src/test/java/br/dev/monitorremoto/core/RemoteGesturePolicyTest.kt').exists()
+print('PASSOU: alpha.35, toque e áudio internos opt-in, MediaProjection em foreground e solicitação local')

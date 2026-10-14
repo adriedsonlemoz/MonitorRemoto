@@ -17,6 +17,8 @@
     <!-- Pré-requisito documentado para FGS connectedDevice (comunicação de rede). -->
     <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <!-- Captura de som de apps compatíveis (não microfone), permissão Android local. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -72,6 +74,18 @@
             android:stopWithTask="false" />
 
         <activity android:name=".ui.RemoteScreenActivity" android:exported="false" />
+
+        <!-- Usuário ativa manualmente em Acessibilidade; sem acesso aos nós da UI. -->
+        <service android:name=".capture.RemoteTouchService"
+            android:label="Monitor Remoto - controle por toque"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data android:name="android.accessibilityservice"
+                android:resource="@xml/remote_touch_accessibility" />
+        </service>
 
         <service
             android:name=".capture.NotificationCaptureService"

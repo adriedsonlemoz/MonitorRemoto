@@ -376,3 +376,8 @@
 - [ ] **Compilação Android completa** `:app:assembleDebug :app:testDebugUnitTest :app:lintDebug` no GitHub Actions.
 - [ ] **Teste físico em dois aparelhos**: consentimento concedido/negado, rotação, bloqueio da tela, parada pela notificação, queda/reconexão Wi-Fi, force-stop, memórias/carga de CPU, frames protegidos por FLAG_SECURE.
 - [ ] Validar tela no Redmi/Android 14+ e medir FPS/tráfego, sem assumir vídeo fluido.
+
+## alpha.35 (14/10/2026)
+
+- Testes locais: verificador estrutural; parser Kotlin; validação XML/YAML; testes JVM de RemoteGesturePolicy e integridade CRC do ZIP (resultados no relatório da entrega).
+- Pendentes: compilação Android/AGP no GitHub Actions, testes instrumentados de MediaProjection em Android 14+, acesso de Acessibilidade no aparelho, áudio de aplicativos compatíveis, reconexão de rede, Bluetooth, rotação e suspensão de tela.

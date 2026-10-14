@@ -15,6 +15,9 @@ import br.dev.monitorremoto.core.MmsMetadataReader
 import br.dev.monitorremoto.core.SensitiveContent
 import br.dev.monitorremoto.capture.NotificationReplyActions
 import br.dev.monitorremoto.capture.ScreenFrameStore
+import br.dev.monitorremoto.capture.AudioChunkStore
+import br.dev.monitorremoto.capture.ScreenShareRequest
+import br.dev.monitorremoto.capture.RemoteTouchService
 import android.util.Base64
 import br.dev.monitorremoto.core.SettingsStore
 import br.dev.monitorremoto.security.CryptoBox
@@ -100,7 +103,7 @@ class MonitorServer(private val context: Context) {
                 val regular = runCatching { WireProtocol.decode(permanentKey, encrypted) }.getOrNull()
                 if (regular != null) {
                     if (regular.optInt("v") != WireProtocol.VERSION ||
-                        regular.optString("op") !in setOf("snapshot", "disconnect", "notificationReply", "smsReply", "screenFrame")) return
+                        regular.optString("op") !in setOf("snapshot", "disconnect", "notificationReply", "smsReply", "screenFrame", "remoteTouch", "audioChunk", "requestScreen")) return
                     if (abs(now - regular.optLong("ts")) > 5 * 60 * 1000L) return
                     synchronized(seenNonces) {
                         if (!seenNonces.add(nonce)) return
@@ -116,12 +119,57 @@ class MonitorServer(private val context: Context) {
                         WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(permanentKey, mismatch))
                         return
                     }
+                    if (regular.optString("op") == "requestScreen") {
+                        val alerted = ScreenShareRequest.notifyLocal(context)
+                        val reply = JSONObject().put("v", WireProtocol.VERSION)
+                            .put("op", "requestScreen").put("appVersion", AppVersion.NAME)
+                            .put("ok", alerted).put("sharing", ScreenFrameStore.sharing)
+                        WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(permanentKey, reply))
+                        AuthenticatedAccess.authenticated(socket.inetAddress?.hostAddress.orEmpty(),
+                            regular.optString("clientId"), regular.optString("clientName"), regular.optString("accessMethod"))
+                        return
+                    }
+                    if (regular.optString("op") == "remoteTouch") {
+                        val gesture = regular.optString("gesture")
+                        val allowed = SettingsStore.allowRemoteTouch(context) && ScreenFrameStore.sharing &&
+                            RemoteTouchService.isReady()
+                        val ok = allowed && RemoteTouchService.send(
+                            regular.optDouble("x", -1.0).toFloat(), regular.optDouble("y", -1.0).toFloat(),
+                            regular.optDouble("endX", -1.0).toFloat(), regular.optDouble("endY", -1.0).toFloat(),
+                            regular.optLong("duration", 240L), gesture)
+                        val reply = JSONObject().put("v", WireProtocol.VERSION)
+                            .put("op", "remoteTouch").put("appVersion", AppVersion.NAME)
+                            .put("ok", ok)
+                        WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(permanentKey, reply))
+                        AuthenticatedAccess.authenticated(socket.inetAddress?.hostAddress.orEmpty(),
+                            regular.optString("clientId"), regular.optString("clientName"), regular.optString("accessMethod"))
+                        return
+                    }
+                    if (regular.optString("op") == "audioChunk") {
+                        val enabled = ScreenFrameStore.sharing && AudioChunkStore.enabled &&
+                            SettingsStore.captureInternalAudio(context)
+                        val chunk = if (enabled) AudioChunkStore.snapshot() else null
+                        val reply = JSONObject().put("v", WireProtocol.VERSION)
+                            .put("op", "audioChunk").put("appVersion", AppVersion.NAME)
+                            .put("enabled", enabled).put("rate", AudioChunkStore.RATE)
+                        if (chunk != null) reply.put("sequence", chunk.sequence)
+                            .put("pcm", Base64.encodeToString(chunk.pcm, Base64.NO_WRAP))
+                        WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(permanentKey, reply))
+                        AuthenticatedAccess.authenticated(socket.inetAddress?.hostAddress.orEmpty(),
+                            regular.optString("clientId"), regular.optString("clientName"), regular.optString("accessMethod"))
+                        return
+                    }
                     if (regular.optString("op") == "screenFrame") {
                         // Um quadro temporário por requisição autenticada; nenhum frame antes da aprovação local.
+                        ScreenFrameStore.viewerPing()
                         val frame = ScreenFrameStore.snapshot()
                         val response = JSONObject().put("v", WireProtocol.VERSION)
                             .put("op", "screenFrame").put("appVersion", AppVersion.NAME)
                             .put("sharing", ScreenFrameStore.sharing)
+                            .put("touchReady", ScreenFrameStore.sharing && SettingsStore.allowRemoteTouch(context) &&
+                                RemoteTouchService.isReady())
+                            .put("audioReady", ScreenFrameStore.sharing && SettingsStore.captureInternalAudio(context) &&
+                                AudioChunkStore.enabled)
                         if (frame != null) {
                             response.put("sequence", frame.sequence)
                                 .put("width", frame.width).put("height", frame.height)

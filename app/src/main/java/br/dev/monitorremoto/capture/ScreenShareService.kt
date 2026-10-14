@@ -1,5 +1,11 @@
 package br.dev.monitorremoto.capture
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.media.AudioAttributes
+import android.media.AudioFormat
+import android.media.AudioRecord
+import android.media.AudioPlaybackCaptureConfiguration
 import android.app.Activity
 import android.app.Notification
 import android.app.NotificationChannel
@@ -27,20 +33,24 @@ import br.dev.monitorremoto.core.SettingsStore
 import br.dev.monitorremoto.ui.MainActivity
 import java.io.ByteArrayOutputStream
 
-/** MediaProjection consentida localmente. Um token por sessão; sem captura invisível nem retomada automática. */
+/** Projeção autorizada: a mesma sessão continua ativa durante reconexões TCP; sem reutilizar token. */
 class ScreenShareService : Service() {
     companion object {
         const val ACTION_START = "br.dev.monitorremoto.SCREEN_START"
         const val ACTION_STOP = "br.dev.monitorremoto.SCREEN_STOP"
+        const val ACTION_AUDIO_STOP = "br.dev.monitorremoto.SCREEN_AUDIO_STOP"
         const val EXTRA_RESULT_CODE = "projection_result_code"
         const val EXTRA_RESULT_DATA = "projection_result_data"
         private const val CHANNEL = "monitor_remoto_tela"
         private const val NOTIFICATION_ID = 58
         private const val TAG = "MonitorRemotoScreen"
-        private const val FRAME_INTERVAL_MS = 1_000L // 1 fps: prioriza bateria e rede local
+        private const val FRAME_INTERVAL_MS = 700L // ~1-2 fps sob demanda; sem codificar quando ninguém assiste
         fun stop(context: Context) { context.stopService(Intent(context, ScreenShareService::class.java)) }
     }
 
+    private var recording: AudioRecord? = null
+    private var audioThread: Thread? = null
+    @Volatile private var audioRunning = false
     private var projection: MediaProjection? = null
     private var display: VirtualDisplay? = null
     private var reader: ImageReader? = null
@@ -58,6 +68,10 @@ class ScreenShareService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.action == ACTION_AUDIO_STOP) {
+            stopInternalAudio()
+            return START_NOT_STICKY
+        }
         if (intent?.action == ACTION_STOP || intent?.action != ACTION_START ||
             !SettingsStore.isMonitorEnabled(this)) {
             stopSelf()
@@ -80,7 +94,7 @@ class ScreenShareService : Service() {
         val notification = Notification.Builder(this, CHANNEL)
             .setSmallIcon(android.R.drawable.ic_menu_view)
             .setContentTitle("Tela sendo compartilhada")
-            .setContentText("Transmitindo para aparelhos pareados na rede local. Toque para abrir.")
+            .setContentText("Sessão ativa até tocar em Parar; reconexões não exigem nova captura.")
             .setContentIntent(open)
             .setOngoing(true)
             .addAction(Notification.Action.Builder(null, "Parar tela", stop).build())
@@ -110,6 +124,7 @@ class ScreenShareService : Service() {
             ScreenFrameStore.begin()
             display = acquired.createVirtualDisplay("Monitor Remoto - tela autorizada", width, height,
                 density, DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR, reader!!.surface, null, worker)
+            startInternalAudio(acquired)
         } catch (error: Exception) {
             Log.e(TAG, "Não foi possível iniciar compartilhamento consentido", error)
             stopSelf()
@@ -117,12 +132,64 @@ class ScreenShareService : Service() {
         return START_NOT_STICKY
     }
 
+    /** Áudio de reprodução de apps que permitem captura (Android 10+). Não usa microfone. */
+    private fun startInternalAudio(grantedProjection: MediaProjection) {
+        if (Build.VERSION.SDK_INT < 29 || !SettingsStore.captureInternalAudio(this) ||
+            checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) return
+        try {
+            val config = AudioPlaybackCaptureConfiguration.Builder(grantedProjection)
+                .addMatchingUsage(AudioAttributes.USAGE_MEDIA)
+                .addMatchingUsage(AudioAttributes.USAGE_GAME)
+                .addMatchingUsage(AudioAttributes.USAGE_UNKNOWN)
+                .build()
+            val minimum = AudioRecord.getMinBufferSize(AudioChunkStore.RATE,
+                AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
+            require(minimum > 0) { "AudioRecord buffer inválido" }
+            val record = AudioRecord.Builder()
+                .setAudioFormat(AudioFormat.Builder()
+                    .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                    .setSampleRate(AudioChunkStore.RATE)
+                    .setChannelMask(AudioFormat.CHANNEL_IN_MONO).build())
+                .setBufferSizeInBytes(maxOf(minimum * 2, AudioChunkStore.MAX_CHUNK * 2))
+                .setAudioPlaybackCaptureConfig(config).build()
+            require(record.state == AudioRecord.STATE_INITIALIZED) { "AudioRecord não iniciado" }
+            record.startRecording()
+            recording = record
+            audioRunning = true
+            AudioChunkStore.start()
+            audioThread = Thread({
+                val buffer = ByteArray(AudioChunkStore.MAX_CHUNK)
+                while (audioRunning) {
+                    val count = runCatching { record.read(buffer, 0, buffer.size,
+                        AudioRecord.READ_BLOCKING) }.getOrDefault(-1)
+                    if (count <= 0) break
+                    AudioChunkStore.publish(buffer.copyOf(count))
+                }
+                AudioChunkStore.stop()
+            }, "MonitorRemoto-audio-playback").apply { isDaemon = true; start() }
+        } catch (error: Exception) {
+            Log.w(TAG, "Áudio interno indisponível; tela continua sem áudio", error)
+            stopInternalAudio()
+        }
+    }
+
+    private fun stopInternalAudio() {
+        audioRunning = false
+        AudioChunkStore.stop()
+        val old = recording
+        recording = null
+        runCatching { old?.stop() }
+        runCatching { old?.release() }
+        audioThread?.interrupt()
+        audioThread = null
+    }
+
     private fun makeReader(width: Int, height: Int): ImageReader =
         ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 2).also { newReader ->
             newReader.setOnImageAvailableListener({ source ->
                 val image = runCatching { source.acquireLatestImage() }.getOrNull() ?: return@setOnImageAvailableListener
                 try {
-                    if (!ScreenFrameStore.sharing) return@setOnImageAvailableListener
+                    if (!ScreenFrameStore.sharing || !ScreenFrameStore.viewerActive()) return@setOnImageAvailableListener
                     val now = SystemClock.elapsedRealtime()
                     if (now - lastFrameAt < FRAME_INTERVAL_MS) return@setOnImageAvailableListener
                     lastFrameAt = now
@@ -183,6 +250,7 @@ class ScreenShareService : Service() {
 
     override fun onDestroy() {
         stopped = true
+        stopInternalAudio()
         ScreenFrameStore.stop()
         runCatching { display?.release() }
         display = null

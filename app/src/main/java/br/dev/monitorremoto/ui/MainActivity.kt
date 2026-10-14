@@ -79,6 +79,7 @@ class MainActivity : Activity() {
     internal val smsSendPermissionRequest = 105
     internal val smsReceivePermissionRequest = 106
     internal val smsSimPermissionRequest = 107
+    internal val audioPermissionRequest = 108
     internal var active = false
     internal var resultBox: LinearLayout? = null
     companion object { const val EXTRA_OPEN_MONITOR = "br.dev.monitorremoto.OPEN_MONITOR" }
@@ -344,6 +345,11 @@ class MainActivity : Activity() {
             smsReceivePermissionRequest -> {
                 SettingsStore.setReceiveSmsEvents(this, granted)
                 message(if (granted) "Recepção SMS habilitada no monitorado." else "RECEIVE_SMS não autorizada pelo Android.")
+            }
+            audioPermissionRequest -> {
+                SettingsStore.setCaptureInternalAudio(this, granted)
+                message(if (granted) "Áudio interno habilitado. Inicie uma nova sessão de compartilhamento de tela."
+                    else "RECORD_AUDIO não autorizado. O áudio interno continuará desligado.")
             }
             smsSimPermissionRequest -> {
                 message(if (granted) "Seleção de chip disponível para SMS." else "READ_PHONE_STATE negada. Será usado o chip padrão.")

@@ -1,4 +1,4 @@
-# Arquitetura (0.1.0-alpha.34)
+# Arquitetura (0.1.0-alpha.35)
 
 ```text
 MONITORADO                                      CONTROLE
@@ -25,9 +25,9 @@ A captura usa `ImageReader` RGBA, `Bitmap` JPEG com largura máxima 540 px, taxa
 
 ## Distribuição e assinatura
 
-O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.34` e `versionCode=34`.
+O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.35` e `versionCode=35`.
 
-- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.34.apk`.
+- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.35.apk`.
 - `upload-artifact` sempre distribui um ZIP; GitHub Releases recebe o **arquivo APK direto**.
 - Com quatro Secrets, Gradle gera APK Release assinado e AAB. Sem Secrets, o arquivo é Debug de teste e não preserva necessariamente a assinatura entre execuções.
 - Releases são prévias, não substituem a futura revisão da Google Play e nem os ensaios reais.
@@ -177,3 +177,7 @@ O botão de recuperar dados não implementa transferência, acesso a arquivos ou
 ## Tela Mensagens alpha.33
 
 `MainActivity` mantém o estado efêmero em RAM (`mode=4`), e `RemoteMessagesUi.kt` renderiza uma página com abas e ações compactas, sem diálogo. O servidor não é consultado automaticamente no polling da home; o usuário abre/atualiza a tela sob demanda. A recuperação da conexão é autenticada antes da consulta. Saída descarta `JSONObject`, invalida callbacks e preserva apenas a marca temporal de leitura. Conteúdo não entra no estado salvo da Activity. `SensitiveContent` reconhece OTP em PT/EN; `SmsInboxReader`, `SmsLiveJournal`, `EventJournal.latest` e a UI rejeitam conteúdo elegível à filtragem em camadas. As mensagens que não puderem ser identificadas como OTP ainda representam risco residual de privacidade.
+
+## Alpha.35: controle e áudio
+
+`RemoteTouchService` é opt-in na Acessibilidade, sem leitura de nós, acionado exclusivamente por comandos AES-GCM validados (`remoteTouch`) enquanto `ScreenFrameStore.sharing` e a preferência local estão ativos. `AudioPlaybackCaptureConfiguration` usa a projeção aprovada e publica PCM mono 16 kHz apenas em `AudioChunkStore`, consumido pelo controlador via `audioChunk`. `requestScreen` só emite notificação local limitada (não inicia projeção). Os três opcodes mantêm validação de appVersion e anti-replay já existentes. Não reutilizar token MediaProjection em uma nova sessão.

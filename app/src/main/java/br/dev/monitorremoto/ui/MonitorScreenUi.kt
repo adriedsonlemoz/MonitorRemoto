@@ -66,6 +66,7 @@ internal fun MainActivity.renderMonitor() {
         addCompact("Mostrar info", br.dev.monitorremoto.R.drawable.ic_info) { showMyConnectionInfo() }
         addCompact("Interromper", br.dev.monitorremoto.R.drawable.ic_power) {
             SettingsStore.setMonitorEnabled(this, false)
+            ScreenShareService.stop(this)
             stopService(Intent(this, MonitorService::class.java))
             render()
         }
@@ -82,8 +83,9 @@ internal fun MainActivity.renderMonitor() {
         val shareCard = panel(12)
         shareCard.addView(label("Compartilhamento da tela", 14f, strong = true))
         shareCard.addView(label(if (ScreenFrameStore.sharing)
-            "● Compartilhando com aparelhos pareados · 1 quadro/s · sem áudio"
-            else "Inativo · exige sua aprovação no Android em cada sessão", 11f, muted = true))
+            "● Sessão ativa · reconexão automática · imagens sob demanda" +
+                (if (br.dev.monitorremoto.capture.AudioChunkStore.enabled) " · áudio interno" else "")
+            else "Inativo · aprovação Android necessária para iniciar nova sessão", 11f, muted = true))
         sectionGap(shareCard, 5)
         shareCard.addView(actionButton(if (ScreenFrameStore.sharing) "Parar compartilhamento" else "Compartilhar tela",
             emphasis = !ScreenFrameStore.sharing) {
@@ -93,7 +95,7 @@ internal fun MainActivity.renderMonitor() {
             } else {
                 showAppConfirm("Compartilhar a tela?",
                     "O aparelho controlador pareado poderá ver o que aparecer nesta tela, inclusive informações privadas. " +
-                    "O Android solicitará sua autorização. Não há gravação nem controle por toque.", confirmText = "Autorizar captura") {
+                    "O Android solicitará sua autorização para a sessão. Sem gravação. Toque e áudio só funcionam se habilitados separadamente em Configurações. A sessão permanece ativa durante desconexões até você parar ou o Android encerrar.", confirmText = "Autorizar captura") {
                     val manager = getSystemService(MediaProjectionManager::class.java)
                     startActivityForResult(manager.createScreenCaptureIntent(), screenCaptureRequest)
                 }
@@ -163,7 +165,8 @@ private fun MainActivity.showIncomingAccessActions(peer: AuthenticatedAccess.Pee
                 br.dev.monitorremoto.R.drawable.ic_power, "Interromper"
             ) {
                 SettingsStore.setMonitorEnabled(this, false)
-                stopService(Intent(this, MonitorService::class.java))
+                ScreenShareService.stop(this)
+            stopService(Intent(this, MonitorService::class.java))
                 render()
             }
         }.create()
