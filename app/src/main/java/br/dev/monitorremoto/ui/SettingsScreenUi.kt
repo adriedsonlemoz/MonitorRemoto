@@ -71,7 +71,7 @@ internal fun MainActivity.renderSettingsModule() {
             "Inicialização, retomada e funcionamento", "service")
         settingsEntry(groupB, R.drawable.ic_activity, "Diagnóstico",
             "Conexão, permissões e estado do servidor", "diagnostics")
-        groupB.addView(iconMenuRow(R.drawable.ic_shield, "Modo avançado ADB", "Pareamento Wi-Fi, conexão e diagnóstico") {
+        groupB.addView(iconMenuRow(R.drawable.ic_shield, "Modo avançado ADB", "Assistente visual: configurar novo, parear e conectar") {
             startActivity(Intent(this, AdbActivity::class.java))
         })
         content.addView(groupB)

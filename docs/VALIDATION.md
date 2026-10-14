@@ -1,3 +1,10 @@
+## Alpha.47 — assistente de configuração ADB (14/10/2026)
+
+- GUI: início → papel (controlador/monitorado) → QR/código ou instruções Android → conexão ou orientação de confirmação. Exibição de IP/modelo apenas com `AdbClient.connected() == true`; o pareamento da sessão não equivale a conexão.
+- Operações ADB nomeadas e callback de sucesso desacoplado do estado de conexão para permitir avançar depois de `pair`. Erros não sinalizam pareado/conectado.
+- **Verificações nesta entrega:** `python3 tools/check_distribution.py` aprovado (incluindo regressão wizard); parser PSI em 99 arquivos Kotlin sem erros sintáticos; compilação e execução Kotlin/JVM de 5 cenários de status aprovadas; 43 XML e 2 YAML válidos. A suíte JUnit foi adicionada, mas não pôde ser executada localmente por falta do JUnit no classpath do ambiente; requer Android Gradle/CI.
+- **Pendente:** compilação Android completa (`:app:testDebugUnitTest :app:assembleDebug`), teste físico de QR/código/mDNS, telas e comportamento em dois celulares. Checagens de sintaxe/estrutura não substituem testes de dispositivo.
+
 ## Alpha.46 — correção do workflow 45 (14/10/2026)
 
 - Falha observada no ZIP de logs workflow 45: `:app:compileDebugKotlin` em `RemoteFilesActivity.kt:59:9` e `:66:9` com `None of the following candidates is applicable: setTextColor(ColorStateList!), setTextColor(Int)`; demais tarefas alcançadas antes da compilação não validam o APK.

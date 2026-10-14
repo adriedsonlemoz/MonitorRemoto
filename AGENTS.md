@@ -1,4 +1,4 @@
-# Monitor Remoto 0.1.0-alpha.46
+# Monitor Remoto 0.1.0-alpha.47
 # Convenções permanentes do projeto Monitor Remoto
 
 - Toda alteração de código incrementa sequencialmente `versionCode` e `versionName` (ex.: `0.1.0-alpha.8` -> `0.1.0-alpha.9`). Sincronizar tela, README, CHANGELOG, RELEASE_NOTES e documentação.
@@ -21,7 +21,7 @@
 - Alpha.10: manter tema **claro padrão**, as opções da engrenagem, janela Conectar, botão de atualização compacto, lista de até 5 aparelhos recentes e os dados do Controle no topo. Não reintroduzir formulário longo na tela principal.
 - Credenciais por dispositivo usam `RecentDevices` + `SecretVault.profileKeyName`, com migração única da alpha.9. Não reaproveitar `CONTROLLER_KEY` antigo para IPs novos nem gravar segredo em preferências sem criptografia. Esquecer apaga o segredo correspondente.
 - Respostas HTTP/TCP não são conexão persistente. Exibir "Conectado" apenas após consulta autenticada bem-sucedida e "Sem resposta" após erro. Não inventar tempos de atualização.
-- Próxima versão sequencial: `0.1.0-alpha.47`, `versionCode 47`.
+- Próxima versão sequencial: `0.1.0-alpha.48`, `versionCode 48`.
 
 - Alpha.15: preservar a seleção Conectar → QR/Manual/Salvos, confirmação do QR antes de parear, cartões salvos com três ações e o scanner em Activity com tema Dialog.
 
@@ -92,3 +92,5 @@
 - Alpha.45: Recuperar dados é leitura SAF por pasta autorizada **no próprio monitorado**, com permissão persistida e opção de revogação. Nunca usar `MANAGE_EXTERNAL_STORAGE`, shell ADB, bypass do Android ou varredura de dados de apps. Só controlar arquivos dentro da árvore SAF previamente escolhida, com caminho relativo validado por reenumeração de filhos, AES-GCM/autenticação e versão exata. Transferir blocos de 48 KiB, até 32 MiB por arquivo, máximo 150 itens por pasta/12 níveis; cliente escolhe destino com ACTION_CREATE_DOCUMENT. Verificar integridade dos blocos e alterações do arquivo, cancelar sem deixar gravação intencional no monitorado. Não prometer recuperar dados apagados; build e testes físicos pendentes.
 
 - Alpha.46: ao chamar `TextView.setTextColor` dentro de `TextView.apply` ou `Button.apply`, nunca usar o getter `foreground` implicitamente: `View.foreground` é `Drawable`. Em `RemoteFilesActivity` usar `this@RemoteFilesActivity.foreground` (`Int`). Manter regressão no verificador estrutural e compilar Kotlin no GitHub Actions.
+
+- Alpha.47: Modo avançado ADB abre assistente por papel: controlador gera QR/código, pareia e só depois conecta; monitorado deve autorizar a Depuração sem fios no Android. Não confundir `pair` com sessão `connect` nem alegar que o monitorado consegue verificar outros clientes ADB por esta tela. Estado Conectado somente se `AdbClient.connected()`, indicativo de modelo é declarado pelo Android, não prova criptográfica de identidade. `onSuccess` de runOperation ocorre quando a operação concluiu sem exceção, inclusive `pair` sem conexão ainda. Ao sair, limpar QR, cancelar sessões e proteger segredo com FLAG_SECURE somente enquanto QR visível.

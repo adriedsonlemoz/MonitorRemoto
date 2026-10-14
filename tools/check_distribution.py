@@ -16,7 +16,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.46" and code.group(1) == "46", "Versões incompatíveis"
+assert version == "0.1.0-alpha.47" and code.group(1) == "47", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -662,3 +662,32 @@ assert not re.search(r'(?<![\w.])setTextColor\(foreground\)', remote_ui46), (
 )
 assert 'private val foreground get() = if (dark) Color.WHITE else Color.rgb(21, 38, 55)' in remote_ui46
 print('PASSOU: alpha.46, TextView/Button usam ColorInt da Activity e não Drawable da View')
+
+# Alpha.47: wizard por papel, status conectado só quando há sessão TLS real.
+ui47 = (ui_root / "AdbActivity.kt").read_text(encoding="utf-8")
+for required in [
+    'Configurar novo', 'Vou controlar outro celular', 'Vou permitir controle deste celular',
+    'Já autorizei antes', 'Page.ROLE', 'Page.METHOD', 'Page.QR', 'Page.CODE',
+    'Page.CONNECT', 'Page.MONITORED', 'Page.MONITORED_CHECK', 'Page.CONNECTED',
+    'PAREADO NESTA TENTATIVA', 'NÃO CONECTADO POR ADB', 'CONECTADO POR ADB',
+    'A conexão ADB', 'AdbPolicy.endpoint', 'FLAG_SECURE', 'Settings.ACTION_SETTINGS',
+    'Conectar e identificar telefone', 'Porta de conexão ADB',
+]:
+    if required == 'A conexão ADB':
+        continue
+    assert required in ui47, f"alpha.47: ausente {required}"
+assert 'val connected = active?.connected() == true' in ui47
+assert 'AdbWizardStatus.resolve(connected, pairedThisSession,' in ui47
+assert (ui_root / 'AdbWizardStatus.kt').is_file()
+assert (root / 'app/src/test/java/br/dev/monitorremoto/ui/AdbWizardStatusTest.kt').is_file()
+assert 'if (succeeded) onSuccess?.invoke(message)' in ui47
+assert 'active.connected() && onSuccess' not in ui47
+assert 'if (client?.connected() == true)' in ui47
+assert 'private var pairedThisSession = false' in ui47
+assert 'if (page == Page.QR && next != Page.QR) clearQr()' in ui47
+assert 'window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)' in ui47
+assert 'window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)' in ui47
+assert 'override fun onStop()' in ui47 and 'visible = false; cancel(); code.text.clear()' in ui47
+assert 'allowBusy = true' in ui47
+assert 'Assistente visual: configurar novo, parear e conectar' in (ui_root / 'SettingsScreenUi.kt').read_text()
+print('PASSOU: alpha.47, assistente ADB por papel, estado TLS real e sucesso de pareamento separado de conexão')

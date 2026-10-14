@@ -1,3 +1,11 @@
+## 0.1.0-alpha.47 (14/10/2026)
+
+- Reestruturado Modo avançado ADB como assistente visual: página inicial “Configurar novo”, seleção do papel, método QR/código, conexão TLS e tela de sucesso. Papel monitorado orienta a autorização no Android, sem atribuir estado falso a conexões recebidas.
+- Cartão permanente com status real: desconectado, pareado nesta tentativa mas ainda sem conexão, ou conectado com IP e modelo reportado. Caminho para conexão previamente autorizada e descoberta mDNS opcional.
+- Corrigida condição de callback: pareamento completo aciona a navegação para conexão mesmo que `AdbClient.connected()` ainda seja false; falhas não podem sinalizar sucesso.
+- `FLAG_SECURE` restrito ao QR temporário, campos sensíveis sem autofill, comandos limitados/confirmados, finalização de sessão ao sair e segurança ADB mantidas. Sem novas permissões.
+- Atualizados `versionName=0.1.0-alpha.47`, `versionCode=47`, `AppVersion`, arquitetura, documentação e verificador. Parser Kotlin PSI, estado JVM e verificador estrutural aprovados; compilação Android e testes físicos pendentes.
+
 ## 0.1.0-alpha.46 (14/10/2026)
 
 - Corrigidos dois erros de compilação de `:app:compileDebugKotlin` do workflow 45, em `RemoteFilesActivity.kt:59` e `:66`. No escopo `TextView.apply`/`Button.apply`, `foreground` referia-se a `View.foreground: Drawable`, enquanto `setTextColor()` exige `Int` ou `ColorStateList`. Qualificado `this@RemoteFilesActivity.foreground` nas duas ocorrências.
