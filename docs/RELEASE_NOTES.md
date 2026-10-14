@@ -1,14 +1,13 @@
-# Monitor Remoto v0.1.0-alpha.49
+# Monitor Remoto v0.1.0-alpha.50
 
-## Reconexão rápida de dispositivos ADB (alpha.49)
+## Novo fluxo ADB compacto (alpha.50)
 
-- O Modo avançado ADB agora lista os **dispositivos conectados anteriormente** neste controlador.
-- Cada cartão salvo mostra nome, última conexão e botão **Reconectar** para reutilizar o último IP e a última porta conhecidos.
-- Fluxo principal mais limpo, seguindo o design sugerido: seção de aparelhos salvos, **+ Adicionar outro celular** e **Configurações avançadas** recolhidas por padrão.
-- Continuidade do assistente guiado com passos melhores, atalhos para **Configurações do Android** e **Opções do desenvolvedor** no telefone monitorado.
-- O app continua mostrando **Conectado** apenas com sessão ADB TLS ativa e mantém `FLAG_SECURE` restrito ao QR temporário.
-
-
+- Tela principal organizada em aparelhos salvos e botão Reconectar. Opções técnicas ficam recolhidas.
+- Seleção de papéis, método QR/código e ajuda em janelas centralizadas e compactas.
+- Após o QR ou código, a conexão TLS é procurada automaticamente pelo IP do dispositivo pareado; quando o mDNS falha, o usuário pode informar a porta manualmente.
+- Controles de navegação ficaram em Configurações avançadas e não ocupam a tela principal.
+- Reconexão tenta porta salva e nova descoberta no mesmo IP; identificação do aparelho muda apenas com confirmação quando há divergência.
+- Mantida proteção de QR, consentimento Android, ADB experimental e isolamento do modo MediaProjection.
 
 ---
 

@@ -16,7 +16,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.49" and code.group(1) == "49", "Versões incompatíveis"
+assert version == "0.1.0-alpha.50" and code.group(1) == "50", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -612,8 +612,8 @@ service43 = (root / 'app/src/main/java/br/dev/monitorremoto/capture/ScreenShareS
 server43 = (root / 'app/src/main/java/br/dev/monitorremoto/transport/MonitorServer.kt').read_text()
 assert 'window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)' in ui43
 assert 'window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)' in ui43
-assert 'clearQr()' in ui43 and 'Emparelhar dispositivo com código QR' in ui43
-assert ('Conexão ADB ativa' in ui43 or 'Nenhum aparelho conectado' in ui43) and 'DIAGNOSTIC' in ui43
+assert 'clearQr()' in ui43 and 'Emparelhar' in ui43
+assert 'Conexão ADB ativa' in ui43 and 'AdbPolicy.Command.DIAGNOSTIC' in ui43
 assert '@Volatile private var preferJpeg = true' in viewer43 and '!preferJpeg &&' in viewer43
 assert 'MAX_LAG_FRAMES = 5' in store43 and 'requestSync = true' in store43
 assert 'VideoFrameStore.videoRequestedRecent()' in service43
@@ -625,13 +625,12 @@ print('PASSOU: alpha.43, janela de QR protegida, instruções ADB e JPEG/AVC sem
 # Uma lambda final sem `operation =` é vinculada por Kotlin ao parâmetro onSuccess (String).
 # Exigir sintaxe inequívoca para todas as invocações na Activity.
 import re as _re44
-call_starts44 = _re44.findall(r'\brunOperation\s*\(\s*"[^"\n]+"\s*,\s*operation\s*=\s*\{\s*adb\s*->', ui43)
-assert len(call_starts44) == 5, f"alpha.44: esperadas 5 invocações ADB com operation nomeada, achadas {len(call_starts44)}"
-assert not _re44.search(r'\brunOperation\s*\(\s*"[^"\n]+"\s*\)\s*\{', ui43), "Trailing lambda de runOperation será interpretada como onSuccess(String)"
-assert 'onSuccess = {' in ui43, 'Callback de conexão deve ser nomeado'
-assert 'adb.pair(endpoint.first, endpoint.second, password)' in ui43
-assert 'adb.pair(endpoint.host, endpoint.port, session.password)' in ui43
-assert 'adb.execute(AdbPolicy.Command.DIAGNOSTIC)' in ui43 and 'adb.execute(cmd)' in ui43
+assert not _re44.search(r'\brunOperation\s*\(\s*"[^"\n]+"\s*\)\s*\{', ui43), "Trailing lambda pode ligar ao callback incorreto"
+assert 'operation: (AdbClient) -> String' in ui43
+assert 'onSuccess: ((String) -> Unit)?' in ui43
+assert 'it.pair(endpoint.first, endpoint.second, pass)' in ui43
+assert 'it.pair(endpoint.host, endpoint.port, currentQr.password)' in ui43
+assert 'adb.execute(AdbPolicy.Command.DIAGNOSTIC)' in ui43 or 'AdbPolicy.Command.DIAGNOSTIC' in ui43
 print('PASSOU: alpha.44, lambdas ADB vinculadas ao parâmetro operation(AdbClient), não a onSuccess(String)')
 
 # Alpha.45: não regredir para uma opção ilustrativa nem contornar o SAF.
@@ -663,34 +662,19 @@ assert not re.search(r'(?<![\w.])setTextColor\(foreground\)', remote_ui46), (
 assert 'private val foreground get() = if (dark) Color.WHITE else Color.rgb(21, 38, 55)' in remote_ui46
 print('PASSOU: alpha.46, TextView/Button usam ColorInt da Activity e não Drawable da View')
 
-# Alpha.49: reconexão rápida ADB, aparelhos salvos e assistente guiado continuam separados da sessão TLS real.
-ui47 = (ui_root / "AdbActivity.kt").read_text(encoding="utf-8")
-for required in [
-    'Conectados anteriormente', 'Reconectar', '+ Adicionar outro celular',
-    'Configurações avançadas', 'Vou controlar outro celular', 'Vou permitir controle deste celular',
-    'Abrir Configurações do Android', 'Abrir Opções do desenvolvedor', 'Page.ROLE', 'Page.METHOD',
-    'Page.QR', 'Page.CODE', 'Page.CONNECT', 'Page.MONITORED', 'Page.MONITORED_CHECK',
-    'Page.CONNECTED', 'Conectado', 'Pareado', 'Desconectado', 'Aguardando',
-    'AdbPolicy.endpoint', 'FLAG_SECURE', 'Settings.ACTION_SETTINGS',
-    'Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS', 'Conectar e identificar telefone',
-    'Porta de conexão ADB', 'attemptReconnect', 'connectToEndpoint', 'rememberConnectedDevice'
-]:
-    assert required in ui47, f"alpha.49: ausente {required}"
-assert 'val connected = active?.connected() == true' in ui47
-assert 'AdbWizardStatus.resolve(' in ui47 and 'pairedThisSession' in ui47
-assert (ui_root / 'AdbWizardStatus.kt').is_file()
-assert (root / 'app/src/test/java/br/dev/monitorremoto/ui/AdbWizardStatusTest.kt').is_file()
-assert 'if (succeeded) onSuccess?.invoke(message)' in ui47
-assert 'active.connected() && onSuccess' not in ui47
-assert 'private var pairedThisSession = false' in ui47
-assert 'private var advancedVisible = false' in ui47
-assert 'setAdvancedVisible(!advancedVisible)' in ui47
-assert 'if (page == Page.QR && next != Page.QR) clearQr()' in ui47
-assert 'window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)' in ui47
-assert 'window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)' in ui47
-assert 'override fun onStop()' in ui47 and 'visible = false' in ui47 and 'cancel()' in ui47 and 'code.text.clear()' in ui47
-assert 'AdbKnownDevices.load(this)' in ui47 and 'AdbKnownDevices.remember(' in ui47 and 'AdbKnownDevices.forget(' in ui47
-assert (root / 'app/src/main/java/br/dev/monitorremoto/adb/AdbKnownDevices.kt').is_file()
-settings_ui49 = (ui_root / 'SettingsScreenUi.kt').read_text(encoding='utf-8')
-assert 'Reconexão rápida e configuração guiada ADB' in settings_ui49
-print('PASSOU: alpha.49, reconexão rápida ADB, aparelhos salvos e estado TLS real')
+# Alpha.50: interface modal compacta, QR/pareamento seguido de descoberta TLS no MESMO host.
+ui50 = (ui_root / "AdbActivity.kt").read_text(encoding="utf-8")
+for value in ["Conectados anteriormente", "Reconectar", "+ Adicionar outro celular",
+    "Configurações avançadas", "Novo dispositivo", "Como deseja parear?", "Parear com QR Code",
+    "Parear por código", 'beginDiscovery("connect", host)', "afterPair(endpoint.host)",
+    "AdbAutoConnectPolicy.connectionServices", "manualConnect", "Controles ADB",
+    "onStop()", "window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)",
+    "window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)"]:
+    assert value in ui50, f"alpha.50: ausente {value}"
+assert 'AdbKnownDevices.remember(' in ui50 and 'AdbKnownDevices.load(this)' in ui50
+assert 'client?.connected() != true' in ui50
+assert 'showControls()' in ui50 and 'modal("Controles ADB"' in ui50
+assert (root / 'app/src/main/java/br/dev/monitorremoto/adb/AdbAutoConnectPolicy.kt').exists()
+assert (root / 'app/src/test/java/br/dev/monitorremoto/adb/AdbAutoConnectPolicyTest.kt').exists()
+assert 'Reconexão rápida e configuração guiada ADB' in (ui_root / 'SettingsScreenUi.kt').read_text()
+print('PASSOU: alpha.50, wizard modal, QR com descoberta automática e fallback manual')

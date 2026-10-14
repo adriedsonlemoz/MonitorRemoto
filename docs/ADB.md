@@ -1,17 +1,14 @@
 # Modo avançado ADB — implementação alpha.49
 
-## Fluxo guiado alpha.49
+## Fluxo compacto da alpha.50
 
-A alpha.49 evolui o **Modo avançado ADB** para um fluxo de reconexão mais prático. A tela inicial mostra um resumo visual do estado, a seção **Conectados anteriormente** e um conjunto de cartões para os aparelhos ADB que já conectaram com sucesso neste controlador. Cada cartão guarda nome, IP, porta e horário da última conexão bem-sucedida.
+A tela principal contém aparelhos conhecidos, Reconectar/Desconectar, Adicionar outro celular e Configurações avançadas recolhidas. Escolha do papel (controlador/monitorado), QR, código e instruções curtas ficam em diálogos centralizados.
 
-O botão **Reconectar** tenta reutilizar diretamente o último IP e a última porta ADB conhecidos. Isso reduz a repetição do processo completo quando o aparelho já foi autorizado antes. O botão **+ Adicionar outro celular** continua disponível para um novo pareamento, enquanto mDNS, limpeza de credencial e demais recursos técnicos ficam atrás de **Configurações avançadas**.
+Depois que o pareamento ADB por QR/código é aceito, o aplicativo tenta localizar um único serviço `_adb-tls-connect` no **mesmo IPv4 privado do serviço de pareamento**. Se houver um único serviço encontrado, tenta a conexão TLS; se houver múltiplos anúncios, nenhuma porta, falha ou rede sem mDNS, oferece entrada manual. A descoberta não é validação criptográfica do aparelho e não deve permitir associação automática de outro IP.
 
-O assistente continua separado por papel:
+A reconexão rápida tenta IP/porta salvos. Quando falhar, procura a porta atual no mesmo IP. Caso o Android informe modelo diferente do salvo, exige confirmação. O nome de modelo/comercial é dado pelo Android e não garante identidade física; a interface não afirma o contrário. A credencial ADB local continua cifrada via Android Keystore.
 
-1. **Controlar outro celular**: este aparelho gera o QR ou recebe o código, depois realiza a conexão ADB.
-2. **Permitir controle deste celular**: este aparelho apenas autoriza a Depuração sem fios nas Configurações do Android e segue passos guiados.
-
-As instruções foram reescritas em **passos numerados**, com botões diretos para abrir **Configurações do Android** e **Opções do desenvolvedor**. O pareamento por QR/código permanece distinto da conexão ADB final. O status conectado só aparece depois que `AdbClient.connected()` confirma a sessão ativa. Os dispositivos salvos servem para conveniência; não provam identidade criptográfica do aparelho.
+O telefone monitorado deve abrir **Opções do desenvolvedor → Depuração sem fios** e autorizar o pareamento manualmente. Nenhuma configuração de desenvolvedor é ativada pelo app. O QR fica protegido por `FLAG_SECURE` enquanto visível; cancelar/sair encerra a sessão.
 
 ## Escopo entregue
 

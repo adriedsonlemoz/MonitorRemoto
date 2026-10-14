@@ -13,7 +13,8 @@ data class AdbKnownDevice(
     val host: String,
     val port: Int,
     val lastConnectedAt: Long,
-    val androidVersion: String = ""
+    val androidVersion: String = "",
+    val model: String = ""
 )
 
 object AdbKnownDevices {
@@ -39,7 +40,8 @@ object AdbKnownDevices {
                             host = host,
                             port = port,
                             lastConnectedAt = item.optLong("lastConnectedAt", 0L),
-                            androidVersion = item.optString("androidVersion").trim()
+                            androidVersion = item.optString("androidVersion").trim(),
+                            model = item.optString("model").trim()
                         )
                     )
                 }
@@ -51,12 +53,12 @@ object AdbKnownDevices {
         val cleaned = device.copy(
             name = device.name.trim().ifBlank { "Aparelho em ${device.host}" },
             host = device.host.trim(),
-            androidVersion = device.androidVersion.trim()
+            androidVersion = device.androidVersion.trim(),
+            model = device.model.trim()
         )
         val current = load(context).toMutableList()
-        val match = current.indexOfFirst {
-            it.name.equals(cleaned.name, ignoreCase = true) || it.host == cleaned.host
-        }
+        // Dois telefones podem ter o mesmo modelo. Nunca mesclar apenas por nome/modelo.
+        val match = current.indexOfFirst { it.host == cleaned.host && it.port == cleaned.port }
         if (match >= 0) {
             current[match] = cleaned
         } else {
@@ -82,6 +84,7 @@ object AdbKnownDevices {
                     put("port", device.port)
                     put("lastConnectedAt", device.lastConnectedAt)
                     put("androidVersion", device.androidVersion)
+                    put("model", device.model)
                 }
             )
         }

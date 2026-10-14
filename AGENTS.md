@@ -1,4 +1,4 @@
-# Monitor Remoto 0.1.0-alpha.49
+# Monitor Remoto 0.1.0-alpha.50
 # Convenções permanentes do projeto Monitor Remoto
 
 - Toda alteração de código incrementa sequencialmente `versionCode` e `versionName` (ex.: `0.1.0-alpha.8` -> `0.1.0-alpha.9`). Sincronizar tela, README, CHANGELOG, RELEASE_NOTES e documentação.
@@ -21,7 +21,7 @@
 - Alpha.10: manter tema **claro padrão**, as opções da engrenagem, janela Conectar, botão de atualização compacto, lista de até 5 aparelhos recentes e os dados do Controle no topo. Não reintroduzir formulário longo na tela principal.
 - Credenciais por dispositivo usam `RecentDevices` + `SecretVault.profileKeyName`, com migração única da alpha.9. Não reaproveitar `CONTROLLER_KEY` antigo para IPs novos nem gravar segredo em preferências sem criptografia. Esquecer apaga o segredo correspondente.
 - Respostas HTTP/TCP não são conexão persistente. Exibir "Conectado" apenas após consulta autenticada bem-sucedida e "Sem resposta" após erro. Não inventar tempos de atualização.
-- Próxima versão sequencial: `0.1.0-alpha.50`, `versionCode 50`.
+- Próxima versão sequencial: `0.1.0-alpha.51`, `versionCode 51`.
 
 - Alpha.15: preservar a seleção Conectar → QR/Manual/Salvos, confirmação do QR antes de parear, cartões salvos com três ações e o scanner em Activity com tema Dialog.
 
@@ -97,3 +97,5 @@
 - Alpha.49: aplicar visual moderno no Modo avançado ADB, com resumo inicial em cartão, chip de estado, ação principal dinâmica e seção **Mostrar/Ocultar configurações avançadas** recolhida por padrão. No fluxo “Permitir controle deste celular”, preferir instruções curtas em passos numerados e oferecer atalho para abrir Configurações/Opções do desenvolvedor. Manter a distinção entre pareamento e conexão ativa e não esconder a natureza experimental do ADB.
 
 - Alpha.49: manter a lista **Conectados anteriormente** no Modo avançado ADB, salvando apenas aparelhos com conexão ADB confirmada. Reconexão rápida deve reutilizar último IP/porta salvos sem fingir identidade verificada; o histórico é conveniência local, não prova criptográfica. Preservar ação **+ Adicionar outro celular**, painel **Configurações avançadas** recolhido por padrão, toque longo para esquecer aparelho salvo e distinção clara entre pareamento, reconexão e sessão ativa.
+
+- Alpha.50: tela ADB deve manter apenas dispositivos salvos, Reconectar, Adicionar outro celular e Configurações avançadas recolhidas. Escolher papel, método, QR, código e orientação do monitorado devem abrir pop-ups centralizados. Depois de pareamento QR/código, buscar somente `_adb-tls-connect` no IP proveniente do pareamento. Em mDNS ambíguo/ausente oferecer conexão manual, não escolher serviço de outro IP. Pareamento não equivale a conexão, nunca apresentar identidade criptograficamente confirmada pelo nome/IPv4. Proteger QR com FLAG_SECURE e manter sessão encerrada ao sair.

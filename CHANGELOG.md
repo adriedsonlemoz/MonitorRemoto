@@ -1,12 +1,13 @@
-## 0.1.0-alpha.49 (14/10/2026)
+## 0.1.0-alpha.50 (14/10/2026)
 
-- Implementada a primeira etapa de **dispositivos ADB salvos**: após uma conexão ADB confirmada, o controlador grava nome, IP, porta e horário da última conexão bem-sucedida.
-- A tela inicial do **Modo avançado ADB** passou a mostrar a seção **Conectados anteriormente**, com cartões inspirados no layout sugerido e botão **Reconectar** por aparelho.
-- O botão **Reconectar** tenta usar diretamente o último IP e a última porta salvos, sem obrigar repetir o assistente completo quando o dispositivo já foi autorizado antes.
-- O fluxo principal ficou mais limpo: **+ Adicionar outro celular** para nova configuração, **Configurações avançadas** recolhidas por padrão e ação contextual **Controlar aparelho / Desconectar** somente quando há sessão ativa.
-- Mantidas as melhorias do assistente guiado: passos numerados, atalhos para Configurações/Opções do desenvolvedor no monitorado e separação clara entre pareamento e conexão.
-- Adicionado armazenamento local `AdbKnownDevices`, atualização do resumo visual de estado e opção de esquecer aparelho salvo por toque longo no cartão.
-- Sincronizados `versionName=0.1.0-alpha.49`, `versionCode=49`, `AppVersion`, README, AGENTS, RELEASE_NOTES, documentação ADB e verificador estrutural. Build Gradle/Android completo e testes físicos em dois celulares continuam pendentes.
+- Simplificada a tela principal ADB de acordo com a referência: dispositivos salvos, Reconectar/Desconectar e Adicionar outro celular; controles técnicos recolhidos.
+- Substituídas as telas do wizard por diálogos centralizados de papel, método, QR temporário, código e orientação do monitorado. Comandos Voltar/Início/Recentes movidos para diálogo de Controles ADB nas configurações avançadas.
+- Após pareamento ADB bem-sucedido por QR ou código, o app busca via mDNS a porta de conexão TLS **no mesmo IP do aparelho pareado** e tenta conectar automaticamente. Busca ambígua, bloqueada ou sem resposta mantém a entrada manual como contingência.
+- Reconectar tenta o último IP/porta e busca a porta atual no mesmo IP após falha; mudanças na identificação do modelo exigem confirmação. Nome comercial informado pelo Android é consultado quando disponível.
+- Corrigida a transição de client ADB de pareamento para conexão: o cliente encerrado é liberado antes de invocar o callback de sucesso. Lista ADB não mescla automaticamente aparelhos de mesmo modelo apenas pelo nome.
+- Preservados controles de consentimento, QR com FLAG_SECURE, sessão encerrada ao sair e funcionalidade normal de vídeo/Recuperar dados; sem novos acessos.
+- VersionName 0.1.0-alpha.50, versionCode 50, AppVersion, README, AGENTS, arquitetura, notas e validações sincronizados. Build Gradle Android e testes físicos ainda pendentes.
+
 ## 0.1.0-alpha.46 (14/10/2026)
 
 - Corrigidos dois erros de compilação de `:app:compileDebugKotlin` do workflow 45, em `RemoteFilesActivity.kt:59` e `:66`. No escopo `TextView.apply`/`Button.apply`, `foreground` referia-se a `View.foreground: Drawable`, enquanto `setTextColor()` exige `Int` ou `ColorStateList`. Qualificado `this@RemoteFilesActivity.foreground` nas duas ocorrências.

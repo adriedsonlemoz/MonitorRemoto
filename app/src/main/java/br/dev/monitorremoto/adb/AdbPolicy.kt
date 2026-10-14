@@ -28,7 +28,7 @@ object AdbPolicy {
         return QrSession("studio-" + token(), token(), now + 120_000)
     }
     enum class Command(val shell: String) {
-        DIAGNOSTIC("getprop ro.product.model; getprop ro.build.version.release; getprop ro.build.version.sdk"),
+        DIAGNOSTIC("getprop ro.product.model; getprop ro.build.version.release; getprop ro.product.marketname; getprop ro.product.vendor.marketname"),
         BACK("input keyevent 4"), HOME("input keyevent 3"), RECENTS("input keyevent 187")
     }
 }

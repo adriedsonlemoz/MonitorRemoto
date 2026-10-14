@@ -1,4 +1,4 @@
-# Arquitetura (0.1.0-alpha.49)
+# Arquitetura (0.1.0-alpha.50)
 
 ```text
 MONITORADO                                      CONTROLE
@@ -29,9 +29,9 @@ A captura usa `ImageReader` RGBA, `Bitmap` JPEG com largura máxima 540 px, taxa
 
 ## Distribuição e assinatura
 
-O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.49` e `versionCode=49`.
+O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.50` e `versionCode=50`.
 
-- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.49.apk`.
+- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.50.apk`.
 - `upload-artifact` sempre distribui um ZIP; GitHub Releases recebe o **arquivo APK direto**.
 - Com quatro Secrets, Gradle gera APK Release assinado e AAB. Sem Secrets, o arquivo é Debug de teste e não preserva necessariamente a assinatura entre execuções.
 - Releases são prévias, não substituem a futura revisão da Google Play e nem os ensaios reais.
@@ -204,3 +204,7 @@ A `RemoteScreenActivity` mantém o vídeo como camada de fundo do `FrameLayout` 
 ## Recuperar dados (alpha.45)
 
 O monitorado usa `ACTION_OPEN_DOCUMENT_TREE` para o usuário selecionar diretamente a pasta autorizada. A permissão persistida de leitura é mantida até revogação; sem árvore ou permissão, o servidor rejeita pedidos mesmo de clientes com chave válida. `SharedDataFolder` reenumera os filhos a cada componente do caminho relativo, recusa `..` e separadores, limita 12 níveis/150 nomes e não aceita IDs de documentos externos enviados pelo controlador. O servidor resolve metadados, limita leitura a 32 MiB por arquivo e transmite blocos de até 48 KiB no envelope AES-GCM habitual. O controlador verifica hash SHA-256 dos blocos, tamanho e alteração de tamanho/data da origem, exige `ACTION_CREATE_DOCUMENT` para salvar a cópia e tenta descartar o documento parcial em caso de falha. A escolha de pastas privadas e a recuperação de arquivos apagados são limitações do Android/SAF e não estão implementadas.
+
+## UI ADB alpha.50 e descoberta automática
+
+`AdbActivity` é uma tela principal compacta com diálogo de seleção de papel, método QR/código e controles opcionais. Depois que `AdbClient.pair()` retorna com sucesso, `AdbDiscovery` procura `_adb-tls-connect` no mesmo endereço obtido do serviço de pareamento; `AdbAutoConnectPolicy` ignora outros IPs e serviços de pareamento. Em caso de ambiguidade/erro, exige fallback manual. Reconexão consulta `AdbKnownDevices` e confirma divergências de modelo. As credenciais não são gravadas no histórico, e o ADB é encerrado ao sair da Activity. A identificação não é atestado criptográfico do dispositivo.
