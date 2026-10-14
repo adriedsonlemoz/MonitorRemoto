@@ -41,8 +41,11 @@ internal fun MainActivity.displayResult(root: JSONObject, fromCache: Boolean = f
         actionTile(R.drawable.ic_message, "Mensagens", "SMS e respostas", enabled = true) {
             openRemoteMessagesScreen()
         },
-        actionTile(R.drawable.ic_monitor, "Ver tela", "Em breve") {
-            showFeatureSoon("Ver tela", "A transmissão exigirá permissão de captura concedida no aparelho monitorado.")
+        actionTile(R.drawable.ic_monitor, "Ver tela", "Ao vivo · autorizado", enabled = true) {
+            startActivity(Intent(this, RemoteScreenActivity::class.java).apply {
+                putExtra(RemoteScreenActivity.EXTRA_HOST, br.dev.monitorremoto.core.SettingsStore.getRemoteHost(this@displayResult))
+                putExtra(RemoteScreenActivity.EXTRA_METHOD, remoteConnection.method)
+            })
         },
         actionTile(R.drawable.ic_pin, "Localização", "Em breve") {
             showFeatureSoon("Localização", "A localização remota dependerá de permissão explícita no aparelho monitorado.")

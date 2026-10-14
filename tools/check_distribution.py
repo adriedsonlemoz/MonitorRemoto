@@ -16,7 +16,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.33" and code.group(1) == "33", "Versões incompatíveis"
+assert version == "0.1.0-alpha.34" and code.group(1) == "34", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -429,3 +429,26 @@ assert 'authentication' in sensitive and 'verification' in sensitive
 assert '!SensitiveContent.isSensitive(it.title, it.preview)' in journal
 assert 'EnglishAuthentication' in (root / 'app/src/test/java/br/dev/monitorremoto/core/SensitiveContentTest.kt').read_text()
 print('PASSOU: alpha.33, central de Mensagens em página própria, abas, filtro OTP multilíngue, sem diálogo enorme')
+
+# alpha.34: captura somente com consentimento local, foreground visível e sessão efêmera.
+screen = (root / 'app/src/main/java/br/dev/monitorremoto/capture/ScreenShareService.kt').read_text()
+frame_store = (root / 'app/src/main/java/br/dev/monitorremoto/capture/ScreenFrameStore.kt').read_text()
+viewer = (root / 'app/src/main/java/br/dev/monitorremoto/ui/RemoteScreenActivity.kt').read_text()
+assert 'android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION' in manifest
+assert 'android:foregroundServiceType="mediaProjection"' in manifest
+assert 'android:name=".ui.RemoteScreenActivity"' in manifest
+assert 'createScreenCaptureIntent()' in ui and 'screenCaptureRequest' in main_ui
+assert 'if (resultCode == Activity.RESULT_OK && data != null' in main_ui
+assert 'FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION' in screen
+assert 'getMediaProjection(resultCode, grant)' in screen and 'registerCallback(' in screen
+assert 'override fun onStop()' in screen and 'override fun onCapturedContentResize' in screen
+assert 'START_NOT_STICKY' in screen and 'ACTION_STOP' in screen
+assert 'fun stop()' in frame_store and 'STALE_MS = 3_000L' in frame_store
+assert 'MAX_JPEG_BYTES = 110_000' in frame_store
+assert '"screenFrame"' in server and 'ScreenFrameStore.snapshot()' in server
+assert 'fun screenFrame(' in client and 'RemoteClient.screenFrame(' in viewer
+assert '"Ver tela", "Ao vivo' in module_ui['RemoteDashboardUi.kt']
+assert 'createVirtualDisplay(' in screen and 'createVirtualDisplay(' not in viewer
+assert 'MediaProjectionManager' not in viewer
+assert 'ScreenShareService.stop(this)' in monitor_service
+print('PASSOU: alpha.34, projeção autorizada, FGS visível, frame criptografado/volátil, sem reinício oculto')

@@ -1,4 +1,4 @@
-# Arquitetura (0.1.0-alpha.33)
+# Arquitetura (0.1.0-alpha.34)
 
 ```text
 MONITORADO                                      CONTROLE
@@ -17,11 +17,17 @@ O FGS `connectedDevice` mantém o socket de escuta durante monitoramento ativo. 
 
 **Limites:** TCP não faz NAT traversal; internet depende da VPN, rede de dispositivos ou infraestrutura futura. O monitor não envia push para o controlador; este consulta quando aberto. OS/fabricantes podem encerrar/restringir o serviço. Testes reais em Android 13–17 são pendentes. Esquemas de sincronização e políticas granulares ainda não estão implementados.
 
+## Compartilhamento de tela (alpha.34)
+
+`MainActivity` no Monitorado solicita `MediaProjectionManager.createScreenCaptureIntent()` e inicia `ScreenShareService` (foregroundServiceType `mediaProjection`) **somente** após autorização na interface do Android. Um `MediaProjection` novo corresponde a exatamente uma chamada `createVirtualDisplay`. Listener `onStop` limpa quadro e encerra serviço; `onCapturedContentResize` redimensiona a superfície sem criar outra projeção. Nenhum receiver reinicia o ScreenShareService em segundo plano.
+
+A captura usa `ImageReader` RGBA, `Bitmap` JPEG com largura máxima 540 px, taxa 1 fps, até 110 KiB/frame e sem persistência. `ScreenFrameStore` mantém somente o quadro atual em RAM com validade de 3 s. Solicitações `screenFrame` são autenticadas via AES-GCM (versão exata, timestamp, nonce contra replay) na mesma porta TCP. O controlador decodifica e mostra na `RemoteScreenActivity` enquanto visível; nunca salva ou grava. **Não confundir 1 fps com vídeo fluido.** O Android protege conteúdo `FLAG_SECURE` e exige consentimento renovado após parada; o monitor não contorna.
+
 ## Distribuição e assinatura
 
-O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.33` e `versionCode=33`.
+O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.34` e `versionCode=34`.
 
-- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.33.apk`.
+- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.34.apk`.
 - `upload-artifact` sempre distribui um ZIP; GitHub Releases recebe o **arquivo APK direto**.
 - Com quatro Secrets, Gradle gera APK Release assinado e AAB. Sem Secrets, o arquivo é Debug de teste e não preserva necessariamente a assinatura entre execuções.
 - Releases são prévias, não substituem a futura revisão da Google Play e nem os ensaios reais.

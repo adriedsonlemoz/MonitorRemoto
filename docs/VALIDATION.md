@@ -367,3 +367,12 @@
 - Kotlin PSI: **65 fontes `.kt`, nenhum erro sintático** (incluindo testes).
 - Smoke test Kotlin/JVM sem Android SDK: 7 amostras de OTP bloqueadas, 3 mensagens comuns preservadas, 1 teste de app financeiro bloqueado.
 - Integridade do ZIP e XML de Manifest conferidos; Gradle/Android completo não compilado neste ambiente.
+
+
+## alpha.34 (14/10/2026)
+
+- Ver tela (preview 1 fps) usando a autorização local explícita `MediaProjection` do Android, `ScreenShareService` do tipo foreground `mediaProjection`, indicação/ação de parada e frame transitório cifrado no protocolo já autenticado.
+- Checkpoints: consentimento por sessão, token único por `createVirtualDisplay`, `onStop`, callback de resize, limite 110 KiB/3 s e sem persistência.
+- [ ] **Compilação Android completa** `:app:assembleDebug :app:testDebugUnitTest :app:lintDebug` no GitHub Actions.
+- [ ] **Teste físico em dois aparelhos**: consentimento concedido/negado, rotação, bloqueio da tela, parada pela notificação, queda/reconexão Wi-Fi, force-stop, memórias/carga de CPU, frames protegidos por FLAG_SECURE.
+- [ ] Validar tela no Redmi/Android 14+ e medir FPS/tráfego, sem assumir vídeo fluido.

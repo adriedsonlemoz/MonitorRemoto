@@ -1,6 +1,13 @@
-# Monitor Remoto v0.1.0-alpha.33
+# Monitor Remoto v0.1.0-alpha.34
 
-## Principal novidade: central de mensagens
+## Principal novidade: Ver tela com consentimento
+
+- **Controlador**: botão Ver tela abre visualização autenticada em página própria. Prévia de 1 imagem/s, sem áudio ou comandos de toque.
+- **Monitorado**: Compartilhar tela solicita autorização MediaProjection do Android em cada sessão; serviço foreground notifica continuamente e permite parar. Sem captura furtiva nem retomada após reboot ou force-stop.
+- Imagem comprimida até 540 px/110 KiB, quadro efêmero RAM (3 segundos) e resposta protegida por AES-GCM/replay. Rotação tratada por redimensionamento e parada por callback da projeção.
+- Compilação Android e testes com aparelhos reais pendentes; versão exata alpha.34 em ambos.
+
+## Central de mensagens (alpha.33)
 
 - Mensagens em tela própria, abas SMS e Notificações, ações compactas Copiar e Responder, controle de volta/atualização.
 - Filtros de autenticação multilíngues corrigidos e aplicados também na leitura dos registros antes da transmissão. Mensagens não ficam gravadas no aparelho controlador.
@@ -19,7 +26,7 @@
 - Opção explícita para notificações de todos os aplicativos elegíveis ou lista individual. Filtros de aplicativos financeiros, notificações secretas e códigos suspeitos continuam.
 - Botões **Copiar** e **Responder** nas telas de SMS/notificações. Responder via `RemoteInput` ou SMS com revisão/confirmacão e autorização separadas.
 - Remoção de `FLAG_SECURE` somente dos diálogos de Mensagens e respostas, para capturas de tela. QR e credenciais continuam protegidos.
-- `versionCode 33` e versão exata exigida em ambos os aparelhos.
+- `versionCode 34` e versão exata exigida em ambos os aparelhos.
 
 ## Limites e testes pendentes
 

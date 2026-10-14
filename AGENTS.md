@@ -1,4 +1,4 @@
-# Monitor Remoto 0.1.0-alpha.33
+# Monitor Remoto 0.1.0-alpha.34
 # Convenções permanentes do projeto Monitor Remoto
 
 - Toda alteração de código incrementa sequencialmente `versionCode` e `versionName` (ex.: `0.1.0-alpha.8` -> `0.1.0-alpha.9`). Sincronizar tela, README, CHANGELOG, RELEASE_NOTES e documentação.
@@ -6,7 +6,7 @@
 - O GitHub Actions `upload-artifact` sempre entrega ZIP ao baixar um Artifact. Publicar Artifact APK só se Release falhar ou for ignorada, evitando duas fontes para a mesma execução. Para **APK direto**, o workflow **também deve publicar o `.apk` como arquivo de uma GitHub Release** (em workflow_dispatch e push ao branch padrão). Não confundir o pacote ZIP de código-fonte com o APK.
 - Opcional: com KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS e KEY_PASSWORD, gerar APK Release assinado estável e AAB Release; nunca armazenar keystore ou segredos no repositório nem em arquivos públicos.
 - Sem Secrets, somente APK Debug para testes, com assinatura temporária; avisar que o APK pode não atualizar sem reinstalação.
-- Não acrescentar serviços de acessibilidade, captura de tela, sobreposição ou vigilância oculta. A alpha.30 inclui leitura opcional de SMS somente após autorização local explícita e READ_SMS, que pode ser bloqueada pelo Android; não contornar permissões restritas. Consentimento expresso; lista positiva de notificações vazia por padrão.
+- Não acrescentar serviços de acessibilidade, sobreposição ou vigilância oculta. Captura de tela só por MediaProjection, com consentimento oficial por sessão e indicação/controle visíveis no monitorado. A alpha.30 inclui leitura opcional de SMS somente após autorização local explícita e READ_SMS, que pode ser bloqueada pelo Android; não contornar permissões restritas. Consentimento expresso; lista positiva de notificações vazia por padrão.
 - Funcionar primeiro na rede local; não expor a porta na internet pública. Preservar criptografia, parada visível e conexão autenticada.
 - Ao entregar versão, reportar status verdadeiro do build Android e disponibilizar ZIP do fonte e, somente após compilação bem-sucedida, o APK; priorizar cópia do fonte no Google Drive.
 
@@ -21,7 +21,7 @@
 - Alpha.10: manter tema **claro padrão**, as opções da engrenagem, janela Conectar, botão de atualização compacto, lista de até 5 aparelhos recentes e os dados do Controle no topo. Não reintroduzir formulário longo na tela principal.
 - Credenciais por dispositivo usam `RecentDevices` + `SecretVault.profileKeyName`, com migração única da alpha.9. Não reaproveitar `CONTROLLER_KEY` antigo para IPs novos nem gravar segredo em preferências sem criptografia. Esquecer apaga o segredo correspondente.
 - Respostas HTTP/TCP não são conexão persistente. Exibir "Conectado" apenas após consulta autenticada bem-sucedida e "Sem resposta" após erro. Não inventar tempos de atualização.
-- Próxima versão sequencial: `0.1.0-alpha.34`, `versionCode 34`.
+- Próxima versão sequencial: `0.1.0-alpha.35`, `versionCode 35`.
 
 - Alpha.15: preservar a seleção Conectar → QR/Manual/Salvos, confirmação do QR antes de parear, cartões salvos com três ações e o scanner em Activity com tema Dialog.
 
@@ -66,3 +66,5 @@
 - Alpha.32: Configurações ocupam um módulo de navegação (`mode=3`) com categorias; não devolver um `AlertDialog` único longo. Toda seção retorna às categorias antes de sair do módulo, preservando tela anterior e preferências. O serviço foreground monitora o listener TCP efetivo e recria apenas o servidor em caso de falha, com backoff e diagnóstico. `START_STICKY` cobre recriação oportunista após morte de processo, mas nunca prometer reinício após force-stop pelo usuário ou políticas do fabricante. Parada explícita permanece parada; não criar alarmes agressivos nem novos acessos silenciosos. Conservar o protocolo criptografado e versão exata.
 
 - Alpha.33: Mensagens é uma página de controle (`mode=4`) com abas SMS/Notificações, sem AlertDialog gigante. Não persistir mensagem recebida em Bundle/disco. Respostas continuam exigindo confirmação. A fonte deve filtrar OTP em PT/EN (incluindo “authentication code”), EventJournal revalida antes de transmitir e a UI filtra novamente antes de mostrar/copiar. Não remover FLAG_SECURE de QR/credenciais.
+
+- Alpha.34: `Ver tela` somente após consentimento do Android no dispositivo monitorado. Um token MediaProjection por sessão, foregroundServiceType `mediaProjection`, notificação e botão Parar local. Sem capturar/retomar no boot ou depois de parada; não adicionar Accessibility nem injeção de toque. `ScreenFrameStore` é volátil e limitado a 1 quadro/s / 110 KiB / expiração 3 s; `screenFrame` usa a mesma chave, AES-GCM, nonce antirreplay e versão exata. O controlador só consulta enquanto a Activity estiver visível. Sem áudio, gravação ou persistência. Testar no Android 14+ (token único e consentimento por sessão), rotação e bloqueio da tela.

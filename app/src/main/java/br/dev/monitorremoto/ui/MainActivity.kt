@@ -72,6 +72,7 @@ class MainActivity : Activity() {
     private var settingsReturnMode = 2
     internal val cameraPermissionRequest = 4317
     internal val qrScanRequest = 4318
+    internal val screenCaptureRequest = 4319
     private val notificationPermissionRequest = 101
     internal val phoneNumberPermissionRequest = 103
     internal val smsReadPermissionRequest = 104
@@ -95,7 +96,8 @@ class MainActivity : Activity() {
     private fun showIncomingAccessIfNeeded(): Boolean {
         if (!active || showingIncoming || isFinishing || isDestroyed ||
             !SettingsStore.isMonitorEnabled(this) || !MonitorService.isRunning ||
-            AuthenticatedAccess.recent().isEmpty()) return false
+            AuthenticatedAccess.recent().isEmpty() ||
+            br.dev.monitorremoto.capture.ScreenFrameStore.sharing) return false
         showingIncoming = true
         startActivity(Intent(this, IncomingAccessActivity::class.java))
         // Fecha também os diálogos abertos na Activity anterior.
@@ -357,9 +359,25 @@ class MainActivity : Activity() {
     @Deprecated("Compatibilidade com a Activity Android nativa")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode != qrScanRequest || resultCode != Activity.RESULT_OK) return
-        val scanned = data?.getStringExtra(QrScanActivity.EXTRA_QR_RESULT) ?: return
-        confirmQrCode(scanned)
+        if (requestCode == screenCaptureRequest) {
+            if (resultCode == Activity.RESULT_OK && data != null &&
+                SettingsStore.isMonitorEnabled(this) && MonitorService.isRunning) {
+                try {
+                    val serviceIntent = Intent(this, br.dev.monitorremoto.capture.ScreenShareService::class.java)
+                        .setAction(br.dev.monitorremoto.capture.ScreenShareService.ACTION_START)
+                        .putExtra(br.dev.monitorremoto.capture.ScreenShareService.EXTRA_RESULT_CODE, resultCode)
+                        .putExtra(br.dev.monitorremoto.capture.ScreenShareService.EXTRA_RESULT_DATA, data)
+                    if (Build.VERSION.SDK_INT >= 26) startForegroundService(serviceIntent)
+                    else startService(serviceIntent)
+                    message("Autorização recebida. Compartilhamento indicado na barra de notificações.")
+                } catch (error: Exception) { message("Não foi possível iniciar a captura: ${error.message}") }
+            } else message("Compartilhamento de tela não autorizado.")
+            return
+        }
+        if (requestCode == qrScanRequest && resultCode == Activity.RESULT_OK) {
+            val scanned = data?.getStringExtra(QrScanActivity.EXTRA_QR_RESULT) ?: return
+            confirmQrCode(scanned)
+        }
     }
 
     internal fun requestStart() {

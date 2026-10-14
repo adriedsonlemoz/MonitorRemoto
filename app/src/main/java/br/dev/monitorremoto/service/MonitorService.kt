@@ -206,6 +206,7 @@ class MonitorService : Service() {
 
     override fun onDestroy() {
         serviceActive = false
+        br.dev.monitorremoto.capture.ScreenShareService.stop(this)
         mainHandler.removeCallbacks(serverWatchdog)
         if (networkCallbackRegistered) {
             runCatching { networkManager.unregisterNetworkCallback(networkCallback) }

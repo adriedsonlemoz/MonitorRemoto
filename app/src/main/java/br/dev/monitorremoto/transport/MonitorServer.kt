@@ -14,6 +14,8 @@ import br.dev.monitorremoto.core.SmsDeliveryJournal
 import br.dev.monitorremoto.core.MmsMetadataReader
 import br.dev.monitorremoto.core.SensitiveContent
 import br.dev.monitorremoto.capture.NotificationReplyActions
+import br.dev.monitorremoto.capture.ScreenFrameStore
+import android.util.Base64
 import br.dev.monitorremoto.core.SettingsStore
 import br.dev.monitorremoto.security.CryptoBox
 import br.dev.monitorremoto.security.SecretVault
@@ -98,7 +100,7 @@ class MonitorServer(private val context: Context) {
                 val regular = runCatching { WireProtocol.decode(permanentKey, encrypted) }.getOrNull()
                 if (regular != null) {
                     if (regular.optInt("v") != WireProtocol.VERSION ||
-                        regular.optString("op") !in setOf("snapshot", "disconnect", "notificationReply", "smsReply")) return
+                        regular.optString("op") !in setOf("snapshot", "disconnect", "notificationReply", "smsReply", "screenFrame")) return
                     if (abs(now - regular.optLong("ts")) > 5 * 60 * 1000L) return
                     synchronized(seenNonces) {
                         if (!seenNonces.add(nonce)) return
@@ -112,6 +114,22 @@ class MonitorServer(private val context: Context) {
                             .put("op", "versionMismatch")
                             .put("appVersion", AppVersion.NAME)
                         WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(permanentKey, mismatch))
+                        return
+                    }
+                    if (regular.optString("op") == "screenFrame") {
+                        // Um quadro temporário por requisição autenticada; nenhum frame antes da aprovação local.
+                        val frame = ScreenFrameStore.snapshot()
+                        val response = JSONObject().put("v", WireProtocol.VERSION)
+                            .put("op", "screenFrame").put("appVersion", AppVersion.NAME)
+                            .put("sharing", ScreenFrameStore.sharing)
+                        if (frame != null) {
+                            response.put("sequence", frame.sequence)
+                                .put("width", frame.width).put("height", frame.height)
+                                .put("jpeg", Base64.encodeToString(frame.jpeg, Base64.NO_WRAP))
+                        }
+                        WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(permanentKey, response))
+                        AuthenticatedAccess.authenticated(socket.inetAddress?.hostAddress.orEmpty(),
+                            regular.optString("clientId"), regular.optString("clientName"), regular.optString("accessMethod"))
                         return
                     }
                     if (regular.optString("op") == "disconnect") {

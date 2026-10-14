@@ -8,6 +8,9 @@ import android.view.View
 import android.widget.LinearLayout
 import br.dev.monitorremoto.core.SettingsStore
 import br.dev.monitorremoto.service.MonitorService
+import br.dev.monitorremoto.capture.ScreenFrameStore
+import br.dev.monitorremoto.capture.ScreenShareService
+import android.media.projection.MediaProjectionManager
 import br.dev.monitorremoto.transport.AuthenticatedAccess
 
 /** Alpha.22: módulo de interface extraído de MainActivity. Sem estado de conexão próprio. */
@@ -74,6 +77,30 @@ internal fun MainActivity.renderMonitor() {
     }
     card.addView(actions)
     content.addView(card)
+    if (enabled && running) {
+        gap(9)
+        val shareCard = panel(12)
+        shareCard.addView(label("Compartilhamento da tela", 14f, strong = true))
+        shareCard.addView(label(if (ScreenFrameStore.sharing)
+            "● Compartilhando com aparelhos pareados · 1 quadro/s · sem áudio"
+            else "Inativo · exige sua aprovação no Android em cada sessão", 11f, muted = true))
+        sectionGap(shareCard, 5)
+        shareCard.addView(actionButton(if (ScreenFrameStore.sharing) "Parar compartilhamento" else "Compartilhar tela",
+            emphasis = !ScreenFrameStore.sharing) {
+            if (ScreenFrameStore.sharing) {
+                ScreenShareService.stop(this)
+                handler.postDelayed({ if (active && mode == 0) render() }, 300L)
+            } else {
+                showAppConfirm("Compartilhar a tela?",
+                    "O aparelho controlador pareado poderá ver o que aparecer nesta tela, inclusive informações privadas. " +
+                    "O Android solicitará sua autorização. Não há gravação nem controle por toque.", confirmText = "Autorizar captura") {
+                    val manager = getSystemService(MediaProjectionManager::class.java)
+                    startActivityForResult(manager.createScreenCaptureIntent(), screenCaptureRequest)
+                }
+            }
+        })
+        content.addView(shareCard)
+    }
     gap(12)
     if (enabled && running) renderIncomingAccess()
     else content.addView(label("Aguardando ativação do monitoramento.", 12f, muted = true))

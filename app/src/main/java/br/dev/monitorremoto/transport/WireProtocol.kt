@@ -26,8 +26,10 @@ object WireProtocol {
 
     fun receive(input: InputStream, maxBytes: Int): ByteArray {
         val data = java.io.ByteArrayOutputStream()
+        // Buffer local reduz syscalls para envelopes de ~200 KiB de uma imagem JPEG cifrada.
+        val buffered = java.io.BufferedInputStream(input, 8 * 1024)
         while (data.size() < maxBytes) {
-            val byte = input.read()
+            val byte = buffered.read()
             if (byte == -1) throw java.io.EOFException("Conexão interrompida")
             if (byte == 10) return data.toByteArray()
             data.write(byte)
