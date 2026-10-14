@@ -12,6 +12,7 @@ import android.view.WindowManager
 import android.view.View
 import android.widget.Button
 import android.widget.LinearLayout
+import br.dev.monitorremoto.R
 import br.dev.monitorremoto.core.SettingsStore
 import br.dev.monitorremoto.security.CryptoBox
 import br.dev.monitorremoto.security.SecretVault
@@ -49,16 +50,20 @@ internal fun MainActivity.showMyConnectionInfo() {
         }
     val (wrapper, layout) = dialogWrapper()
     dialogIntro(layout, "Use somente entre aparelhos próprios ou autorizados. A chave permite acesso aos dados monitorados.")
-    val card = panel(14)
-    card.addView(label("Endereço IP atual", 12f, muted = true))
-    card.addView(label(ip, 17f, strong = true))
-    sectionGap(card, 6)
-    card.addView(label("Chave de pareamento", 12f, muted = true))
+    val card = panel(15)
+    card.addView(iconSectionHeader(R.drawable.ic_wifi, "Conexão local", "IP atual deste aparelho"))
+    sectionGap(card, 7)
+    card.addView(label(ip, 19f, strong = true))
+    sectionGap(card, 12)
+    card.addView(iconSectionHeader(R.drawable.ic_shield, "Chave de pareamento", "Protegida pelo Android Keystore"))
+    sectionGap(card, 8)
     val keyLabel = label("••••••••••••••••", 14f).apply {
         setTextIsSelectable(false)
         maxLines = 3
         setTextColor(ink)
     }
+    keyLabel.background = shape(fieldColor, 14, true)
+    keyLabel.setPadding(dp(12), dp(12), dp(12), dp(12))
     card.addView(keyLabel)
     layout.addView(card)
     sectionGap(layout, 8)

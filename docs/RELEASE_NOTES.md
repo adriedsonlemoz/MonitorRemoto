@@ -1,18 +1,18 @@
-# Monitor Remoto v0.1.0-alpha.26
+# Monitor Remoto v0.1.0-alpha.27
 
 ## Novidades
 
-- Novo painel conectado, com três indicadores e seis atalhos em grade, próximos ao estilo visual solicitado.
-- **Detalhes do aparelho** abre tela própria organizada em cartões: bateria, Wi-Fi/conexão, rede móvel e chip, armazenamento, RAM e sistema.
-- Dados técnicos coletados do aparelho monitorado e enviados por canal autenticado criptografado. Informações indisponíveis são mostradas como tal.
-- Opção de compartilhar número da linha disponível no aparelho monitorado, **desligada por padrão**. Exige autorização explícita e permissão de sistema; operadora pode não informar número.
-- **Recuperar dados** aparece em funções remotas como **Em breve**. Ainda não permite navegar nem copiar arquivos.
-- Copiar resumo permanece disponível na nova tela de detalhes.
+- Interface padronizada segundo a tela Detalhes do aparelho: cartões arredondados, ícones vetoriais, tipografia curta e disposição compacta.
+- Home com atalhos de conectar e monitorar, lista de aparelhos salvos renovada.
+- Modo Monitorado com indicadores de IP/autorização e três ações em cartões horizontais.
+- Conexão QR/Manual, gerenciamento de aparelhos e configurações internas com cartões ilustrados.
+- Diagnóstico, Sobre, Minhas informações, Gerar QR e leitor de QR acompanham o mesmo padrão.
+- Não há recurso novo de acesso remoto, recuperação de arquivos ou permissão nova nesta versão.
 
-## Instalação
+## Segurança
 
-Instale a alpha.26 nos dois aparelhos; versões diferentes não são aceitas pelo pareamento e pelas consultas.
+As chaves permanecem protegidas; o QR continua temporário, de uso único e com proteção contra captura por FLAG_SECURE. A versão exata deve coincidir nos dois aparelhos. Instale alpha.27 em ambos.
 
-## Validação pendente
+## Verificação
 
-Ainda é necessário compilar o APK pelo GitHub Actions e testar a interface e as leituras em aparelhos reais. Este ZIP contém apenas código-fonte.
+Verificações estáticas e sintáticas podem ser feitas localmente. Compilação Android via GitHub Actions e testes visuais em aparelhos reais ainda são necessários.

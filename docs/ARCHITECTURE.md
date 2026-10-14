@@ -1,4 +1,4 @@
-# Arquitetura (0.1.0-alpha.26)
+# Arquitetura (0.1.0-alpha.27)
 
 ```text
 MONITORADO                                      CONTROLE
@@ -19,9 +19,9 @@ O FGS `connectedDevice` mantém o socket de escuta durante monitoramento ativo. 
 
 ## Distribuição e assinatura
 
-O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.26` e `versionCode=26`.
+O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.27` e `versionCode=27`.
 
-- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.26.apk`.
+- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.27.apk`.
 - `upload-artifact` sempre distribui um ZIP; GitHub Releases recebe o **arquivo APK direto**.
 - Com quatro Secrets, Gradle gera APK Release assinado e AAB. Sem Secrets, o arquivo é Debug de teste e não preserva necessariamente a assinatura entre execuções.
 - Releases são prévias, não substituem a futura revisão da Google Play e nem os ensaios reais.
@@ -140,3 +140,8 @@ No helper `IncomingAccessActivity.infoMetric` em `IncomingAccessScreenUi.kt`, os
 A leitura do número da linha está desligada por padrão e requer escolha explícita **e** permissão `READ_PHONE_NUMBERS` no aparelho monitorado. Se o usuário desligar a opção, o número não é mais incluído em snapshots futuros. A tela de detalhes apresenta dados não retornados como indisponíveis.
 
 O botão de recuperar dados não implementa transferência, acesso a arquivos ou bypass de bloqueio de tela.
+
+
+## Identidade visual alpha.27
+
+`UiComponents.kt` centraliza `iconTile`, `iconMenuRow`, `iconSectionHeader`, `iconMetric`, `twoColumnTiles` e `headerIconButton`. A Home, o Monitorado, os diálogos de Configurações e os fluxos QR/manual reutilizam esses componentes. A Activity mantém sua responsabilidade anterior de navegação, sem permissões novas nem modificação no protocolo.

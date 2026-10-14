@@ -11,6 +11,7 @@ import android.view.WindowManager
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import br.dev.monitorremoto.R
 import br.dev.monitorremoto.core.RecentDevices
 import br.dev.monitorremoto.core.SettingsStore
 import br.dev.monitorremoto.service.MonitorService
@@ -65,21 +66,29 @@ internal fun MainActivity.showPairingQr(ip: String) {
         bitmap.setPixels(pixels, 0, 600, 0, 0, 600, 600)
         val panel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(16), dp(8), dp(16), dp(8))
+            setPadding(dp(18), dp(14), dp(18), dp(14))
         }
-        panel.addView(TextView(this).apply {
-            text = "No aparelho CONTROLADOR, toque em 'Ler QR Code'.\nRede: $ip:${WireProtocol.PORT}"
-            textSize = 14f
-        })
-        val size = minOf(resources.displayMetrics.widthPixels - dp(96), dp(320))
-        panel.addView(ImageView(this).apply {
+        panel.addView(iconSectionHeader(R.drawable.ic_qr, "Pareamento seguro", "Código temporário de uso único"))
+        sectionGap(panel, 12)
+        val size = minOf(resources.displayMetrics.widthPixels - dp(116), dp(300))
+        val qrHolder = LinearLayout(this).apply {
+            gravity = Gravity.CENTER
+            background = shape(surface, 20, true)
+            setPadding(dp(13), dp(13), dp(13), dp(13))
+        }
+        qrHolder.addView(ImageView(this).apply {
             setImageBitmap(bitmap)
             contentDescription = "QR Code de pareamento temporário. Não compartilhe."
-        }, LinearLayout.LayoutParams(size, size).apply { gravity = Gravity.CENTER_HORIZONTAL })
-        panel.addView(TextView(this).apply {
-            text = "Acesso temporário. Expira em 2 minutos ou após o primeiro pareamento. Não compartilhe imagens deste código."
-            textSize = 12f
-        })
+        }, LinearLayout.LayoutParams(size, size))
+        panel.addView(qrHolder, LinearLayout.LayoutParams(-1, -2))
+        sectionGap(panel, 12)
+        val network = iconMenuRow(R.drawable.ic_wifi, "Rede local", "$ip:${WireProtocol.PORT}") {}
+        network.isClickable = false
+        network.isFocusable = false
+        panel.addView(network)
+        sectionGap(panel, 10)
+        panel.addView(label("No aparelho controlador, escolha QR Code e aponte a câmera.", 12.5f))
+        panel.addView(label("Expira em 2 minutos ou após o primeiro pareamento. Não compartilhe a imagem deste QR.", 11.5f, muted = true))
         val dialog = AlertDialog.Builder(this)
             .setTitle("Parear pela rede local")
             .setView(panel)

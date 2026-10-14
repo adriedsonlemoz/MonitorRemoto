@@ -13,6 +13,7 @@ class AppVersionTest {
         assertFalse(AppVersion.compatible("0.1.0-alpha.23"))
         assertFalse(AppVersion.compatible("0.1.0-alpha.24"))
         assertFalse(AppVersion.compatible("0.1.0-alpha.25"))
+        assertFalse(AppVersion.compatible("0.1.0-alpha.26"))
         assertFalse(AppVersion.compatible(null))
         assertTrue(AppVersion.incompatibility("0.1.0-alpha.23").contains("Versões incompatíveis"))
     }

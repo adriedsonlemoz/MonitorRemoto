@@ -106,7 +106,8 @@ private fun MainActivity.showAppearanceDialog() {
     var popup: AlertDialog? = null
     options.forEachIndexed { index, option ->
         val selected = option.first == current
-        layout.addView(dialogCardRow(option.second, option.third, if (selected) "●" else "○", accent = selected) {
+        layout.addView(iconMenuRow(R.drawable.ic_palette, option.second,
+            if (selected) "✓ Selecionado · ${option.third}" else option.third) {
             if (option.first != SettingsStore.theme(this)) {
                 SettingsStore.setTheme(this, option.first)
                 popup?.dismiss()
@@ -125,7 +126,7 @@ private fun MainActivity.showPermissionSettings() {
     val count = SettingsStore.notificationAllowlist(this).size
     val (wrapper, layout) = dialogWrapper()
     dialogIntro(layout, "O monitoramento da bateria funciona sem esta permissão. As notificações só são enviadas para apps autorizados e não financeiros.")
-    layout.addView(dialogCardRow("Acesso às notificações", state, "›") {
+    layout.addView(iconMenuRow(R.drawable.ic_bell, "Acesso às notificações", state) {
         AlertDialog.Builder(this).setTitle("Acesso a notificações (opcional)")
             .setMessage("O Android concede acesso geral às notificações, que podem conter informações sensíveis. Apenas aplicativos escolhidos são transmitidos, com filtros não infalíveis. Você pode revogar o acesso nas Configurações Android. O monitoramento da bateria não exige essa permissão.")
             .setNegativeButton("Cancelar", null)
@@ -134,11 +135,11 @@ private fun MainActivity.showPermissionSettings() {
             }.show()
     })
     sectionGap(layout, 8)
-    layout.addView(dialogCardRow("Aplicativos autorizados", "$count selecionado(s)", "›") { selectNotificationApps() })
+    layout.addView(iconMenuRow(R.drawable.ic_phone, "Aplicativos autorizados", "$count selecionado(s)") { selectNotificationApps() })
     sectionGap(layout, 8)
     val numberEnabled = SettingsStore.sharePhoneNumber(this) &&
         checkSelfPermission(Manifest.permission.READ_PHONE_NUMBERS) == PackageManager.PERMISSION_GRANTED
-    layout.addView(dialogCardRow("Número do chip", if (numberEnabled) "Compartilhamento ativado" else "Desativado (padrão)", "›") {
+    layout.addView(iconMenuRow(R.drawable.ic_sim, "Número do chip", if (numberEnabled) "Compartilhamento ativado" else "Desativado (padrão)") {
         if (numberEnabled) {
             SettingsStore.setSharePhoneNumber(this, false)
             message("Compartilhamento do número desativado. O Android pode manter a permissão concedida, mas o app não transmitirá o número.")
@@ -165,9 +166,9 @@ private fun MainActivity.showPermissionSettings() {
 private fun MainActivity.showSecuritySettings() {
     val (wrapper, layout) = dialogWrapper()
     dialogIntro(layout, "As credenciais são protegidas pelo Android Keystore. Compartilhe a chave somente entre seus próprios aparelhos.")
-    layout.addView(dialogCardRow("Mostrar/copiar chave de pareamento", "Usar conexão manual com IP e chave", "›") { showMonitorKey() })
+    layout.addView(iconMenuRow(R.drawable.ic_shield, "Mostrar/copiar chave", "IP e chave de pareamento protegidos") { showMonitorKey() })
     sectionGap(layout, 8)
-    layout.addView(dialogCardRow("Trocar chave e revogar acessos", "Todos os controladores precisarão parear novamente", "›") { confirmRotateMonitorKey() })
+    layout.addView(iconMenuRow(R.drawable.ic_logout, "Trocar chave e revogar acessos", "Revoga o acesso de todos os controladores", dangerous = true) { confirmRotateMonitorKey() })
     AlertDialog.Builder(this)
         .setTitle("Segurança e pareamento")
         .setView(wrapper)
@@ -196,12 +197,12 @@ private fun MainActivity.showServiceSettings() {
     val autostart = SettingsStore.autoStartEnabled(this)
     val (wrapper, layout) = dialogWrapper()
     dialogIntro(layout, "Controle o comportamento do serviço monitorado neste aparelho.")
-    layout.addView(dialogCardRow("Retomar serviço", "Recupera o monitoramento se estiver autorizado", "›") {
+    layout.addView(iconMenuRow(R.drawable.ic_power, "Retomar serviço", "Recupera o monitoramento se estiver autorizado") {
         if (SettingsStore.isMonitorEnabled(this)) startServiceExplicitly()
         else message("Ative o monitoramento antes de iniciar o serviço.")
     })
     sectionGap(layout, 8)
-    layout.addView(dialogCardRow(if (autostart) "Desativar início após reiniciar" else "Ativar início após reiniciar", "Depende das restrições do Android e do fabricante", "›") {
+    layout.addView(iconMenuRow(R.drawable.ic_clock, if (autostart) "Desativar início após reiniciar" else "Ativar início após reiniciar", "Depende das restrições do Android e do fabricante") {
         SettingsStore.setAutoStart(this, !autostart)
         message("Preferência salva. A inicialização depende das restrições do Android e do fabricante.")
     })
@@ -217,11 +218,23 @@ private fun MainActivity.showDiagnostics() {
     val (wrapper, layout) = dialogWrapper()
     dialogIntro(layout, "Resumo técnico do serviço local e das permissões relacionadas.")
     val card = panel(14)
-    card.addView(dialogMetricRow("Serviço", if (running) "Ativo" else "Parado"))
-    card.addView(dialogMetricRow("Monitoramento autorizado", if (SettingsStore.isMonitorEnabled(this)) "Sim" else "Não"))
-    card.addView(dialogMetricRow("Porta TCP", WireProtocol.PORT.toString()))
+    card.addView(iconSectionHeader(R.drawable.ic_activity, "Serviço e rede", "Estado atual deste aparelho"))
+    sectionGap(card, 12)
+    val firstRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+    firstRow.addView(iconMetric("Serviço", if (running) "Ativo" else "Parado", R.drawable.ic_power),
+        LinearLayout.LayoutParams(0, -2, 1f).apply { rightMargin = dp(9) })
+    firstRow.addView(iconMetric("Monitoramento", if (SettingsStore.isMonitorEnabled(this)) "Autorizado" else "Desativado", R.drawable.ic_shield),
+        LinearLayout.LayoutParams(0, -2, 1f))
+    card.addView(firstRow)
+    sectionGap(card, 9)
+    val secondRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+    secondRow.addView(iconMetric("Porta TCP", WireProtocol.PORT.toString(), R.drawable.ic_wifi),
+        LinearLayout.LayoutParams(0, -2, 1f).apply { rightMargin = dp(9) })
+    secondRow.addView(iconMetric("Notificações", if (hasListener()) "Autorizadas" else "Sem acesso", R.drawable.ic_bell),
+        LinearLayout.LayoutParams(0, -2, 1f))
+    card.addView(secondRow)
+    sectionGap(card, 10)
     card.addView(dialogMetricRow("IP local", localIps().ifBlank { "Indisponível" }))
-    card.addView(dialogMetricRow("Notificações", if (hasListener()) "Autorizadas" else "Sem acesso"))
     card.addView(dialogMetricRow("Apps permitidos", SettingsStore.notificationAllowlist(this).size.toString()))
     layout.addView(card)
     AlertDialog.Builder(this)
@@ -237,12 +250,14 @@ internal fun MainActivity.showAboutDialog() {
     val (wrapper, layout) = dialogWrapper()
     dialogIntro(layout, "Resumo rápido do foco atual do projeto.")
     val card = panel(14)
+    card.addView(iconSectionHeader(R.drawable.ic_info, "Monitor Remoto", "Uso particular e conexão privada"))
+    sectionGap(card, 9)
     card.addView(dialogMetricRow("Versão", AppVersion.NAME))
     card.addView(dialogMetricRow("Tela inicial", "Home com escolha de aparelhos"))
     card.addView(dialogMetricRow("Modo monitorado", "No mesmo APK"))
-    card.addView(dialogMetricRow("Segurança", "Pareamento local e Android Keystore"))
+    card.addView(dialogMetricRow("Segurança", "Pareamento e Android Keystore"))
     layout.addView(card)
-    layout.addView(label("O aplicativo prioriza uso particular, conexão local, privacidade, baixo consumo e permissões explícitas.", 12f, muted = true))
+    layout.addView(label("Privacidade, baixo consumo e permissões explícitas continuam como prioridades.", 12f, muted = true))
     AlertDialog.Builder(this)
         .setTitle("Sobre o Monitor Remoto")
         .setView(wrapper)

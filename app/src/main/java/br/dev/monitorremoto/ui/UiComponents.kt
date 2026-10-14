@@ -153,3 +153,130 @@ internal fun MainActivity.vectorIcon(resource: Int, size: Int, tint: Int = ink):
     scaleType = ImageView.ScaleType.FIT_CENTER
     layoutParams = LinearLayout.LayoutParams(dp(size), dp(size))
 }
+
+/** Alpha.27: linguagem visual unificada para Home, Monitorado, pareamento e configurações.
+ * Os ícones usam os mesmos drawables vetoriais do painel remoto da alpha.26.
+ */
+internal fun MainActivity.iconTile(
+    iconRes: Int,
+    title: String,
+    subtitle: String = "",
+    featured: Boolean = false,
+    onClick: () -> Unit
+): LinearLayout = LinearLayout(this).apply {
+    orientation = LinearLayout.VERTICAL
+    gravity = Gravity.CENTER
+    background = shape(if (featured) highlight else fieldColor, 20, !featured)
+    setPadding(dp(8), dp(14), dp(8), dp(14))
+    minimumHeight = dp(108)
+    isFocusable = true
+    isClickable = true
+    contentDescription = if (subtitle.isBlank()) title else "$title. $subtitle"
+    setOnClickListener { onClick() }
+    addView(vectorIcon(iconRes, 27, if (featured) highlightText else ink).apply {
+        layoutParams = LinearLayout.LayoutParams(dp(27), dp(27)).apply { gravity = Gravity.CENTER_HORIZONTAL }
+    })
+    addView(label(title, 13f, strong = true).apply {
+        gravity = Gravity.CENTER
+        setTextColor(if (featured) highlightText else ink)
+        setPadding(0, dp(11), 0, 0)
+        maxLines = 2
+    })
+    if (subtitle.isNotBlank()) addView(label(subtitle, 10.5f).apply {
+        gravity = Gravity.CENTER
+        setTextColor(if (featured) highlightText else dim)
+        setPadding(0, dp(3), 0, 0)
+        maxLines = 2
+    })
+}
+
+internal fun MainActivity.iconMenuRow(
+    iconRes: Int,
+    title: String,
+    subtitle: String = "",
+    dangerous: Boolean = false,
+    onClick: () -> Unit
+): LinearLayout = LinearLayout(this).apply {
+    orientation = LinearLayout.HORIZONTAL
+    gravity = Gravity.CENTER_VERTICAL
+    background = shape(fieldColor, 18, true)
+    setPadding(dp(12), dp(12), dp(12), dp(12))
+    minimumHeight = dp(64)
+    isClickable = true
+    isFocusable = true
+    contentDescription = "$title. $subtitle"
+    setOnClickListener { onClick() }
+    val symbol = LinearLayout(this@iconMenuRow).apply {
+        background = shape(surface, 14, true)
+        gravity = Gravity.CENTER
+        addView(vectorIcon(iconRes, 23, if (dangerous) android.graphics.Color.rgb(186, 67, 58) else highlight))
+    }
+    addView(symbol, LinearLayout.LayoutParams(dp(44), dp(44)))
+    addView(View(this@iconMenuRow), LinearLayout.LayoutParams(dp(10), 1))
+    val words = LinearLayout(this@iconMenuRow).apply { orientation = LinearLayout.VERTICAL }
+    words.addView(label(title, 14f, strong = true).apply {
+        if (dangerous) setTextColor(android.graphics.Color.rgb(186, 67, 58))
+        setPadding(0, 0, 0, 0)
+    })
+    if (subtitle.isNotBlank()) words.addView(label(subtitle, 11.5f, muted = true).apply {
+        maxLines = 2
+        setPadding(0, dp(3), 0, 0)
+    })
+    addView(words, LinearLayout.LayoutParams(0, -2, 1f))
+    addView(label("›", 20f, muted = true).apply {
+        gravity = Gravity.CENTER
+        setPadding(dp(6), 0, 0, 0)
+    })
+}
+
+internal fun MainActivity.iconSectionHeader(iconRes: Int, title: String, subtitle: String = ""): LinearLayout =
+    LinearLayout(this).apply {
+        orientation = LinearLayout.HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+        addView(vectorIcon(iconRes, 23, highlight))
+        addView(View(this@iconSectionHeader), LinearLayout.LayoutParams(dp(10), 1))
+        val texts = LinearLayout(this@iconSectionHeader).apply { orientation = LinearLayout.VERTICAL }
+        texts.addView(label(title, 17f, strong = true).apply { setPadding(0, 0, 0, 0) })
+        if (subtitle.isNotBlank()) texts.addView(label(subtitle, 11.5f, muted = true).apply { setPadding(0, dp(3), 0, 0) })
+        addView(texts, LinearLayout.LayoutParams(0, -2, 1f))
+    }
+
+internal fun MainActivity.twoColumnTiles(parent: LinearLayout, tiles: List<LinearLayout>) {
+    tiles.chunked(2).forEachIndexed { rowIndex, entries ->
+        val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        entries.forEachIndexed { index, tile ->
+            row.addView(tile, LinearLayout.LayoutParams(0, -2, 1f).apply {
+                if (index == 0) rightMargin = dp(9)
+            })
+        }
+        if (entries.size == 1) row.addView(View(this), LinearLayout.LayoutParams(0, 1, 1f))
+        parent.addView(row)
+        if (rowIndex < (tiles.size - 1) / 2) sectionGap(parent, 9)
+    }
+}
+
+internal fun MainActivity.iconMetric(labelText: String, valueText: String, iconRes: Int): LinearLayout =
+    LinearLayout(this).apply {
+        orientation = LinearLayout.VERTICAL
+        background = shape(fieldColor, 18)
+        setPadding(dp(13), dp(13), dp(10), dp(13))
+        minimumHeight = dp(95)
+        addView(vectorIcon(iconRes, 22, highlight))
+        addView(label(labelText, 11f, muted = true).apply { setPadding(0, dp(7), 0, 0) })
+        addView(label(valueText, 14f, strong = true).apply {
+            setPadding(0, dp(4), 0, 0)
+            maxLines = 2
+        })
+    }
+
+internal fun MainActivity.headerIconButton(iconRes: Int, description: String, onClick: () -> Unit): ImageView =
+    ImageView(this).apply {
+        setImageResource(iconRes)
+        imageTintList = ColorStateList.valueOf(ink)
+        background = shape(surface, 16, true)
+        setPadding(dp(12), dp(12), dp(12), dp(12))
+        isClickable = true
+        isFocusable = true
+        contentDescription = description
+        setOnClickListener { onClick() }
+    }

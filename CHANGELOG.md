@@ -1,5 +1,16 @@
 # Histórico de versões
 
+## 0.1.0-alpha.27 (14/10/2026)
+
+- Padronização visual do aplicativo segundo os cartões, bordas, ícones vetoriais e espaços da tela Detalhes do aparelho da alpha.26.
+- Home redesenhada com dois atalhos lado a lado, aparelhos anteriores em cartões compactos e gestão por menu visual.
+- Modo Monitorado atualizado com ícone de aparelho, informações de IP/acesso em cartões e ações QR/Informações/Interromper em grade horizontal.
+- Conectar reformulado com cartões QR e Manual lado a lado; histórico, diálogos de segurança e formulário manual seguem o mesmo design.
+- Submenus Configurações (Aparência, Permissões, Segurança, Serviço), Diagnóstico e Sobre agora usam opções ilustradas e métricas em cartões.
+- Janelas Minhas informações e Gerar QR reorganizadas com cabeçalhos vetoriais, credencial inicialmente oculta e QR temporário protegido. Leitor QR utiliza cabeçalho e controles coerentes com a nova identidade.
+- Cabeçalho principal usa ícones Android vetoriais; protocolo, credenciais, permissões e fluxo de conexão foram preservados.
+- Compilação Gradle/Android e testes visuais em aparelhos físicos continuam pendentes.
+
 ## 0.1.0-alpha.26 (14/10/2026)
 
 - Painel de controle redesenhado seguindo o layout aprovado: cartões de Bateria, Temperatura e Rede em linha, ícones vetoriais e grade de seis atalhos. Removidos os indicadores redundantes e chips de IP/chave da tela principal.

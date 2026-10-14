@@ -7,6 +7,7 @@ import android.graphics.Color
 import android.text.InputType
 import android.view.View
 import android.widget.LinearLayout
+import br.dev.monitorremoto.R
 import br.dev.monitorremoto.core.RecentDevices
 import br.dev.monitorremoto.core.SettingsStore
 import br.dev.monitorremoto.security.CryptoBox
@@ -15,17 +16,17 @@ internal fun MainActivity.showSavedDeviceOptions(item: RecentDevices.Device) {
     val (wrapper, layout) = dialogWrapper()
     dialogIntro(layout, "${item.name} · ${item.host}")
     var popup: AlertDialog? = null
-    layout.addView(dialogCardRow("Conectar", "Consultar este aparelho", accent = true) {
+    layout.addView(iconMenuRow(R.drawable.ic_phone, "Conectar", "Consultar este aparelho") {
         popup?.dismiss()
         connectSavedDevice(item)
     })
     sectionGap(layout, 8)
-    layout.addView(dialogCardRow("Renomear", "Alterar o nome exibido") {
+    layout.addView(iconMenuRow(R.drawable.ic_info, "Renomear", "Alterar o nome exibido") {
         popup?.dismiss()
         renameSavedDevice(item)
     })
     sectionGap(layout, 8)
-    layout.addView(dialogCardRow("Esquecer", "Apagar a credencial salva") {
+    layout.addView(iconMenuRow(R.drawable.ic_logout, "Esquecer", "Apagar a credencial salva", dangerous = true) {
         popup?.dismiss()
         forgetSavedDevice(item)
     })
@@ -40,35 +41,47 @@ internal fun MainActivity.showSavedDeviceOptions(item: RecentDevices.Device) {
 internal fun MainActivity.showConnectionChooser() {
     RecentDevices.migrateLegacy(this)
     val (wrapper, layout) = dialogWrapper()
-    dialogIntro(layout, "Escolha como conectar.")
+    dialogIntro(layout, "Escolha como conectar. Use o QR Code para um pareamento temporário ou digite IP e chave.")
     var chooser: AlertDialog? = null
     val choices = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-    choices.addView(actionButton("▣ QR Code", emphasis = true) {
+    choices.addView(iconTile(R.drawable.ic_qr, "QR Code", "Ler com a câmera", featured = true) {
         chooser?.dismiss()
         startQrScanner()
-    }, LinearLayout.LayoutParams(0, dp(52), 1f))
-    choices.addView(View(this), LinearLayout.LayoutParams(dp(8), 1))
-    choices.addView(actionButton("⌨ Manual") {
+    }, LinearLayout.LayoutParams(0, -2, 1f))
+    choices.addView(View(this), LinearLayout.LayoutParams(dp(9), 1))
+    choices.addView(iconTile(R.drawable.ic_phone, "Manual", "IP e chave") {
         chooser?.dismiss()
         showManualConnectionDialog()
-    }, LinearLayout.LayoutParams(0, dp(52), 1f))
+    }, LinearLayout.LayoutParams(0, -2, 1f))
     layout.addView(choices)
-    sectionGap(layout, 14)
-    layout.addView(label("Aparelhos anteriores", 15f, strong = true))
+    sectionGap(layout, 16)
+    layout.addView(iconSectionHeader(R.drawable.ic_phone, "Aparelhos anteriores", "Conecte-se usando credenciais salvas"))
+    sectionGap(layout, 10)
     val devices = RecentDevices.list(this)
     if (devices.isEmpty()) {
-        layout.addView(label("Nenhum aparelho salvo.", 12f, muted = true))
+        val empty = panel(14).apply { background = shape(fieldColor, 18) }
+        empty.addView(label("Nenhum aparelho salvo.", 12f, muted = true))
+        layout.addView(empty)
     }
     devices.forEach { item ->
-        val card = panel(10)
-        card.addView(label(item.name, 13.5f, strong = true).apply {
-            maxLines = 2; ellipsize = android.text.TextUtils.TruncateAt.END
+        val card = panel(12).apply { background = shape(fieldColor, 18, true) }
+        val titleRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = android.view.Gravity.CENTER_VERTICAL }
+        val words = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        words.addView(label(item.name, 14f, strong = true).apply {
+            setPadding(0, 0, 0, 0)
+            maxLines = 2
+            ellipsize = android.text.TextUtils.TruncateAt.END
         })
         val seen = if (item.lastSuccessMs == 0L) "Sem acesso confirmado" else formatDate(item.lastSuccessMs)
-        card.addView(label("${item.host} · $seen", 10.5f, muted = true).apply {
-            maxLines = 2; ellipsize = android.text.TextUtils.TruncateAt.END
+        words.addView(label("${item.host} · $seen", 10.5f, muted = true).apply {
+            setPadding(0, dp(3), 0, 0)
+            maxLines = 2
         })
-        sectionGap(card, 6)
+        titleRow.addView(vectorIcon(R.drawable.ic_phone, 23, highlight))
+        titleRow.addView(View(this), LinearLayout.LayoutParams(dp(10), 1))
+        titleRow.addView(words, LinearLayout.LayoutParams(0, -2, 1f))
+        card.addView(titleRow)
+        sectionGap(card, 10)
         val buttons = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         fun addAction(title: String, emphasized: Boolean = false, red: Boolean = false, onClick: () -> Unit) {
             if (buttons.childCount > 0) buttons.addView(View(this), LinearLayout.LayoutParams(dp(5), 1))
@@ -84,7 +97,7 @@ internal fun MainActivity.showConnectionChooser() {
         addAction("Esquecer", red = true) { chooser?.dismiss(); forgetSavedDevice(item) }
         card.addView(buttons)
         layout.addView(card)
-        sectionGap(layout, 7)
+        sectionGap(layout, 8)
     }
     chooser = AlertDialog.Builder(this).setTitle("Conectar aparelho")
         .setView(wrapper).setNegativeButton("Fechar", null).create()
@@ -140,7 +153,7 @@ internal fun MainActivity.showManualConnectionDialog() {
         if (hasSaved) hint = "Chave já salva. Deixe vazio para manter"
     }
     val networkPanel = panel(14)
-    networkPanel.addView(label("1. Endereço do aparelho", 15f, strong = true))
+    networkPanel.addView(iconSectionHeader(R.drawable.ic_wifi, "Endereço do aparelho"))
     networkPanel.addView(label("Digite o IP local completo ou o nome da VPN privada.", 12f, muted = true))
     networkPanel.addView(host)
     networkPanel.addView(label("Sugestão da rede Wi-Fi atual, editável.", 11.5f, muted = true))
@@ -148,7 +161,7 @@ internal fun MainActivity.showManualConnectionDialog() {
     sectionGap(layout, 12)
 
     val keyPanel = panel(14)
-    keyPanel.addView(label("2. Chave de pareamento", 15f, strong = true))
+    keyPanel.addView(iconSectionHeader(R.drawable.ic_shield, "Chave de pareamento"))
     keyPanel.addView(label("Cole a chave ou deixe vazio para usar a chave salva deste IP.", 12f, muted = true))
     keyPanel.addView(key)
     val keyActions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }

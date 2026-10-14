@@ -5,6 +5,7 @@ import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
+import android.content.res.ColorStateList
 import android.graphics.drawable.GradientDrawable
 import android.graphics.ImageFormat
 import android.graphics.SurfaceTexture
@@ -26,8 +27,10 @@ import android.view.TextureView
 import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.LinearLayout
+import android.widget.ImageView
 import android.widget.TextView
 import android.view.WindowManager
+import br.dev.monitorremoto.R
 
 /** Leitor nativo/offline com Camera2 + ZXing Core, sem Activity de captura de terceiros. */
 class QrScanActivity : Activity(), TextureView.SurfaceTextureListener {
@@ -64,14 +67,47 @@ class QrScanActivity : Activity(), TextureView.SurfaceTextureListener {
                 cornerRadius = dp(18).toFloat()
             }
         }
-        root.addView(TextView(this).apply {
+        val heading = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        val qrIcon = ImageView(this).apply {
+            setImageResource(R.drawable.ic_qr)
+            imageTintList = ColorStateList.valueOf(Color.rgb(24, 166, 146))
+            setPadding(dp(9), dp(9), dp(9), dp(9))
+            background = GradientDrawable().apply {
+                setColor(Color.rgb(242, 246, 250))
+                cornerRadius = dp(14).toFloat()
+            }
+        }
+        heading.addView(qrIcon, LinearLayout.LayoutParams(dp(46), dp(46)))
+        val headerText = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(12), 0, 0, 0)
+        }
+        headerText.addView(TextView(this@QrScanActivity).apply {
             text = "Aponte para o QR Code"
-            textSize = 19f
+            textSize = 18f
             setTextColor(Color.rgb(23, 34, 48))
-            setPadding(0, 0, 0, dp(12))
+        })
+        headerText.addView(TextView(this@QrScanActivity).apply {
+            text = "Pareamento privado e temporário"
+            textSize = 11.5f
+            setTextColor(Color.rgb(92, 109, 128))
+        })
+        heading.addView(headerText, LinearLayout.LayoutParams(0, -2, 1f))
+        root.addView(heading)
+        root.addView(TextView(this).apply {
+            text = "Centralize o QR do aparelho monitorado na câmera."
+            textSize = 12f
+            setTextColor(Color.rgb(92, 109, 128))
+            setPadding(0, dp(10), 0, dp(12))
         })
         val cameraFrame = FrameLayout(this).apply {
-            setBackgroundColor(Color.BLACK)
+            background = GradientDrawable().apply {
+                setColor(Color.BLACK)
+                cornerRadius = dp(18).toFloat()
+            }
             clipToOutline = true
         }
         texture = TextureView(this).apply { surfaceTextureListener = this@QrScanActivity }
@@ -85,10 +121,17 @@ class QrScanActivity : Activity(), TextureView.SurfaceTextureListener {
         }
         root.addView(status, LinearLayout.LayoutParams(-1, -2))
         root.addView(Button(this).apply {
-            text = "Cancelar"
+            text = "Cancelar leitura"
             isAllCaps = false
+            textSize = 13f
+            setTextColor(Color.rgb(23, 34, 48))
+            background = GradientDrawable().apply {
+                setColor(Color.rgb(242, 246, 250))
+                cornerRadius = dp(14).toFloat()
+                setStroke(dp(1), Color.rgb(224, 231, 239))
+            }
             setOnClickListener { finish() }
-        }, LinearLayout.LayoutParams(-1, dp(44)))
+        }, LinearLayout.LayoutParams(-1, dp(46)))
         setContentView(root)
     }
 

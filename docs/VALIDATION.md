@@ -292,3 +292,11 @@
 - [ ] Compilação Android completa por Gradle/CI.
 - [ ] Testes visuais em tema claro/escuro e em telas compactas.
 - [ ] Testes físicos de SIM único, dual SIM, sem chip, Android 8-16 e VPN.
+
+## alpha.27: padronização visual (14/10/2026)
+
+- [x] Home, Modo Monitorado, Configurações e Conexão usam cartões e ícones vetoriais comuns.
+- [x] Janelas de QR, leitor QR e credenciais seguem a linguagem do painel conectado.
+- [x] Fluxos de permissão, pareamento, serviço e revogação não foram intencionalmente modificados.
+- [ ] Compilação Android/Gradle completa no GitHub Actions.
+- [ ] Teste manual das telas, tema claro/escuro e em aparelhos com diferentes tamanhos.

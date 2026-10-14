@@ -209,14 +209,11 @@ class MainActivity : Activity() {
             ellipsize = android.text.TextUtils.TruncateAt.END
         })
         header.addView(title, LinearLayout.LayoutParams(0, -2, 1f))
-        header.addView(actionButton("⌂") { navigateHome() }.apply {
-            contentDescription = "Home: voltar à tela inicial"
-            textSize = 22f
-        }, LinearLayout.LayoutParams(dp(45), dp(43)))
-        header.addView(View(this), LinearLayout.LayoutParams(dp(7), 1))
-        header.addView(actionButton("⚙") { showSettingsDialog() }.apply {
-            contentDescription = "Configurações"
-        }, LinearLayout.LayoutParams(dp(45), dp(43)))
+        header.addView(headerIconButton(R.drawable.ic_phone, "Home: voltar à tela inicial") { navigateHome() },
+            LinearLayout.LayoutParams(dp(45), dp(45)))
+        header.addView(View(this), LinearLayout.LayoutParams(dp(8), 1))
+        header.addView(headerIconButton(R.drawable.ic_settings, "Configurações") { showSettingsDialog() },
+            LinearLayout.LayoutParams(dp(45), dp(45)))
         content.addView(header)
 
         val metaRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }

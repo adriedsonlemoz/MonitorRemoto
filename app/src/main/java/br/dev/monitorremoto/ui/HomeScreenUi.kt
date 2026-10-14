@@ -1,9 +1,12 @@
 package br.dev.monitorremoto.ui
 
 import android.app.AlertDialog
+import android.content.res.ColorStateList
 import android.view.Gravity
 import android.view.View
+import android.widget.ImageView
 import android.widget.LinearLayout
+import br.dev.monitorremoto.R
 import br.dev.monitorremoto.core.RecentDevices
 import br.dev.monitorremoto.core.SettingsStore
 import br.dev.monitorremoto.service.MonitorService
@@ -12,98 +15,121 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-/** Alpha.22: módulo de interface extraído de MainActivity. Sem estado de conexão próprio. */
-
-/** Home é sempre navegável mesmo quando o monitor está parado ou sem rede. */
+/** Alpha.27: Home segue os cartões vetoriais e os agrupamentos do painel remoto. */
 internal fun MainActivity.renderHome() {
-    val remoteAccess = AuthenticatedAccess.recent()
-    if (remoteAccess.isNotEmpty() && SettingsStore.isMonitorEnabled(this) && MonitorService.isRunning) {
-        val banner = panel(12)
-        banner.addView(label("● Acesso remoto em andamento", 14f, strong = true).apply {
-            setTextColor(highlight)
+    val recentAccess = AuthenticatedAccess.recent()
+    if (recentAccess.isNotEmpty() && SettingsStore.isMonitorEnabled(this) && MonitorService.isRunning) {
+        val accessCard = panel(15)
+        accessCard.addView(iconSectionHeader(R.drawable.ic_shield, "Acesso remoto recente", "${recentAccess.size} aparelho(s) consultaram este celular"))
+        sectionGap(accessCard, 12)
+        accessCard.addView(iconMenuRow(R.drawable.ic_phone, "Ver acessos", "Identificar consultas autorizadas") {
+            mode = 0
+            render()
         })
-        banner.addView(label("${remoteAccess.size} aparelho(s) consultaram este celular recentemente.", 11f, muted = true))
-        banner.addView(actionButton("Ver acessos") { mode = 0; render() },
-            LinearLayout.LayoutParams(-1, dp(40)))
-        content.addView(banner)
-        gap(9)
+        content.addView(accessCard)
+        gap(12)
     }
-    content.addView(label("O que você deseja fazer?", 20f, strong = true))
-    content.addView(label("Conecte um aparelho ou disponibilize os dados deste celular.", 12f, muted = true))
-    gap(12)
-    content.addView(button("＋  Conectar novo aparelho", emphasis = true) { showConnectionChooser() })
-    gap(12)
+
+    content.addView(label("Seus aparelhos", 21f, strong = true))
+    content.addView(label("Escolha como usar o Monitor Remoto.", 12f, muted = true))
+    gap(14)
+    val shortcuts = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+    twoColumnTiles(shortcuts, listOf(
+        iconTile(R.drawable.ic_qr, "Conectar novo aparelho", "QR Code ou IP", featured = true) {
+            showConnectionChooser()
+        },
+        iconTile(R.drawable.ic_phone, "Monitorar este aparelho", "Compartilhar dados") {
+            mode = 0
+            render()
+        }
+    ))
+    content.addView(shortcuts)
+    gap(15)
 
     val recent = RecentDevices.list(this)
-    val listPanel = panel(14)
-    listPanel.addView(label("Aparelhos anteriores", 16f, strong = true))
-    listPanel.addView(label("Conecte rapidamente ou use a engrenagem para gerenciar cada aparelho.", 12f, muted = true))
-    sectionGap(listPanel, 8)
+    val listPanel = panel(16).apply { background = shape(surface, 24, true) }
+    listPanel.addView(iconSectionHeader(R.drawable.ic_phone, "Aparelhos anteriores", "Conexões salvas neste celular"))
+    sectionGap(listPanel, 14)
     if (recent.isEmpty()) {
-        listPanel.addView(label("Nenhum aparelho salvo. Escolha Conectar novo aparelho para começar.", 12f, muted = true))
+        val empty = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            background = shape(fieldColor, 20)
+            setPadding(dp(18), dp(24), dp(18), dp(24))
+        }
+        empty.addView(vectorIcon(R.drawable.ic_qr, 32, dim))
+        empty.addView(label("Nenhum aparelho salvo", 14f, strong = true).apply { gravity = Gravity.CENTER })
+        empty.addView(label("Use Conectar novo aparelho para iniciar um pareamento.", 11.5f, muted = true).apply {
+            gravity = Gravity.CENTER
+        })
+        listPanel.addView(empty)
     } else {
         recent.forEachIndexed { index, item ->
-            if (index != 0) sectionGap(listPanel, 9)
-            val devicePanel = panel(11)
-            val actions = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
+            if (index != 0) sectionGap(listPanel, 10)
+            val device = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                background = shape(fieldColor, 20, true)
+                setPadding(dp(13), dp(13), dp(13), dp(13))
             }
-            actions.addView(label(item.name, 14f, strong = true).apply {
+            val heading = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+            val iconHolder = LinearLayout(this).apply {
+                gravity = Gravity.CENTER
+                background = shape(surface, 14, true)
+                addView(vectorIcon(R.drawable.ic_phone, 24, highlight))
+            }
+            heading.addView(iconHolder, LinearLayout.LayoutParams(dp(46), dp(46)))
+            heading.addView(View(this), LinearLayout.LayoutParams(dp(10), 1))
+            val labels = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+            labels.addView(label(item.name, 14.5f, strong = true).apply {
                 maxLines = 2
                 ellipsize = android.text.TextUtils.TruncateAt.END
-            }, LinearLayout.LayoutParams(0, -2, 1f))
-            actions.addView(View(this), LinearLayout.LayoutParams(dp(6), 1))
-            actions.addView(actionButton("Conectar", emphasis = true) {
-                connectSavedDevice(item)
-            }.apply {
-                minWidth = 0
-                textSize = 11.5f
-                setPadding(dp(4), 0, dp(4), 0)
-            }, LinearLayout.LayoutParams(dp(84), dp(44)))
-            actions.addView(View(this), LinearLayout.LayoutParams(dp(6), 1))
-            actions.addView(actionButton("⚙") {
-                showHomeSavedDeviceOptions(item)
-            }.apply {
-                textSize = 18f
-                contentDescription = "Gerenciar ${item.name}: renomear ou esquecer"
-                minWidth = 0
                 setPadding(0, 0, 0, 0)
-            }, LinearLayout.LayoutParams(dp(44), dp(44)))
-            devicePanel.addView(actions)
-            devicePanel.addView(label("IP: ${item.host}", 12f, muted = true))
+            })
+            labels.addView(label(item.host, 11.5f, muted = true).apply { setPadding(0, dp(4), 0, 0) })
+            heading.addView(labels, LinearLayout.LayoutParams(0, -2, 1f))
+            device.addView(heading)
             val lastUsed = if (item.lastSuccessMs > 0L)
                 SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date(item.lastSuccessMs))
                 else "ainda sem conexão confirmada"
-            devicePanel.addView(label("Última conexão: $lastUsed", 11f, muted = true))
-            listPanel.addView(devicePanel)
+            device.addView(label("Última conexão: $lastUsed", 11f, muted = true).apply { setPadding(0, dp(7), 0, dp(8)) })
+            val buttons = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+            buttons.addView(actionButton("Conectar", emphasis = true) { connectSavedDevice(item) },
+                LinearLayout.LayoutParams(0, dp(44), 1f))
+            buttons.addView(View(this), LinearLayout.LayoutParams(dp(9), 1))
+            val settings = ImageView(this).apply {
+                setImageResource(R.drawable.ic_settings)
+                imageTintList = ColorStateList.valueOf(ink)
+                setPadding(dp(12), dp(12), dp(12), dp(12))
+                background = shape(surface, 14, true)
+                contentDescription = "Gerenciar ${item.name}: renomear ou esquecer"
+                isClickable = true
+                isFocusable = true
+                setOnClickListener { showHomeSavedDeviceOptions(item) }
+            }
+            buttons.addView(settings, LinearLayout.LayoutParams(dp(44), dp(44)))
+            device.addView(buttons)
+            listPanel.addView(device)
         }
     }
     content.addView(listPanel)
-    gap(14)
-
-    val monitorCard = panel(14)
-    monitorCard.addView(label("Monitorar este aparelho", 16f, strong = true))
-    monitorCard.addView(label("Permite que outro celular consulte os dados deste aparelho.", 12f, muted = true))
-    sectionGap(monitorCard, 9)
-    monitorCard.addView(actionButton("Abrir tela do aparelho ›") {
-        mode = 0
-        render()
-    }, LinearLayout.LayoutParams(-1, dp(48)))
-    content.addView(monitorCard)
 }
 
-/** O menu da engrenagem de cada aparelho contém apenas ações de gerenciamento. */
+/** Opções de um aparelho ficam em cartões com ícones, sem lista nativa simples. */
 private fun MainActivity.showHomeSavedDeviceOptions(item: RecentDevices.Device) {
     val (wrapper, layout) = dialogWrapper()
     dialogIntro(layout, "${item.name} · ${item.host}")
     var popup: AlertDialog? = null
-    layout.addView(dialogCardRow("Renomear", "Alterar o nome do aparelho salvo") {
+    layout.addView(iconMenuRow(R.drawable.ic_phone, "Conectar", "Abrir este aparelho salvo") {
+        popup?.dismiss()
+        connectSavedDevice(item)
+    })
+    sectionGap(layout, 9)
+    layout.addView(iconMenuRow(R.drawable.ic_info, "Renomear", "Alterar o nome do aparelho salvo") {
         popup?.dismiss()
         renameSavedDevice(item, returnToChooser = false)
     })
-    sectionGap(layout, 8)
-    layout.addView(dialogCardRow("Esquecer aparelho", "Excluir a chave e remover este aparelho da lista") {
+    sectionGap(layout, 9)
+    layout.addView(iconMenuRow(R.drawable.ic_logout, "Esquecer aparelho", "Remover credencial e histórico local", dangerous = true) {
         popup?.dismiss()
         forgetSavedDevice(item, returnToChooser = false)
     })
@@ -114,4 +140,3 @@ private fun MainActivity.showHomeSavedDeviceOptions(item: RecentDevices.Device) 
         .create()
     popup.show()
 }
-

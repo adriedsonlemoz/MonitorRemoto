@@ -14,60 +14,65 @@ import br.dev.monitorremoto.transport.AuthenticatedAccess
 
 /** Tela monitorada: ações agrupadas à direita do cartão, sem botões longos. */
 internal fun MainActivity.renderMonitor() {
-    content.addView(label("Modo monitorado · este celular", 18f, strong = true))
+    content.addView(label("Modo monitorado", 21f, strong = true))
     content.addView(label("Compartilhe dados somente com aparelhos autorizados.", 12f, muted = true))
-    gap(9)
+    gap(13)
     val enabled = SettingsStore.isMonitorEnabled(this)
     val running = MonitorService.isRunning
-    val card = panel(14)
-    val columns = LinearLayout(this).apply {
-        orientation = LinearLayout.HORIZONTAL
-        gravity = Gravity.TOP
+    val card = panel(17).apply { background = shape(surface, 24, true) }
+    val header = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+    val iconHolder = LinearLayout(this).apply {
+        gravity = Gravity.CENTER
+        background = shape(fieldColor, 17)
+        addView(vectorIcon(br.dev.monitorremoto.R.drawable.ic_phone, 31, highlight))
     }
-    val details = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-    details.addView(label("Este aparelho", 17f, strong = true))
+    header.addView(iconHolder, LinearLayout.LayoutParams(dp(62), dp(62)))
+    header.addView(View(this), LinearLayout.LayoutParams(dp(12), 1))
+    val headerText = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+    headerText.addView(label("Este aparelho", 17f, strong = true).apply { setPadding(0, 0, 0, 0) })
     val state = when {
         !enabled -> "● Monitoramento inativo"
         running -> "● Monitoramento ativo"
         else -> "● Serviço sem execução"
     }
-    details.addView(label(state, 13.5f, strong = true).apply {
+    headerText.addView(label(state, 12.5f, strong = true).apply {
+        setPadding(0, dp(6), 0, 0)
         setTextColor(if (enabled && running) highlight else if (enabled) Color.rgb(190, 88, 61) else dim)
     })
-    val preferred = preferredLocalAddress()
-    details.addView(label("IP: ${preferred ?: "rede indisponível"}", 12.5f).apply {
-        maxLines = 3
-        ellipsize = android.text.TextUtils.TruncateAt.END
-    })
-    details.addView(label("Acesso autorizado por chave de pareamento.", 11f, muted = true))
-    columns.addView(details, LinearLayout.LayoutParams(0, -2, 1f))
-    columns.addView(View(this), LinearLayout.LayoutParams(dp(10), 1))
+    header.addView(headerText, LinearLayout.LayoutParams(0, -2, 1f))
+    card.addView(header)
+    sectionGap(card, 14)
 
-    val actions = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-    fun addCompact(title: String, emphasize: Boolean = false, onClick: () -> Unit) {
-        if (actions.childCount > 0) sectionGap(actions, 7)
-        actions.addView(actionButton(title, emphasis = emphasize, onClick = onClick).apply {
-            minWidth = 0
-            textSize = 11.5f
-            setPadding(dp(4), 0, dp(4), 0)
-        }, LinearLayout.LayoutParams(-1, dp(46)))
+    val columns = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+    val details = iconMetric("IP da rede", preferredLocalAddress() ?: "Indisponível", br.dev.monitorremoto.R.drawable.ic_wifi)
+    columns.addView(details, LinearLayout.LayoutParams(0, -2, 1f))
+    columns.addView(View(this), LinearLayout.LayoutParams(dp(9), 1))
+    val access = iconMetric("Acesso", "Chave autorizada", br.dev.monitorremoto.R.drawable.ic_shield)
+    columns.addView(access, LinearLayout.LayoutParams(0, -2, 1f))
+    card.addView(columns)
+    sectionGap(card, 16)
+
+    val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+    fun addCompact(title: String, icon: Int, emphasize: Boolean = false, onClick: () -> Unit) {
+        if (actions.childCount > 0) actions.addView(View(this), LinearLayout.LayoutParams(dp(8), 1))
+        val tile = iconTile(icon, title, featured = emphasize, onClick = onClick).apply { minimumHeight = dp(102) }
+        actions.addView(tile, LinearLayout.LayoutParams(0, -2, 1f))
     }
     if (enabled && running) {
-        addCompact("Gerar QR", true) { chooseQrAddress() }
-        addCompact("Mostrar info") { showMyConnectionInfo() }
-        addCompact("Interromper") {
+        addCompact("Gerar QR", br.dev.monitorremoto.R.drawable.ic_qr, true) { chooseQrAddress() }
+        addCompact("Mostrar info", br.dev.monitorremoto.R.drawable.ic_info) { showMyConnectionInfo() }
+        addCompact("Interromper", br.dev.monitorremoto.R.drawable.ic_power) {
             SettingsStore.setMonitorEnabled(this, false)
             stopService(Intent(this, MonitorService::class.java))
             render()
         }
     } else {
-        addCompact(if (enabled) "Retomar" else "Ativar", true) {
+        addCompact(if (enabled) "Retomar" else "Ativar", br.dev.monitorremoto.R.drawable.ic_power, true) {
             if (enabled) startServiceExplicitly() else requestStart()
         }
-        addCompact("Mostrar info") { showMyConnectionInfo() }
+        addCompact("Mostrar info", br.dev.monitorremoto.R.drawable.ic_info) { showMyConnectionInfo() }
     }
-    columns.addView(actions, LinearLayout.LayoutParams(dp(118), -2))
-    card.addView(columns)
+    card.addView(actions)
     content.addView(card)
     gap(12)
     if (enabled && running) renderIncomingAccess()

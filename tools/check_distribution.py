@@ -16,7 +16,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.26" and code.group(1) == "26", "Versões incompatíveis"
+assert version == "0.1.0-alpha.27" and code.group(1) == "27", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -135,12 +135,12 @@ print('PASSOU: alpha.17, Home independente, informações manuais protegidas e r
 # alpha.17: não reapresentar Monitorado como Home; atalhos separados e ação de gerenciamento por aparelho.
 assert 'internal var mode = 2 // 2: início, 0: monitorado, 1: controle' in ui
 assert 'else -> renderHome()' in ui and '0 -> renderMonitor()' in ui and '1 -> {' in ui
-assert '＋  Conectar novo aparelho' in ui and 'Aparelhos anteriores' in ui
+assert 'iconTile(R.drawable.ic_qr, "Conectar novo aparelho"' in ui and 'Aparelhos anteriores' in ui
 assert 'Última conexão: $lastUsed' in ui and 'item.lastSuccessMs > 0L' in ui
 assert 'showHomeSavedDeviceOptions(item)' in ui and 'returnToChooser = false' in ui
-assert 'Abrir tela do aparelho' in ui and 'mode = 0' in ui
-assert 'val columns = LinearLayout(this)' in ui and 'LinearLayout.LayoutParams(dp(118), -2)' in ui
-assert 'addCompact("Gerar QR"' in ui and 'addCompact("Mostrar info")' in ui and 'addCompact("Interromper")' in ui
+assert 'iconTile(R.drawable.ic_phone, "Monitorar este aparelho"' in ui and 'mode = 0' in ui
+assert 'val columns = LinearLayout(this)' in ui and 'iconMetric("IP da rede"' in ui
+assert 'addCompact("Gerar QR"' in ui and 'addCompact("Mostrar info"' in ui and 'addCompact("Interromper"' in ui
 assert 'showMyConnectionInfo()' in ui and 'FLAG_SECURE' in ui
 assert 'startServiceExplicitly()' in ui and 'stopService(Intent(this, MonitorService::class.java))' in ui
 assert 'private fun renderRecentDevicesHome()' not in ui
@@ -154,7 +154,7 @@ assert 'STALE_AFTER_MS = 45_000L' in tracker and 'fun clear()' in tracker
 assert 'AuthenticatedAccess.clear()' in (root / 'app/src/main/java/br/dev/monitorremoto/service/MonitorService.kt').read_text()
 assert 'controllerId' in client and 'clientName' in client and 'accessMethod' in client
 assert 'mode = 2\n    render()' in ui, 'Desconectar não retorna à Home'
-assert 'actionButton("▣ QR Code"' in ui and 'actionButton("⌨ Manual"' in ui
+assert 'iconTile(R.drawable.ic_qr, "QR Code"' in ui and 'iconTile(R.drawable.ic_phone, "Manual"' in ui
 assert 'addAction("Conectar", true)' in ui and 'addAction("Renomear")' in ui
 assert 'addAction("Esquecer", red = true)' in ui
 assert 'addInfoAction(revealButton)' in ui and 'addInfoAction(actionButton("Copiar"' in ui
@@ -299,3 +299,28 @@ assert 'Armazenamento' in details and 'Rede móvel e chip' in details and 'Siste
 assert 'Copiar resumo técnico' in details and 'FLAG_SECURE' in details
 assert len(list((root / 'app/src/main/res/drawable').glob('ic_*.xml'))) >= 25
 print('PASSOU: alpha.26, painel compacto, nova Activity, leitores, consentimento e recursos futuros')
+
+# alpha.27: interface padronizada em módulos sem regressão no fluxo autorizado.
+components = module_ui['UiComponents.kt']
+home = module_ui['HomeScreenUi.kt']
+monitor = module_ui['MonitorScreenUi.kt']
+settings_ui = module_ui['SettingsScreenUi.kt']
+qr_reader = (ui_root / 'QrScanActivity.kt').read_text()
+for function in ['iconTile(', 'iconMenuRow(', 'iconSectionHeader(', 'iconMetric(', 'twoColumnTiles(', 'headerIconButton(']:
+    assert function in components, f'Componente visual alpha.27 ausente: {function}'
+assert 'twoColumnTiles(shortcuts' in home and 'R.drawable.ic_phone' in home and 'showHomeSavedDeviceOptions(item)' in home
+assert 'iconTile(R.drawable.ic_qr, "Conectar novo aparelho"' in home
+assert 'addCompact("Gerar QR"' in monitor and 'addCompact("Mostrar info"' in monitor and 'addCompact("Interromper"' in monitor
+assert 'iconMetric("IP da rede"' in monitor and 'SettingsStore.setMonitorEnabled(this, false)' in monitor
+assert 'options.chunked(2)' in settings_ui and 'iconMenuRow(R.drawable.ic_sim' in settings_ui
+assert 'iconMetric("Porta TCP"' in settings_ui and 'showAppearanceDialog()' in settings_ui
+assert 'iconTile(R.drawable.ic_qr, "QR Code"' in pairing_ui and 'iconTile(R.drawable.ic_phone, "Manual"' in pairing_ui
+assert 'showManualConnectionDialog()' in pairing_ui and 'setOnClickListener' in pairing_ui
+assert 'iconSectionHeader(R.drawable.ic_qr, "Pareamento seguro"' in pairing_qr
+assert 'PairingSession.revoke(offer.session)' in pairing_qr and 'WindowManager.LayoutParams.FLAG_SECURE' in pairing_qr
+assert 'headerIconButton(R.drawable.ic_settings' in main_ui
+assert 'Aponte para o QR Code' in qr_reader and 'this@QrScanActivity' in qr_reader
+assert 'ic_qr' in qr_reader and 'window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)' in qr_reader
+assert 'ClipDescription.EXTRA_IS_SENSITIVE' in credentials_ui
+assert 'assertFalse(AppVersion.compatible("0.1.0-alpha.26"))' in app_version_test
+print('PASSOU: alpha.27, Home, Monitorado, Configurações, QR, credenciais, ícones e versões')
