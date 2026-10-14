@@ -38,8 +38,8 @@ internal fun MainActivity.displayResult(root: JSONObject, fromCache: Boolean = f
         actionTile(R.drawable.ic_bell, "Notificações", if (eventCount > 0) "$eventCount evento(s)" else "", enabled = true) {
             showRemoteNotifications(root)
         },
-        actionTile(R.drawable.ic_message, "Mensagens", "Em breve") {
-            showFeatureSoon("Mensagens", "Não existe leitura direta de mensagens nesta versão.")
+        actionTile(R.drawable.ic_message, "Mensagens", "SMS e respostas", enabled = true) {
+            loadRemoteMessages()
         },
         actionTile(R.drawable.ic_monitor, "Ver tela", "Em breve") {
             showFeatureSoon("Ver tela", "A transmissão exigirá permissão de captura concedida no aparelho monitorado.")

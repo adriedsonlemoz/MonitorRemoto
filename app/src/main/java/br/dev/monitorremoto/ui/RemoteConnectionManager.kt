@@ -74,6 +74,41 @@ internal class RemoteConnectionManager(context: Context) {
         }
     }
 
+    /** Requisita SMS apenas ao abrir Mensagens; não consulta a inbox no polling de 15 s. */
+    fun loadMessages(host: String, onComplete: (Result<JSONObject>) -> Unit) {
+        val key = if (host.isBlank()) null else RecentDevices.key(appContext, host)
+        if (key == null || state != "connected" || cachedHost != host) {
+            onComplete(Result.failure(IllegalStateException("Conecte e atualize o aparelho primeiro.")))
+            return
+        }
+        val accessMethod = method
+        thread(name = "MonitorRemoto-messages-read") {
+            val result = runCatching { RemoteClient.snapshot(host, key, appContext, accessMethod, true) }
+            main.post {
+                if (cachedHost == host && br.dev.monitorremoto.core.SettingsStore.getRemoteHost(appContext) == host)
+                    onComplete(result)
+            }
+        }
+    }
+
+    /** A escolha do controlador pode mudar enquanto a resposta remota trafega. */
+    fun sendMessage(host: String, operation: String, recipient: String, text: String,
+        onComplete: (Result<String>) -> Unit) {
+        val key = if (host.isBlank()) null else RecentDevices.key(appContext, host)
+        if (key == null || state != "connected" || cachedHost != host) {
+            onComplete(Result.failure(IllegalStateException("Atualize a conexão antes de enviar.")))
+            return
+        }
+        val accessMethod = method
+        thread(name = "MonitorRemoto-message") {
+            val result = runCatching { RemoteClient.messageCommand(host, key, appContext,
+                accessMethod, operation, recipient, text) }
+            main.post {
+                if (cachedHost == host && br.dev.monitorremoto.core.SettingsStore.getRemoteHost(appContext) == host) onComplete(result)
+            }
+        }
+    }
+
     /**
      * Callback receives (finished, freshSnapshot). When finished is false the state became loading.
      * A failed request can still have [cached] for the same host, but it is not marked as live data.

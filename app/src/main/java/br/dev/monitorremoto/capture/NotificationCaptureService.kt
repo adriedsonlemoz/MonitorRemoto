@@ -8,8 +8,17 @@ import br.dev.monitorremoto.core.SettingsStore
 import br.dev.monitorremoto.core.SensitiveContent
 
 class NotificationCaptureService : NotificationListenerService() {
+    override fun onNotificationRemoved(sbn: StatusBarNotification?) {
+        sbn?.key?.let { NotificationReplyActions.forget(it) }
+    }
+
+    override fun onListenerDisconnected() {
+        NotificationReplyActions.clear()
+    }
+
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         if (sbn == null || !SettingsStore.isMonitorEnabled(this)) return
+        NotificationReplyActions.forget(sbn.key)
         if (sbn.packageName == packageName) return
         if (sbn.packageName !in SettingsStore.notificationAllowlist(this)) return
         if (SensitiveContent.isBlockedFinancialApp(sbn.packageName, sbn.packageName)) return
@@ -23,6 +32,9 @@ class NotificationCaptureService : NotificationListenerService() {
         val text = extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString()
             ?: extras.getCharSequence(Notification.EXTRA_TEXT)?.toString().orEmpty()
         if (SensitiveContent.isSensitive(title, text)) return
-        EventJournal.add("notificacao", sbn.packageName, title, text)
+        val replyToken = if (SettingsStore.allowNotificationReplies(this)) {
+            NotificationReplyActions.remember(sbn.key, sbn.packageName, notification)
+        } else null
+        EventJournal.add("notificacao", sbn.packageName, title, text, replyToken)
     }
 }

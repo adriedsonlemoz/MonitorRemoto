@@ -1,5 +1,14 @@
 # Histórico de versões
 
+## 0.1.0-alpha.30 (14/10/2026)
+
+- Central **Mensagens** no controlador, com SMS recebidos e notificações autorizadas, data/hora e ações de resposta com confirmação.
+- Leitura opcional de até 30 SMS recebidos usando `READ_SMS`, consultados sob demanda, filtrando indícios de autenticação. Sem armazenamento local, sem `RECEIVE_SMS`, desativado por padrão; no Android a permissão pode ser bloqueada por ser *hard restricted*.
+- Resposta SMS opcional por `SEND_SMS`, apenas para números regulares presentes na caixa recebida, taxa mínima de 20 s entre solicitações e corpo limitado a 500 caracteres; pode gerar cobrança, não confirma entrega.
+- Resposta por notificação usando `Notification.Action` e `RemoteInput`, somente para aplicativos permitidos com ações ativas, token efêmero de uso único e validade de até 10 minutos. Histórico de WhatsApp não é acessado.
+- As três autorizações independentes são desativadas por padrão; pedidos cifrados AES-GCM usam autenticação, nonce antirreplay, versão exata e confirmação de ação no controlador. Revogação limpa os tokens.
+- `versionCode 30`, `versionName/AppVersion.NAME 0.1.0-alpha.30`. A validação sintática/estrutural local não substitui compilação Android, permissões reais ou envio de SMS em aparelhos.
+
 ## 0.1.0-alpha.29 (14/10/2026)
 
 - Corrigido erro de sintaxe de `MonitorScreenUi.kt` (linhas 143–145) apontado no workflow “Gerar APK e Release 29”: a criação/abertura do diálogo de acesso autenticado tinha uma terminação `}.create()` duplicada após o refactor da alpha.28.

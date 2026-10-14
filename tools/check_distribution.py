@@ -8,7 +8,7 @@ gradle = (root / "app/build.gradle.kts").read_text(encoding="utf-8")
 workflow = (root / ".github/workflows/android.yml").read_text(encoding="utf-8")
 ui_root = root / "app/src/main/java/br/dev/monitorremoto/ui"
 main_ui = (ui_root / "MainActivity.kt").read_text(encoding="utf-8")
-modules = ["UiComponents.kt", "HomeScreenUi.kt", "MonitorScreenUi.kt", "SettingsScreenUi.kt", "RemoteDashboardUi.kt", "IncomingAccessScreenUi.kt", "ConnectionScreenUi.kt", "ConnectionController.kt", "PairingScreenUi.kt", "PairingQrUi.kt", "MonitorCredentialsUi.kt", "PairingController.kt", "RemoteConnectionManager.kt"]
+modules = ["UiComponents.kt", "HomeScreenUi.kt", "MonitorScreenUi.kt", "SettingsScreenUi.kt", "RemoteDashboardUi.kt", "IncomingAccessScreenUi.kt", "ConnectionScreenUi.kt", "ConnectionController.kt", "PairingScreenUi.kt", "PairingQrUi.kt", "MonitorCredentialsUi.kt", "PairingController.kt", "RemoteConnectionManager.kt", "RemoteMessagesUi.kt"]
 module_ui = {name: (ui_root / name).read_text(encoding="utf-8") for name in modules}
 ui = main_ui + "\n" + "\n".join(module_ui.values())
 match = re.search(r'\bversionName\s*=\s*"([^"]+)"', gradle)
@@ -16,7 +16,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.29" and code.group(1) == "29", "Versões incompatíveis"
+assert version == "0.1.0-alpha.30" and code.group(1) == "30", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -52,9 +52,9 @@ journal = (root / 'app/src/main/java/br/dev/monitorremoto/core/EventJournal.kt')
 settings = (root / 'app/src/main/java/br/dev/monitorremoto/core/SettingsStore.kt').read_text(encoding='utf-8')
 server = (root / 'app/src/main/java/br/dev/monitorremoto/transport/MonitorServer.kt').read_text(encoding='utf-8')
 assert 'fun clear()' in journal and 'fun retainAllowed(' in journal and 'allowedPackages' in journal
-assert 'if (!enabled || !wasEnabled) EventJournal.clear()' in settings
+assert 'if (!enabled || !wasEnabled) {' in settings and 'EventJournal.clear()' in settings and 'NotificationReplyActions.clear()' in settings
 assert 'EventJournal.retainAllowed(packages)' in settings
-assert 'EventJournal.latestJson(SettingsStore.notificationAllowlist(context))' in server
+assert 'EventJournal.latestJson(SettingsStore.notificationAllowlist(context), SettingsStore.allowNotificationReplies(context))' in server
 assert 'ArrayBlockingQueue<Runnable>(12)' in server and 'ThreadPoolExecutor.AbortPolicy()' in server
 print('PASSOU: limpeza por revogação e limite de fila do servidor declarados')
 
@@ -358,3 +358,24 @@ assert access_actions.count('showManagedDialog(dialog)') == 1, 'O diálogo deve 
 assert '.create().let { showManagedDialog(it) }' not in access_actions, 'Terminação antiga duplicada'
 assert 'showAppConfirm(' in access_actions and 'confirmRotateMonitorKey()' in access_actions
 print('PASSOU: alpha.29, construtor e exibição únicos no diálogo de acesso autenticado')
+
+# alpha.30: consentimentos novos e envio seguro, sem RECEIVER_SMS nem AccessibilityService.
+assert 'android.permission.READ_SMS' in manifest and 'android.permission.SEND_SMS' in manifest
+assert 'android.permission.RECEIVE_SMS' not in manifest
+assert 'android.accessibilityservice' not in manifest
+assert 'getBoolean("share_sms_inbox", false)' in settings
+assert 'getBoolean("allow_sms_replies", false)' in settings
+assert 'getBoolean("allow_notification_replies", false)' in settings
+assert 'smsReadPermissionRequest ->' in main_ui and 'smsSendPermissionRequest ->' in main_ui
+assert 'notificationReply' in server and 'smsReply' in server and 'commandResult' in server
+assert 'NotificationReplyActions.reply' in server and 'SmsReplySender.send' in server
+assert 'if (regular.optBoolean("includeSms")) SmsInboxReader.snapshot(context)' in server
+assert '.put("includeSms", includeSms)' in client
+assert 'fun loadMessages(' in remote_manager
+assert (root / 'app/src/main/java/br/dev/monitorremoto/core/SmsInboxReader.kt').exists()
+assert (root / 'app/src/main/java/br/dev/monitorremoto/capture/NotificationReplyActions.kt').exists()
+assert (root / 'app/src/test/java/br/dev/monitorremoto/core/MessagePolicyTest.kt').exists()
+assert 'loadRemoteMessages()' in module_ui['RemoteDashboardUi.kt']
+assert 'RemoteInput.addResultsToIntent' in (root / 'app/src/main/java/br/dev/monitorremoto/capture/NotificationReplyActions.kt').read_text()
+assert 'showAppConfirm("Confirmar envio remoto?"' in module_ui['RemoteMessagesUi.kt']
+print('PASSOU: alpha.30, consentimentos SMS/RemoteInput, controle remoto autenticado e UI de confirmação')

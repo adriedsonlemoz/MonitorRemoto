@@ -2,6 +2,7 @@ package br.dev.monitorremoto.core
 
 import android.content.Context
 import java.util.UUID
+import br.dev.monitorremoto.capture.NotificationReplyActions
 
 object SettingsStore {
     private const val FILE = "monitor_remoto_settings"
@@ -13,7 +14,10 @@ object SettingsStore {
         val wasEnabled = preferences.getBoolean("monitor_enabled", false)
         preferences.edit().putBoolean("monitor_enabled", enabled).apply()
         // Nunca reutilizar eventos da sessão anterior, mesmo com uma captura em trânsito.
-        if (!enabled || !wasEnabled) EventJournal.clear()
+        if (!enabled || !wasEnabled) {
+            EventJournal.clear()
+            NotificationReplyActions.clear()
+        }
     }
 
     fun notificationAllowlist(context: Context): Set<String> =
@@ -22,6 +26,22 @@ object SettingsStore {
         // Retirar a autorização também apaga os eventos já capturados desses apps.
         prefs(context).edit().putStringSet("notification_allowlist", packages.toSet()).apply()
         EventJournal.retainAllowed(packages)
+        NotificationReplyActions.retainAllowed(packages)
+    }
+
+    /** Separadamente consentidas no aparelho monitorado; OFF por padrão. */
+    fun shareSmsInbox(context: Context) = prefs(context).getBoolean("share_sms_inbox", false)
+    fun setShareSmsInbox(context: Context, value: Boolean) =
+        prefs(context).edit().putBoolean("share_sms_inbox", value).apply()
+
+    fun allowSmsReplies(context: Context) = prefs(context).getBoolean("allow_sms_replies", false)
+    fun setAllowSmsReplies(context: Context, value: Boolean) =
+        prefs(context).edit().putBoolean("allow_sms_replies", value).apply()
+
+    fun allowNotificationReplies(context: Context) = prefs(context).getBoolean("allow_notification_replies", false)
+    fun setAllowNotificationReplies(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean("allow_notification_replies", value).apply()
+        if (!value) NotificationReplyActions.clear()
     }
 
     /** Ativação explícita, separada da permissão de sistema para acesso ao número da linha. */

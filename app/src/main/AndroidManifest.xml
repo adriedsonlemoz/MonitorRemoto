@@ -9,6 +9,9 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- Opcional: somente após autorização explícita no aparelho monitorado. -->
     <uses-permission android:name="android.permission.READ_PHONE_NUMBERS" />
+    <!-- SMS particular, independente de Google Play: permissões runtime e restrições do instalador continuam vigentes. -->
+    <uses-permission android:name="android.permission.READ_SMS" />
+    <uses-permission android:name="android.permission.SEND_SMS" />
     <!-- Pré-requisito documentado para FGS connectedDevice (comunicação de rede). -->
     <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />

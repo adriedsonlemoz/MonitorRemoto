@@ -37,7 +37,7 @@ internal fun MainActivity.showSettingsDialog() {
 
     val options = listOf(
         Triple("Aparência", "Claro · Escuro · Sistema", R.drawable.ic_palette),
-        Triple("Notificações", "Acesso e apps permitidos", R.drawable.ic_bell),
+        Triple("Notificações", "Apps, SMS e respostas", R.drawable.ic_bell),
         Triple("Segurança", "Chaves e pareamento", R.drawable.ic_shield),
         Triple("Serviço", "Ativar e inicialização", R.drawable.ic_power),
         Triple("Diagnóstico", "Rede e permissões", R.drawable.ic_activity),
@@ -135,6 +135,54 @@ private fun MainActivity.showPermissionSettings() {
     })
     sectionGap(layout, 8)
     layout.addView(iconMenuRow(R.drawable.ic_phone, "Aplicativos autorizados", "$count selecionado(s)") { selectNotificationApps() })
+    sectionGap(layout, 8)
+    val replyOn = SettingsStore.allowNotificationReplies(this)
+    layout.addView(iconMenuRow(R.drawable.ic_message, "Responder notificações", if (replyOn) "Habilitado (desativar)" else "Desativado (ativar)") {
+        if (replyOn) {
+            SettingsStore.setAllowNotificationReplies(this, false)
+            message("Respostas por notificações desativadas. Tokens pendentes apagados.")
+        } else showAppConfirm("Autorizar respostas remotas?",
+            "Aparelhos com a chave de pareamento poderão enviar respostas usando ações de notificações dos apps que você selecionou. A mensagem será sempre digitada e confirmada no controlador. A permissão de notificações e a lista de apps continuam necessárias.",
+            R.drawable.ic_message, "Habilitar") {
+            SettingsStore.setAllowNotificationReplies(this, true)
+            message("Respostas ativadas para novas notificações elegíveis.")
+        }
+    })
+    sectionGap(layout, 8)
+    val smsRead = SettingsStore.shareSmsInbox(this) &&
+        checkSelfPermission(Manifest.permission.READ_SMS) == PackageManager.PERMISSION_GRANTED
+    layout.addView(iconMenuRow(R.drawable.ic_message, "Ler caixa de SMS", if (smsRead) "Habilitado (desativar)" else "Desativado (ativar)") {
+        if (smsRead) {
+            SettingsStore.setShareSmsInbox(this, false)
+            SettingsStore.setAllowSmsReplies(this, false)
+            message("Compartilhamento da caixa de SMS e respostas SMS desativados.")
+        } else showAppConfirm("Compartilhar SMS recebidos?",
+            "Serão consultados sob demanda até 30 SMS recentes, com supressão de conteúdo sensível. O Android pode restringir READ_SMS mesmo fora da Play Store. Apenas aparelhos pareados poderão consultar as mensagens.",
+            R.drawable.ic_message, "Solicitar READ_SMS") {
+            if (checkSelfPermission(Manifest.permission.READ_SMS) == PackageManager.PERMISSION_GRANTED) {
+                SettingsStore.setShareSmsInbox(this, true)
+                message("Compartilhamento de SMS autorizado.")
+            } else requestPermissions(arrayOf(Manifest.permission.READ_SMS), smsReadPermissionRequest)
+        }
+    })
+    sectionGap(layout, 8)
+    val smsWrite = SettingsStore.allowSmsReplies(this) &&
+        checkSelfPermission(Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED
+    layout.addView(iconMenuRow(R.drawable.ic_message, "Responder SMS", if (smsWrite) "Habilitado (desativar)" else "Desativado (ativar)") {
+        if (smsWrite) {
+            SettingsStore.setAllowSmsReplies(this, false)
+            message("Respostas SMS remotas desativadas.")
+        } else if (!SettingsStore.shareSmsInbox(this)) {
+            message("Autorize primeiro a leitura de SMS para permitir respostas a números conhecidos.")
+        } else showAppConfirm("Autorizar resposta a SMS?",
+            "O envio usa a operadora e pode gerar cobrança. Apenas números regulares de mensagens recebidas poderão ser respondidos. O controlador precisará confirmar cada envio. Solicitar SEND_SMS agora?",
+            R.drawable.ic_message, "Solicitar SEND_SMS") {
+            if (checkSelfPermission(Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED) {
+                SettingsStore.setAllowSmsReplies(this, true)
+                message("Respostas SMS autorizadas.")
+            } else requestPermissions(arrayOf(Manifest.permission.SEND_SMS), smsSendPermissionRequest)
+        }
+    })
     sectionGap(layout, 8)
     val numberEnabled = SettingsStore.sharePhoneNumber(this) &&
         checkSelfPermission(Manifest.permission.READ_PHONE_NUMBERS) == PackageManager.PERMISSION_GRANTED
@@ -236,6 +284,11 @@ private fun MainActivity.showDiagnostics() {
     sectionGap(card, 10)
     card.addView(dialogMetricRow("IP local", localIps().ifBlank { "Indisponível" }))
     card.addView(dialogMetricRow("Apps permitidos", SettingsStore.notificationAllowlist(this).size.toString()))
+    card.addView(dialogMetricRow("Leitura SMS", if (SettingsStore.shareSmsInbox(this) &&
+        checkSelfPermission(Manifest.permission.READ_SMS) == PackageManager.PERMISSION_GRANTED) "Autorizada" else "Desativada/sem permissão"))
+    card.addView(dialogMetricRow("Resposta SMS", if (SettingsStore.allowSmsReplies(this) &&
+        checkSelfPermission(Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED) "Autorizada" else "Desativada/sem permissão"))
+    card.addView(dialogMetricRow("Resposta notificação", if (SettingsStore.allowNotificationReplies(this)) "Ativa" else "Desativada"))
     layout.addView(card)
     AlertDialog.Builder(this)
         .setTitle("Diagnóstico")
@@ -298,7 +351,7 @@ internal fun MainActivity.selectNotificationApps() {
     sectionGap(layout, 8)
     layout.addView(panel(11).apply {
         background = shape(fieldColor, 15)
-        addView(label("Aplicativos bancários conhecidos são excluídos da lista. Não há acesso à caixa de SMS: apenas notificações dos aplicativos autorizados.", 11f, muted = true))
+        addView(label("Aplicativos bancários conhecidos são excluídos da lista. A leitura opcional de SMS usa outra permissão e precisa de autorização independente.", 11f, muted = true))
     })
 
     fun refreshList(filter: String) {

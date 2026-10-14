@@ -1,4 +1,4 @@
-# Monitor Remoto 0.1.0-alpha.29
+# Monitor Remoto 0.1.0-alpha.30
 # Convenções permanentes do projeto Monitor Remoto
 
 - Toda alteração de código incrementa sequencialmente `versionCode` e `versionName` (ex.: `0.1.0-alpha.8` -> `0.1.0-alpha.9`). Sincronizar tela, README, CHANGELOG, RELEASE_NOTES e documentação.
@@ -6,7 +6,7 @@
 - O GitHub Actions `upload-artifact` sempre entrega ZIP ao baixar um Artifact. Publicar Artifact APK só se Release falhar ou for ignorada, evitando duas fontes para a mesma execução. Para **APK direto**, o workflow **também deve publicar o `.apk` como arquivo de uma GitHub Release** (em workflow_dispatch e push ao branch padrão). Não confundir o pacote ZIP de código-fonte com o APK.
 - Opcional: com KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS e KEY_PASSWORD, gerar APK Release assinado estável e AAB Release; nunca armazenar keystore ou segredos no repositório nem em arquivos públicos.
 - Sem Secrets, somente APK Debug para testes, com assinatura temporária; avisar que o APK pode não atualizar sem reinstalação.
-- Não acrescentar serviços de acessibilidade, captura de tela, sobreposição, leitura SMS direta ou vigilância oculta. Consentimento expresso; lista positiva de notificações vazia por padrão.
+- Não acrescentar serviços de acessibilidade, captura de tela, sobreposição ou vigilância oculta. A alpha.30 inclui leitura opcional de SMS somente após autorização local explícita e READ_SMS, que pode ser bloqueada pelo Android; não contornar permissões restritas. Consentimento expresso; lista positiva de notificações vazia por padrão.
 - Funcionar primeiro na rede local; não expor a porta na internet pública. Preservar criptografia, parada visível e conexão autenticada.
 - Ao entregar versão, reportar status verdadeiro do build Android e disponibilizar ZIP do fonte e, somente após compilação bem-sucedida, o APK; priorizar cópia do fonte no Google Drive.
 
@@ -21,7 +21,7 @@
 - Alpha.10: manter tema **claro padrão**, as opções da engrenagem, janela Conectar, botão de atualização compacto, lista de até 5 aparelhos recentes e os dados do Controle no topo. Não reintroduzir formulário longo na tela principal.
 - Credenciais por dispositivo usam `RecentDevices` + `SecretVault.profileKeyName`, com migração única da alpha.9. Não reaproveitar `CONTROLLER_KEY` antigo para IPs novos nem gravar segredo em preferências sem criptografia. Esquecer apaga o segredo correspondente.
 - Respostas HTTP/TCP não são conexão persistente. Exibir "Conectado" apenas após consulta autenticada bem-sucedida e "Sem resposta" após erro. Não inventar tempos de atualização.
-- Próxima versão sequencial: `0.1.0-alpha.30`, `versionCode 30`.
+- Próxima versão sequencial: `0.1.0-alpha.31`, `versionCode 31`.
 
 - Alpha.15: preservar a seleção Conectar → QR/Manual/Salvos, confirmação do QR antes de parear, cartões salvos com três ações e o scanner em Activity com tema Dialog.
 
@@ -58,3 +58,5 @@
 - Mensagem de versão incompatível autenticada do servidor deve permanecer cifrada com a chave já validada. Nunca revelar versão a clientes sem chave válida; não afirmar que EOF prova incompatibilidade. `ConnectionIssue` descreve hipóteses e o diagnóstico copiado não inclui segredo.
 
 - Alpha.29: `MonitorScreenUi.showIncomingAccessActions` cria o `AlertDialog` uma única vez e chama `showManagedDialog(dialog)` uma única vez. Evitar a terminação `.create().let { showManagedDialog(it) }` em conjunto com novo `.create()`. O validador exige essa invariável após o erro `:app:compileDebugKotlin` no workflow 29.
+
+- Alpha.30: compartilhar SMS, permitir SMS enviados e responder notificações são três opções independentes inicialmente desligadas. A consulta SMS é sob demanda (`includeSms=true` só quando Mensagens é aberta), sem RECEIVE_SMS e sem persistência; a leitura depende de READ_SMS, que pode ser restrita por instalador. O comando de resposta SMS usa SEND_SMS e número já visto na inbox, confirma no controlador, limita taxa/corpo e não garante entrega. RemoteInput somente em ação ativa e permitida, token único com expiração, e confirmação do controlador. Comandos cifrados no mesmo protocolo e chave, com proteção de replay e versão exata. Bloquear códigos, apps financeiros e parar ao revogar; nenhum acesso furtivo ou bypass das proteções Android.

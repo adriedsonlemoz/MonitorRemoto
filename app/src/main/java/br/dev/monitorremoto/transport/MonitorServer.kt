@@ -6,6 +6,10 @@ import br.dev.monitorremoto.core.NetworkReader
 import br.dev.monitorremoto.core.DeviceInfoReader
 import br.dev.monitorremoto.core.TelephonyReader
 import br.dev.monitorremoto.core.EventJournal
+import br.dev.monitorremoto.core.SmsInboxReader
+import br.dev.monitorremoto.core.SmsReplySender
+import br.dev.monitorremoto.core.SensitiveContent
+import br.dev.monitorremoto.capture.NotificationReplyActions
 import br.dev.monitorremoto.core.SettingsStore
 import br.dev.monitorremoto.security.CryptoBox
 import br.dev.monitorremoto.security.SecretVault
@@ -79,7 +83,7 @@ class MonitorServer(private val context: Context) {
                 val regular = runCatching { WireProtocol.decode(permanentKey, encrypted) }.getOrNull()
                 if (regular != null) {
                     if (regular.optInt("v") != WireProtocol.VERSION ||
-                        regular.optString("op") !in setOf("snapshot", "disconnect")) return
+                        regular.optString("op") !in setOf("snapshot", "disconnect", "notificationReply", "smsReply")) return
                     if (abs(now - regular.optLong("ts")) > 5 * 60 * 1000L) return
                     synchronized(seenNonces) {
                         if (!seenNonces.add(nonce)) return
@@ -104,6 +108,30 @@ class MonitorServer(private val context: Context) {
                         AuthenticatedAccess.disconnected(socket.inetAddress?.hostAddress.orEmpty(), regular.optString("clientId"))
                         return
                     }
+                    if (regular.optString("op") in setOf("notificationReply", "smsReply")) {
+                        val operation = regular.getString("op")
+                        val body = regular.optString("body")
+                        val commandResult = runCatching {
+                            check(body.isNotBlank() && body.length <= 500 &&
+                                !SensitiveContent.isSensitive("", body)) { "Mensagem rejeitada pelo filtro de segurança." }
+                            if (operation == "notificationReply") {
+                                check(SettingsStore.allowNotificationReplies(context)) { "Respostas a notificações desativadas no monitorado." }
+                                check(NotificationReplyActions.reply(context, regular.optString("replyToken"),
+                                    body, SettingsStore.notificationAllowlist(context))) { "Notificação expirada, removida ou sem ação de resposta." }
+                                "Ação de resposta acionada. Entrega ao destinatário não confirmada."
+                            } else {
+                                SmsReplySender.send(context, regular.optString("destination"), body)
+                            }
+                        }
+                        val reply = JSONObject().put("v", WireProtocol.VERSION)
+                            .put("op", "commandResult").put("appVersion", AppVersion.NAME)
+                            .put("ok", commandResult.isSuccess)
+                            .put("message", commandResult.getOrNull() ?: commandResult.exceptionOrNull()?.message?.take(160).orEmpty())
+                        WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(permanentKey, reply))
+                        AuthenticatedAccess.authenticated(socket.inetAddress?.hostAddress.orEmpty(),
+                            regular.optString("clientId"), regular.optString("clientName"), regular.optString("accessMethod"))
+                        return
+                    }
                     val response = JSONObject().apply {
                         put("v", WireProtocol.VERSION)
                         put("appVersion", AppVersion.NAME)
@@ -113,8 +141,13 @@ class MonitorServer(private val context: Context) {
                         put("deviceInfo", DeviceInfoReader.snapshot(context))
                         put("telephony", TelephonyReader.snapshot(context))
                         put("events", if (SettingsStore.isMonitorEnabled(context))
-                            EventJournal.latestJson(SettingsStore.notificationAllowlist(context))
+                            EventJournal.latestJson(SettingsStore.notificationAllowlist(context), SettingsStore.allowNotificationReplies(context))
                             else org.json.JSONArray())
+                        put("smsInbox", if (regular.optBoolean("includeSms")) SmsInboxReader.snapshot(context) else org.json.JSONArray())
+                        put("messagingPermissions", JSONObject().put("smsRead", SettingsStore.shareSmsInbox(context) && SmsInboxReader.hasAccess(context))
+                            .put("smsReply", SettingsStore.allowSmsReplies(context) && SmsInboxReader.hasAccess(context) &&
+                                context.checkSelfPermission(android.Manifest.permission.SEND_SMS) == android.content.pm.PackageManager.PERMISSION_GRANTED)
+                            .put("notificationReply", SettingsStore.allowNotificationReplies(context)))
                         put("epoch", EventJournal.epoch)
                     }
                     WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(permanentKey, response))

@@ -320,3 +320,18 @@
 - [x] Smoke Kotlin/JVM local passou em 6 asserções (AppVersion e classificação de erros).
 - [x] `python3 tools/check_distribution.py` passou com as invariantes da alpha.29.
 - [ ] Build Android/AGP completo indisponível neste ambiente (sem SDK/Gradle); verificar em CI.
+
+## alpha.30 (14/10/2026)
+
+- [x] `tools/check_distribution.py`: 22 grupos de invariantes, inclusive consentimentos e comandos de mensagem.
+- [x] Parser PSI Kotlin: 57 fontes de app/teste, 0 erros sintáticos.
+- [x] Kotlin/JVM: 10 verificações reais de filtro de SMS e numeração.
+- [x] Sem leitura de inbox no polling normal: somente quando `includeSms=true` no pedido de abertura Mensagens.
+- [ ] Compilação Android completa, testes instrumentados e permissões reais ainda pendentes.
+
+- [x] Novos caminhos de SMS e RemoteInput com consentimentos separados, inicialmente falsos, e autenticação obrigatória.
+- [x] Mensagens sem coleta oculta, sem RECEIVE_SMS, sem acesso histórico interno de WhatsApp.
+- [ ] Build Gradle Android e teste instrumentado em dispositivo real (API 26–36).
+- [ ] Conferir permissão hard-restricted READ_SMS no instalador/ROM.
+- [ ] Testar resposta WhatsApp com notificação existente, expirando token, revogando lista e cancelando a notificação.
+- [ ] Testar SMS com SIM, custo, multi-SIM, mensagens multipartes e confirmação de envio real.

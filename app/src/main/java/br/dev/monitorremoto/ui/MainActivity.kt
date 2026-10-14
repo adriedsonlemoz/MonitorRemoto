@@ -56,11 +56,14 @@ class MainActivity : Activity() {
     internal val handler = Handler(Looper.getMainLooper())
     internal val remoteConnection by lazy { RemoteConnectionManager(applicationContext) }
     internal val pairingController = PairingController()
+    internal val lastMessageViewedMs = mutableMapOf<String, Long>() // Apenas carimbo temporal em RAM
     internal var mode = 2 // 2: início, 0: monitorado, 1: controle
     internal val cameraPermissionRequest = 4317
     internal val qrScanRequest = 4318
     private val notificationPermissionRequest = 101
     internal val phoneNumberPermissionRequest = 103
+    internal val smsReadPermissionRequest = 104
+    internal val smsSendPermissionRequest = 105
     internal var active = false
     internal var resultBox: LinearLayout? = null
     companion object { const val EXTRA_OPEN_MONITOR = "br.dev.monitorremoto.OPEN_MONITOR" }
@@ -264,6 +267,16 @@ class MainActivity : Activity() {
             notificationPermissionRequest -> {
                 if (granted) startServiceExplicitly()
                 else message("Autorize notificações para exibir o monitoramento ativo.")
+            }
+            smsReadPermissionRequest -> {
+                SettingsStore.setShareSmsInbox(this, granted)
+                message(if (granted) "Leitura de SMS ativada no monitorado. Mensagens de autenticação serão filtradas."
+                    else "READ_SMS não autorizada. Alguns instaladores/versões do Android restringem essa permissão.")
+            }
+            smsSendPermissionRequest -> {
+                SettingsStore.setAllowSmsReplies(this, granted)
+                message(if (granted) "Respostas SMS habilitadas. Cada envio deverá ser solicitado no controlador."
+                    else "SEND_SMS não autorizada no aparelho monitorado.")
             }
             phoneNumberPermissionRequest -> {
                 SettingsStore.setSharePhoneNumber(this, granted)

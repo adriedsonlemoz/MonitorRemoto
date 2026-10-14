@@ -1,4 +1,4 @@
-# Arquitetura (0.1.0-alpha.29)
+# Arquitetura (0.1.0-alpha.30)
 
 ```text
 MONITORADO                                      CONTROLE
@@ -19,9 +19,9 @@ O FGS `connectedDevice` mantém o socket de escuta durante monitoramento ativo. 
 
 ## Distribuição e assinatura
 
-O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.29` e `versionCode=29`.
+O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.30` e `versionCode=30`.
 
-- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.29.apk`.
+- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.30.apk`.
 - `upload-artifact` sempre distribui um ZIP; GitHub Releases recebe o **arquivo APK direto**.
 - Com quatro Secrets, Gradle gera APK Release assinado e AAB. Sem Secrets, o arquivo é Debug de teste e não preserva necessariamente a assinatura entre execuções.
 - Releases são prévias, não substituem a futura revisão da Google Play e nem os ensaios reais.
@@ -149,3 +149,7 @@ O botão de recuperar dados não implementa transferência, acesso a arquivos ou
 ## Interface de avisos e diagnósticos alpha.28
 
 `AppDialogUi.kt` centraliza uma única janela visível na Activity. `ConnectionIssue.kt` categoriza erros locais sem inferir certeza a partir de EOF. `ConnectionErrorUi.kt` mostra o diagnóstico sem a chave de pareamento. Uma mensagem `versionMismatch` só é enviada pelo monitorado depois da autenticação AES-GCM, do controle de timestamp e de replay; versões antigas podem não emitir essa resposta.
+
+## Alpha.30: canal de mensagens autorizado
+
+`NotificationCaptureService` registra, apenas quando permitido, ações `RemoteInput` no buffer volátil `NotificationReplyActions` (máximo 60, validade 10 minutos, token único). O `EventJournal` só expõe o token quando o consentimento ainda está ativo. `SmsInboxReader` consulta a inbox apenas mediante `includeSms=true` na consulta manual de Mensagens, nunca no polling de 15 segundos, com READ_SMS e sem persistência, bloqueando mensagens com sinais de autenticação. `SmsReplySender` exige READ_SMS, SEND_SMS, opt-ins do monitorado, destinatário recebido anteriormente e limite de taxa. `MonitorServer` aceita `notificationReply` e `smsReply` após os mesmos controles AES-GCM, timestamp, nonce e versão exata de `snapshot`; respostas são `commandResult`, sem alegar entrega final. `RemoteMessagesUi.kt` usa confirmação explícita e `RemoteConnectionManager` invalida respostas de aparelhos trocados.

@@ -1,18 +1,16 @@
-# Monitor Remoto v0.1.0-alpha.29
+# Monitor Remoto v0.1.0-alpha.30
 
-## Correção de compilação
+## Funcionalidades implementadas no código-fonte
 
-- Corrigida a duplicação de `.create()` no final de `showIncomingAccessActions`, em `MonitorScreenUi.kt`, que impedia `:app:compileDebugKotlin` no workflow 29.
-- As ações do diálogo **Acesso autenticado** foram preservadas: Trocar chave, Fechar e Parar serviço com confirmação.
-- Novo teste de regressão no validador do projeto verifica uma única criação e uma única exibição do diálogo.
+- Central **Mensagens** com notificações autorizadas e até 30 SMS recebidos consultados sob demanda, com filtros de dados sensíveis.
+- Respostas WhatsApp e de outros apps somente usando a ação de resposta ativa da notificação (`RemoteInput`). Não lê conversas históricas.
+- Respostas SMS por `SmsManager`, somente a número regular já recebido, com confirmação no controlador e limite de taxa; não comprova entrega.
+- Controles distintos no monitorado para habilitar **SMS recebido**, **resposta SMS** e **resposta de notificações**, desativados por padrão; sem ação furtiva.
+- Criptografia/autenticação AES-GCM, proteção contra replay e versão idêntica entre os aparelhos.
 
-## Recursos mantidos da alpha.28
+## Limitações
 
-- Diálogos gerenciados para evitar sobreposição; confirmação visível de ações sensíveis.
-- Diagnóstico de conexão, inclusive resposta de versão incompatível criptografada somente após autenticação.
-- Seleção explícita de aplicativos de notificação, QR temporário e credenciais Android Keystore.
-- Não houve novas permissões Android. O protocolo exige **versões idênticas** nos dois aparelhos.
-
-## Validação e distribuição
-
-Execute novamente o GitHub Actions para compilar/testar e, se bem-sucedido, publicar o APK em Releases. Instale a alpha.29 em **ambos** os celulares. Este ZIP contém somente código-fonte, não um APK.
+- `READ_SMS` é hard restricted em diversas versões do Android; a instalação fora do Google Play **não garante** que a permissão seja concedida. O app não contorna essa restrição.
+- A resposta a notificação expira quando o Android/app cancela a notificação ou expira o token; o recebimento pelo destinatário não é confirmado.
+- Conteúdo financeiro/OTP é filtrado em melhor esforço. SMS podem custar dinheiro e exigir SIM habilitado.
+- Requer build CI e testes reais; este arquivo é código-fonte, não APK.

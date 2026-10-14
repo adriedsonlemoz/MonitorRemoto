@@ -10,7 +10,7 @@ import java.net.Socket
 
 object RemoteClient {
     /** Executar somente fora da thread principal. */
-    fun snapshot(host: String, key: ByteArray, context: Context, method: String = "Chave salva"): JSONObject {
+    fun snapshot(host: String, key: ByteArray, context: Context, method: String = "Chave salva", includeSms: Boolean = false): JSONObject {
         require(host.isNotBlank() && host.length <= 253)
         require(!host.contains('/') && !host.contains(':') && !host.contains(' ')) {
             "Informe apenas o IP IPv4 ou hostname (sem http:// ou porta)."
@@ -18,6 +18,7 @@ object RemoteClient {
         val request = JSONObject()
             .put("v", WireProtocol.VERSION)
             .put("op", "snapshot")
+            .put("includeSms", includeSms)
             .put("appVersion", AppVersion.NAME)
             .put("ts", System.currentTimeMillis())
             .put("clientId", SettingsStore.controllerId(context))
@@ -57,6 +58,35 @@ object RemoteClient {
             WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(key, request))
             val reply = WireProtocol.decode(key, WireProtocol.receive(socket.getInputStream(), 16 * 1024))
             check(reply.optString("op") == "disconnectOk" && AppVersion.compatible(reply.optString("appVersion")))
+        }
+    }
+
+    /** Uma instrução iniciada pelo usuário, protegida pela mesma sessão autenticada do snapshot. */
+    fun messageCommand(host: String, key: ByteArray, context: Context, method: String,
+        operation: String, destinationOrToken: String, text: String): String {
+        require(operation in setOf("notificationReply", "smsReply"))
+        require(host.isNotBlank() && host.length <= 253 && !host.contains('/') && !host.contains(':') && !host.contains(' '))
+        require(text.isNotBlank() && text.length <= 500)
+        val request = JSONObject().put("v", WireProtocol.VERSION)
+            .put("op", operation).put("appVersion", AppVersion.NAME)
+            .put("ts", System.currentTimeMillis())
+            .put("clientId", SettingsStore.controllerId(context))
+            .put("clientName", listOf(Build.MANUFACTURER, Build.MODEL).joinToString(" ").take(72))
+            .put("accessMethod", method)
+            .put("body", text)
+        if (operation == "notificationReply") request.put("replyToken", destinationOrToken)
+        else request.put("destination", destinationOrToken)
+        return Socket().use { socket ->
+            socket.connect(InetSocketAddress(host, WireProtocol.PORT), 4500)
+            socket.soTimeout = 6500
+            WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(key, request))
+            val response = WireProtocol.decode(key, WireProtocol.receive(socket.getInputStream(), 16 * 1024))
+            if (response.optString("op") == "versionMismatch")
+                error(AppVersion.incompatibility(response.optString("appVersion")))
+            check(response.optString("op") == "commandResult" && response.optInt("v") == WireProtocol.VERSION &&
+                AppVersion.compatible(response.optString("appVersion"))) { "Resposta inválida do monitorado." }
+            check(response.optBoolean("ok")) { response.optString("message", "Operação recusada.") }
+            response.optString("message")
         }
     }
 
