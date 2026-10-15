@@ -1,3 +1,10 @@
+## 0.1.0-alpha.69 (versionCode 69)
+
+- Corrigidos os **oito erros de compilação Kotlin** registrados no GitHub Actions #64 da alpha.68: quatro tentativas de atribuir `lineSpacingExtra` (somente leitura) e quatro acessos à função `darkTheme()` privada de `MainActivity`.
+- TextView agora usa o método público Android `setLineSpacing(extraPx, 1f)` para preservar o espaçamento previsto. `darkTheme()` passa a ser `internal`, acessível aos componentes da interface no mesmo módulo Kotlin.
+- Verificador estrutural ganha regressões específicas para esses dois problemas. Mantidos os cartões maiores, indicadores de estado e diálogos da alpha.68, sem alterar fluxo remoto, permissões nem segurança.
+- Compilação Android integral da alpha.69 e testes de aparência em aparelhos reais ainda pendentes.
+
 ## 0.1.0-alpha.68 (versionCode 68)
 
 - Configurações redesenhadas para deixar a seleção e a confirmação das ações mais claras. Os cartões ficaram maiores, com textos ampliados e um selo visual em formato de botão mostrando o estado principal: `ATIVADO`, `DESATIVADO`, `ABRIR`, `VOLTAR` ou `REVOGAR`.

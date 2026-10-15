@@ -110,7 +110,7 @@ internal fun MainActivity.dialogIntro(parent: LinearLayout, text: String) {
     if (text.isBlank()) return
     parent.addView(label(text, 13.5f, muted = true).apply {
         setPadding(0, 0, 0, dp(8))
-        lineSpacingExtra = dp(2).toFloat()
+        setLineSpacing(dp(2).toFloat(), 1f)
     })
 }
 
@@ -281,7 +281,7 @@ internal fun MainActivity.iconMenuRow(
         words.addView(label(subtitle, 12.6f, muted = true).apply {
             maxLines = 3
             setPadding(0, dp(4), 0, 0)
-            lineSpacingExtra = dp(1).toFloat()
+            setLineSpacing(dp(1).toFloat(), 1f)
         })
     }
     addView(words, LinearLayout.LayoutParams(0, -2, 1f))

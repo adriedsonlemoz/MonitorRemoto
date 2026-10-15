@@ -30,7 +30,7 @@ internal fun MainActivity.showAppNotice(
         background = shape(fieldColor, 18, true)
         addView(label(description, 14.2f).apply {
             setPadding(0, 0, 0, 0)
-            lineSpacingExtra = dp(2).toFloat()
+            setLineSpacing(dp(2).toFloat(), 1f)
         })
     })
     sectionGap(layout, 14)
@@ -54,7 +54,7 @@ internal fun MainActivity.showAppConfirm(
         background = shape(fieldColor, 18, true)
         addView(label(description, 14.2f).apply {
             setPadding(0, 0, 0, 0)
-            lineSpacingExtra = dp(2).toFloat()
+            setLineSpacing(dp(2).toFloat(), 1f)
         })
     })
     sectionGap(layout, 10)

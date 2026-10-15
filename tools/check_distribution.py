@@ -16,7 +16,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.68" and code.group(1) == "68", "Versões incompatíveis"
+assert version == "0.1.0-alpha.69" and code.group(1) == "69", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -977,3 +977,15 @@ assert 'receivedAt = monotonicMs()' in frame_source
 assert 'nowMs - lastRequestAtMs <=' in (root / 'app/src/main/java/br/dev/monitorremoto/core/CameraStreamPolicy.kt').read_text(), 'Expiração de visualizador não preservada'
 assert (root / 'app/src/test/java/br/dev/monitorremoto/core/CameraFrameStoreGenerationTest.kt').is_file(), 'Testes de frame store ausentes'
 print('PASSOU: alpha.67, relógio monotônico compatível com JVM e expiração preservada')
+
+# Alpha.69: erros reais de compilação do workflow #64 (alpha.68).
+from pathlib import Path as _Path
+_ui_dir = root / "app/src/main/java/br/dev/monitorremoto/ui"
+_components = (_ui_dir / "UiComponents.kt").read_text(encoding="utf-8")
+_dialogs = (_ui_dir / "AppDialogUi.kt").read_text(encoding="utf-8")
+_main = (_ui_dir / "MainActivity.kt").read_text(encoding="utf-8")
+assert not re.search(r"\blineSpacingExtra\s*=", _components + "\n" + _dialogs), "TextView.lineSpacingExtra é val somente leitura; usar setLineSpacing"
+assert _components.count("setLineSpacing(") >= 2 and _dialogs.count("setLineSpacing(") >= 2, "Espaçamento visual deve usar o setter Android"
+assert "internal fun darkTheme(): Boolean" in _main, "darkTheme deve ser acessível às extensões UI"
+assert "private fun darkTheme(): Boolean" not in _main, "darkTheme privado causou erro de compilação no workflow 64"
+print("PASSOU: alpha.69 regressão Kotlin TextView.setLineSpacing e visibilidade de darkTheme")

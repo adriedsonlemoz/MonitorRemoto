@@ -38,7 +38,7 @@ import java.util.Locale
 class MainActivity : Activity() {
     internal var activeUiDialog: AlertDialog? = null
 
-    private fun darkTheme(): Boolean = when (SettingsStore.theme(this)) {
+    internal fun darkTheme(): Boolean = when (SettingsStore.theme(this)) {
         "dark" -> true
         "system" -> (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
         else -> false

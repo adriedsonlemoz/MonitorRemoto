@@ -1,3 +1,11 @@
+## Alpha.69 — correção de compilação da interface (15/10/2026)
+
+- [x] GitHub Actions execução #64 (`38734079523`) analisada: `:app:compileDebugKotlin` falhou com **oito erros** em `AppDialogUi.kt`/`UiComponents.kt` (`lineSpacingExtra` read-only, `darkTheme` privado).
+- [x] `setLineSpacing(extra, 1f)` substituiu as 4 atribuições à propriedade somente leitura; `darkTheme()` é agora `internal` na `MainActivity`.
+- [x] Versionamento sequencial `0.1.0-alpha.69` / `versionCode 69` sincronizado em Gradle, AppVersion e documentação.
+- [x] Regressões de compilação adicionadas ao validador estrutural para evitar os dois erros da alpha.68.
+- [ ] Compilação Android real, suíte JUnit Gradle e execução em aparelhos não realizadas localmente; reexecutar CI com alpha.69.
+
 ## Alpha.68 — usabilidade das Configurações (15/10/2026)
 
 - [x] Base alpha.67 analisada antes das alterações; foco restrito à experiência de Configurações, sem mexer no protocolo remoto.
