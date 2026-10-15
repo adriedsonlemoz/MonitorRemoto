@@ -10,7 +10,8 @@ class RemoteFilePolicyTest {
         for (invalid in listOf("", ".", "..", "../../etc", "/DCIM", "a/b", "a\\b", "\u0000secret", "line\nnext", "a".repeat(201))) {
             assertFalse("Deveria rejeitar: $invalid", RemoteFilePolicy.validSegment(invalid))
         }
-        assertFalse(RemoteFilePolicy.validPath(List(13) { "sub" }))
+        assertTrue(RemoteFilePolicy.validPath(List(13) { "sub" }))
+        assertFalse(RemoteFilePolicy.validPath(List(14) { "sub" }))
         assertTrue(RemoteFilePolicy.validPath(List(12) { "sub" }))
     }
     @Test fun boundedChunks() {

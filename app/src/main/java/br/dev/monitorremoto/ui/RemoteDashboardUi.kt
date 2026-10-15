@@ -1,6 +1,8 @@
 package br.dev.monitorremoto.ui
 
 import android.app.AlertDialog
+import android.graphics.Color
+import br.dev.monitorremoto.core.BatteryTemperaturePolicy
 import android.content.Intent
 import android.view.Gravity
 import android.view.View
@@ -15,6 +17,7 @@ internal fun MainActivity.displayResult(root: JSONObject, fromCache: Boolean = f
     container.removeAllViews()
     val battery = root.optJSONObject("battery") ?: return
     val network = root.optJSONObject("network")
+    val deviceState = root.optJSONObject("deviceState")
     val percentage = if (!battery.has("levelPercent") || battery.isNull("levelPercent")) "—"
         else battery.optInt("levelPercent", -1).takeIf { it in 0..100 }?.let { "$it%" } ?: "—"
     val status = battery.optString("state").takeIf {
@@ -26,14 +29,47 @@ internal fun MainActivity.displayResult(root: JSONObject, fromCache: Boolean = f
     val temperature = if (battery.isNull("temperatureC")) "—" else
         String.format(Locale.getDefault(), "%.1f °C", battery.optDouble("temperatureC"))
     val networkType = network?.optString("type")?.ifBlank { "Indisponível" } ?: "Indisponível"
+    val ssid = network?.optString("wifiSsid")?.takeIf { it.isNotBlank() && it != "null" }
+    val signal = network?.optInt("wifiRssiDbm", 0)?.takeIf { it in -110..-10 }?.let { "$it dBm" }
+    val wifiNote = when {
+        ssid != null -> listOfNotNull(ssid, signal).joinToString(" · ")
+        network?.optBoolean("wifiPermission") == false -> "SSID: autorizar no monitorado"
+        else -> "SSID indisponível"
+    }
+    val tempC = if (battery.has("temperatureC") && !battery.isNull("temperatureC")) battery.optDouble("temperatureC") else null
+    val tempZone = BatteryTemperaturePolicy.zone(tempC)
     val items = listOf(
         compactMetricCard(if (chargingIndicator) R.drawable.ic_battery_charging else R.drawable.ic_battery, "Bateria",
             if (chargingIndicator) "$percentage ⚡" else percentage, statusLine),
-        compactMetricCard(R.drawable.ic_thermometer, "Temperatura", temperature),
-        compactMetricCard(R.drawable.ic_wifi, "Rede", networkType),
+        compactMetricCard(R.drawable.ic_thermometer, "Temperatura", temperature, BatteryTemperaturePolicy.label(tempZone), tempZone),
+        compactMetricCard(R.drawable.ic_wifi, "Rede", networkType, wifiNote),
     )
     addMetricGrid(container, items)
-    sectionGap(container, 19)
+    sectionGap(container, 8)
+    if (deviceState != null) {
+        val screen = deviceState.optString("screenState").takeIf {
+            it in setOf("Ligada", "Desligada", "Ambiente")
+        } ?: if (deviceState.optBoolean("screenInteractive")) "Interativa" else "Desconhecida"
+        val locked = when {
+            deviceState.isNull("deviceLocked") -> "Bloqueio desconhecido"
+            deviceState.optBoolean("deviceLocked") -> "Bloqueado"
+            else -> "Desbloqueado"
+        }
+        val cameraState = when {
+            deviceState.isNull("cameraPossiblyBusy") -> "Câmera: desconhecida"
+            deviceState.optBoolean("cameraPossiblyBusy") -> "Câmera: possivelmente em uso"
+            else -> "Câmera: disponível"
+        }
+        val pkg = deviceState.optString("foregroundPackage").takeIf { it.isNotBlank() && it != "null" }
+        val appState = when {
+            !deviceState.optBoolean("usagePermission") -> "App: acesso ao uso não autorizado"
+            pkg != null && screen in setOf("Ligada", "Interativa") -> "App: $pkg"
+            else -> "App: não identificado"
+        }
+        container.addView(label("Tela: $screen · $locked   |   $cameraState", 12f, muted = true))
+        container.addView(label(appState, 11.5f, muted = true))
+    }
+    sectionGap(container, 12)
 
     container.addView(label("Funções remotas", 17f, strong = true).apply { setPadding(0, 0, 0, dp(12)) })
     val eventCount = root.optJSONArray("events")?.let { events ->
@@ -138,25 +174,32 @@ private fun MainActivity.showRemoteMaintenance() {
 }
 
 private fun MainActivity.compactMetricCard(icon: Int, title: String, value: String,
-    subtitle: String? = null): LinearLayout =
+    subtitle: String? = null, temperatureZone: BatteryTemperaturePolicy.Zone? = null): LinearLayout =
     LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         gravity = Gravity.CENTER
-        background = shape(fieldColor, 18)
-        setPadding(dp(3), dp(13), dp(3), dp(12))
-        minimumHeight = dp(125)
-        addView(vectorIcon(icon, 28), LinearLayout.LayoutParams(dp(28), dp(28)))
+        val themed = when (temperatureZone) {
+            BatteryTemperaturePolicy.Zone.COLD -> if (darkTheme()) Color.rgb(35, 61, 78) else Color.rgb(224, 241, 252)
+            BatteryTemperaturePolicy.Zone.WARM -> if (darkTheme()) Color.rgb(91, 67, 35) else Color.rgb(255, 240, 214)
+            BatteryTemperaturePolicy.Zone.HOT -> if (darkTheme()) Color.rgb(100, 42, 47) else Color.rgb(255, 226, 227)
+            BatteryTemperaturePolicy.Zone.NORMAL -> if (darkTheme()) Color.rgb(39, 72, 54) else Color.rgb(231, 246, 235)
+            else -> fieldColor
+        }
+        background = shape(themed, 14)
+        setPadding(dp(4), dp(7), dp(4), dp(7))
+        minimumHeight = dp(96)
+        addView(vectorIcon(icon, 21), LinearLayout.LayoutParams(dp(21), dp(21)))
         addView(label(title, 11.5f, muted = true).apply {
             gravity = Gravity.CENTER
             maxLines = 1
-            setPadding(0, dp(10), 0, dp(3))
+            setPadding(0, dp(4), 0, dp(2))
         })
-        addView(label(value, 16f, strong = true).apply {
+        addView(label(value, 14f, strong = true).apply {
             gravity = Gravity.CENTER
             maxLines = 2
             setPadding(0, 0, 0, 0)
         })
-        if (!subtitle.isNullOrBlank()) addView(label(subtitle, 10f, muted = true).apply {
+        if (!subtitle.isNullOrBlank()) addView(label(subtitle, 9.5f, muted = true).apply {
             gravity = Gravity.CENTER
             maxLines = 2
             setPadding(dp(2), dp(3), dp(2), 0)
@@ -191,7 +234,7 @@ private fun MainActivity.actionTile(icon: Int, title: String, subtitle: String, 
             maxLines = 2
             setPadding(0, dp(10), 0, 0)
         })
-        if (subtitle.isNotBlank()) addView(label(subtitle, 10f, muted = true).apply {
+        if (subtitle.isNotBlank()) addView(label(subtitle, 9.5f, muted = true).apply {
             gravity = Gravity.CENTER
             maxLines = 1
             setPadding(0, dp(2), 0, 0)

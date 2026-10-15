@@ -111,6 +111,45 @@ object RemoteClient {
         return data
     }
 
+    /** Até dois blocos autenticados por requisição, reduz conexões sem bufferizar o arquivo todo. */
+    fun dataChunks(host: String, key: ByteArray, context: Context, method: String,
+        path: List<String>, size: Long, modified: Long, offset: Long): List<ByteArray> {
+        require(br.dev.monitorremoto.core.RemoteFilePolicy.validChunk(size, offset))
+        val response = dataRequest(host, key, context, method, "dataChunks", path, size, modified, offset)
+        check(response.optLong("size", -1) == size && response.optLong("modified", -1) == modified &&
+            response.optLong("offset", -1) == offset) { "Metadados mudaram durante a cópia." }
+        val blocks = response.optJSONArray("chunks") ?: error("Blocos ausentes.")
+        val count = if (offset + br.dev.monitorremoto.core.RemoteFilePolicy.CHUNK_BYTES < size) 2 else 1
+        check(blocks.length() == count) { "Quantidade de blocos inesperada." }
+        return (0 until count).map { index ->
+            val at = offset + index * br.dev.monitorremoto.core.RemoteFilePolicy.CHUNK_BYTES.toLong()
+            val item = blocks.getJSONObject(index)
+            check(item.optLong("offset", -1L) == at) { "Blocos fora de ordem." }
+            val bytes = Base64.decode(item.getString("bytes"), Base64.NO_WRAP)
+            check(bytes.size == br.dev.monitorremoto.core.RemoteFilePolicy.nextChunkLength(size, at)) {
+                "Bloco de tamanho incorreto."
+            }
+            val digest = java.security.MessageDigest.getInstance("SHA-256").digest(bytes)
+                .joinToString("") { "%02x".format(it.toInt() and 255) }
+            check(item.optString("sha256") == digest) { "Falha de integridade do bloco." }
+            bytes
+        }
+    }
+
+    /** Verifica o digest completo na origem após todos os blocos (proteção contra alterações silenciosas). */
+    fun dataHash(host: String, key: ByteArray, context: Context, method: String,
+        path: List<String>, size: Long, modified: Long): String {
+        val response = dataRequest(host, key, context, method, "dataHash", path, size, modified, 0L)
+        check(response.optLong("size", -1) == size && response.optLong("modified", -1) == modified) {
+            "A origem mudou antes da conferência."
+        }
+        return response.optString("sha256").also { hash ->
+            check(hash.length == 64 && hash.all { it in '0'..'9' || it in 'a'..'f' }) {
+                "Hash final inválido."
+            }
+        }
+    }
+
     private fun dataRequest(host: String, key: ByteArray, context: Context, method: String,
         op: String, path: List<String>, size: Long, modified: Long, offset: Long): JSONObject {
         require(host.isNotBlank() && host.length <= 253 && !host.contains('/') &&
@@ -124,7 +163,7 @@ object RemoteClient {
             .put("clientId", SettingsStore.controllerId(context))
             .put("clientName", listOf(Build.MANUFACTURER, Build.MODEL).joinToString(" ").take(72))
             .put("accessMethod", method)
-        if (op == "dataChunk") request.put("size", size).put("modified", modified).put("offset", offset)
+        if (op in setOf("dataChunk", "dataChunks", "dataHash")) request.put("size", size).put("modified", modified).put("offset", offset)
         return Socket().use { socket ->
             socket.connect(InetSocketAddress(host, WireProtocol.PORT), 4500)
             socket.soTimeout = 10_000

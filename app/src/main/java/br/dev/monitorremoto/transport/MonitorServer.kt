@@ -116,7 +116,7 @@ class MonitorServer(private val context: Context) {
                 val regular = runCatching { WireProtocol.decode(permanentKey, encrypted) }.getOrNull()
                 if (regular != null) {
                     if (regular.optInt("v") != WireProtocol.VERSION ||
-                        regular.optString("op") !in setOf("snapshot", "disconnect", "notificationReply", "smsReply", "screenFrame", "screenCapture", "remoteTouch", "audioChunk", "requestScreen", "videoFrame", "wakeScreen", "dataList", "dataChunk", "appsList", "deviceControl", "cameraFrame", "cameraSwitch")) return
+                        regular.optString("op") !in setOf("snapshot", "disconnect", "notificationReply", "smsReply", "screenFrame", "screenCapture", "remoteTouch", "audioChunk", "requestScreen", "videoFrame", "wakeScreen", "dataList", "dataChunk", "dataChunks", "dataHash", "appsList", "deviceControl", "cameraFrame", "cameraSwitch")) return
                     if (abs(now - regular.optLong("ts")) > 5 * 60 * 1000L) return
                     synchronized(seenNonces) {
                         // Retenção compatível com ±5 minutos de validade do envelope.
@@ -141,7 +141,7 @@ class MonitorServer(private val context: Context) {
                         WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(permanentKey, mismatch))
                         return
                     }
-                    if (regular.optString("op") in setOf("dataList", "dataChunk")) {
+                    if (regular.optString("op") in setOf("dataList", "dataChunk", "dataChunks", "dataHash")) {
                         val response = SharedDataFolder.handle(context, regular)
                         WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(permanentKey, response))
                         AuthenticatedAccess.authenticated(socket.inetAddress?.hostAddress.orEmpty(),
@@ -436,6 +436,7 @@ class MonitorServer(private val context: Context) {
                         put("serverMs", now)
                         put("battery", BatteryReader.snapshot(context))
                         put("network", NetworkReader.snapshot(context))
+                        put("deviceState", br.dev.monitorremoto.core.DeviceStateReader.snapshot(context))
                         put("deviceInfo", DeviceInfoReader.snapshot(context))
                         put("telephony", TelephonyReader.snapshot(context))
                         put("events", if (SettingsStore.isMonitorEnabled(context))

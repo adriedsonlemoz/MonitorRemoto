@@ -1,3 +1,13 @@
+# Monitor Remoto v0.1.0-alpha.72
+
+**Diagnóstico do Minha Câmera e telemetria compacta:** painel Controle mostra o estado real do display (ligada, desligada ou ambiente, conforme o Android), bloqueio, indício de indisponibilidade da câmera e o último pacote em primeiro plano após acesso ao uso concedido localmente. A indicação de câmera ocupada **não confirma gravação**, pois o Monitor Remoto não tem integração de telemetria com Minha Câmera. Cartões de Bateria/Temperatura/Rede mais baixos; temperatura usa faixas orientativas coloridas e Wi-Fi apresenta SSID/RSSI quando o Android permite a leitura por permissão explícita de localização.
+
+**Recuperação SAF:** navega até 12 níveis de pasta e copia arquivos nesse nível; rejeita nomes duplicados ambíguos; permite copiar pasta com subpastas para uma nova pasta de destino (até 20 arquivos, 128 MiB no lote e 32 MiB por arquivo, 150 entradas por pasta, 200 itens no total); agrupa dois blocos criptografados de 48 KiB por consulta e confere hash SHA-256 de cada bloco e do arquivo integral na origem/destino. Retries curtos não substituem retomada após encerramento do processo, e a cópia continua vinculada à Activity. Pastas parciais são removidas em caso de falha quando o provedor permite.
+
+**Validação:** script de regressão e verificação sintática Kotlin; testes JVM puros da política e temperatura. **Ainda não compilada pelo Android Gradle Plugin nem testada em dois aparelhos**. Executar `:app:testDebugUnitTest :app:assembleDebug` na CI antes de instalar.
+
+---
+
 # Monitor Remoto v0.1.0-alpha.71
 
 **Correção de compilação no visualizador:** workflow #66 falhou em `:app:compileDebugKotlin` na linha 472 de `RemoteScreenActivity.kt` por análise recursiva de tipos do Kotlin, causada por `poll` referenciar a si mesmo no inicializador. O polling agora declara `Runnable` explicitamente e o callback que recebe um resultado de visita anterior reagenda `this` em vez de referenciar a propriedade `poll`. Preservadas autenticação, consentimento, câmera visível, Configurações, executor único e os demais recursos.

@@ -1,4 +1,4 @@
-# Arquitetura (0.1.0-alpha.71)
+# Arquitetura (0.1.0-alpha.72)
 
 ```text
 MONITORADO                                      CONTROLE
@@ -31,9 +31,9 @@ A captura usa `ImageReader` RGBA, `Bitmap` JPEG com largura máxima 540 px, taxa
 
 ## Distribuição e assinatura
 
-O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.71` e `versionCode=71`.
+O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.72` e `versionCode=72`.
 
-- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.71.apk`.
+- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.72.apk`.
 - `upload-artifact` sempre distribui um ZIP; GitHub Releases recebe o **arquivo APK direto**.
 - Com quatro Secrets, Gradle gera APK Release assinado e AAB. Sem Secrets, o arquivo é Debug de teste e não preserva necessariamente a assinatura entre execuções.
 - Releases são prévias, não substituem a futura revisão da Google Play e nem os ensaios reais.
@@ -265,3 +265,9 @@ O `RemotePhysicalControls`, propriedade lógica do `MonitorService`, mantém o a
 ## Alpha.70: selos de estado, sessão Camera2 e polling
 
 `ui/SettingsBadgeKind.kt` define selos explícitos; telas fornecem booleanos reais via `SettingsBadgeKind.forEnabled`, evitando inferência por legendas. `CameraFrameStore.stop(token)` ignora pedido obsoleto, enquanto `stop()` continua disponível ao serviço para parada global imediata. `CameraShareActivity` possui somente o token de sua sessão, não revoga a captura aberta em nova instância. `RemoteScreenActivity` usa executor de polling de thread única, geração por visita e shutdown em `onDestroy`; protocolos de transporte inalterados. Build Android e testes de concorrência em hardware seguem pendentes.
+
+## Alpha.72: diagnósticos e recuperação SAF
+
+`DeviceStateReader` fornece leitura local de estado do display, bloqueio, disponibilidade indicativa das câmeras (callback associado ao serviço monitorado) e o último evento de atividade quando `PACKAGE_USAGE_STATS` foi liberado manualmente. Sem inspeção do conteúdo da tela. `NetworkReader` lê SSID e RSSI apenas com localização Android autorizada, devolvendo nulos quando indisponível. `BatteryTemperaturePolicy` define cores de interface, não uma garantia de segurança térmica.
+
+`SharedDataFolder` continua restrito à árvore SAF e agora responde `dataHash` (hash do arquivo integral) e `dataChunks` (até dois blocos autenticados por pedido). A cópia recursiva é pré-enumerada pelo controlador e limitada a 20 arquivos, 128 MiB e 200 itens, sem sobrescrever os existentes. Não há fluxo persistente/resumível caso Activity ou processo termine.

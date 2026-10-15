@@ -16,7 +16,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.71" and code.group(1) == "71", "Versões incompatíveis"
+assert version == "0.1.0-alpha.72" and code.group(1) == "72", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -193,7 +193,7 @@ assert 'ACCESS_CHANNEL' in service and 'IMPORTANCE_DEFAULT' in service
 assert 'SettingsStore.isMonitorEnabled(this) && !MonitorService.isServiceActive' in ui
 assert 'private fun recoverAuthorizedServiceIfStopped()' in ui
 assert 'renderSettingsModule()' in ui and 'openSettingsModule()' in ui
-assert 'private fun MainActivity.compactMetricCard(' in ui and 'minimumHeight = dp(125)' in ui
+assert 'private fun MainActivity.compactMetricCard(' in ui and 'minimumHeight = dp(96)' in ui
 assert (root / 'app/src/test/java/br/dev/monitorremoto/transport/AppVersionTest.kt').is_file()
 assert len(list((root / 'app/src/main/res/drawable').glob('ic_*.xml'))) >= 10
 print('PASSOU: alpha.20, versão exata, disconnect, notificação, Activity de acesso e UI vetorial')
@@ -644,7 +644,7 @@ assert 'takePersistableUriPermission' in shared_folder and 'releasePersistableUr
 assert 'DocumentsContract.buildChildDocumentsUriUsingTree' in shared_folder and 'fun resolve(' in shared_folder
 assert 'RemoteFilePolicy.validPath(path)' in client and 'RemoteFilePolicy.validPath(path)' in shared_folder
 assert 'dataList' in server and 'dataChunk' in server and 'SharedDataFolder.handle(context, regular)' in server
-assert 'ACTION_CREATE_DOCUMENT' in remote_files and 'RemoteClient.dataChunk(' in remote_files and 'cancel.set(true)' in remote_files
+assert 'ACTION_CREATE_DOCUMENT' in remote_files and 'RemoteClient.dataChunks(' in remote_files and 'cancel.set(true)' in remote_files
 assert 'MessageDigest.getInstance("SHA-256")' in client and 'MAX_FILE_BYTES = 32L * 1024L * 1024L' in file_policy
 assert 'MANAGE_EXTERNAL_STORAGE' not in manifest and 'READ_EXTERNAL_STORAGE' not in manifest
 assert 'android:name=".ui.RemoteFilesActivity" android:exported="false"' in manifest
@@ -791,7 +791,7 @@ dashboard57 = (ui_root / 'RemoteDashboardUi.kt').read_text(encoding='utf-8')
 for token in ['ACTION_OPEN_DOCUMENT_TREE', 'ACTION_CREATE_DOCUMENT', 'MAX_BATCH_ITEMS = 20',
               'MAX_BATCH_BYTES = 128L * 1024L * 1024L', 'safeNewDocumentName',
               'DocumentsContract.createDocument', 'DocumentsContract.deleteDocument',
-              'RemoteClient.dataChunk(', 'RemoteClient.dataList(', 'Selecionar', 'Copiar selecionados',
+              'RemoteClient.dataChunks(', 'RemoteClient.dataList(', 'Selecionar', 'Copiar selecionados',
               'Ordenar', 'Buscar nesta pasta', 'Grade', 'entryDate', 'entrySize', 'showHelp']:
     assert token in files57, f'alpha.57: função ausente: {token}'
 assert 'SharedDataFolder.handle' not in files57
@@ -1019,3 +1019,23 @@ assert 'main.post(this)' in _viewer, "Callback de visita antiga deve reagendar o
 assert 'main.post(poll)' not in _viewer.split('private val poll: Runnable = object : Runnable', 1)[1].split('override fun onCreate(', 1)[0], "Autorreferência ao poll durante inicialização pode causar inferência recursiva"
 assert 'main.postDelayed(this, retryDelay)' in _viewer, "Cadência após a resposta foi alterada"
 print("PASSOU: alpha.71, regressão de inferência recursiva no polling #66")
+
+# Alpha.72: estado do aparelho, SSID condicionado, módulo SAF e verificações por digest.
+state = (root / "app/src/main/java/br/dev/monitorremoto/core/DeviceStateReader.kt").read_text()
+net = (root / "app/src/main/java/br/dev/monitorremoto/core/NetworkReader.kt").read_text()
+shared = (root / "app/src/main/java/br/dev/monitorremoto/core/SharedDataFolder.kt").read_text()
+files = (ui_root / "RemoteFilesActivity.kt").read_text()
+client = (root / "app/src/main/java/br/dev/monitorremoto/transport/RemoteClient.kt").read_text()
+manifest = (root / "app/src/main/AndroidManifest.xml").read_text()
+assert 'DeviceStateReader.snapshot(context)' in server
+assert 'DeviceStateReader.start(applicationContext)' in (root / "app/src/main/java/br/dev/monitorremoto/service/MonitorService.kt").read_text()
+assert 'cameraPossiblyBusy' in state and 'foregroundPackage' in state and 'usageAccess(context)' in state
+assert 'wifiSsid' in net and 'wifiRssiDbm' in net and 'ACCESS_FINE_LOCATION' in manifest
+assert 'PACKAGE_USAGE_STATS' in manifest and 'ACCESS_WIFI_STATE' in manifest
+assert 'val themed = when (temperatureZone)' in (ui_root / 'RemoteDashboardUi.kt').read_text()
+assert 'MAX_FILE_PATH_PARTS = MAX_DEPTH + 1' in (root / 'app/src/main/java/br/dev/monitorremoto/core/RemoteFilePolicy.kt').read_text()
+assert 'matches.size == 1' in shared and 'isHash' in shared and 'isMulti' in shared
+assert 'dataChunks(' in client and 'dataHash(' in client
+assert 'copyRemoteFolder' in files and 'collectRemoteFolder' in files and 'fetchChunksWithRetry' in files
+assert (root / 'app/src/test/java/br/dev/monitorremoto/core/BatteryTemperaturePolicyTest.kt').exists()
+print('PASSOU: alpha.72, snapshot, telemetria, arquivos SAF com SHA integral e cópia recursiva.')

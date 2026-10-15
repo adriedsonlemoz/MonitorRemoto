@@ -1,3 +1,10 @@
+## 0.1.0-alpha.72 (versionCode 72) | 15/10/2026
+- Cartões de telemetria compactos (~96 dp de altura mínima) e gradiente semântico por faixa de temperatura da bateria; faixas orientativas, não diagnósticos de segurança.
+- Estado da tela e bloqueio, disponibilidade provável da câmera (sem alegar gravação) e último aplicativo em primeiro plano após autorização especial de acesso ao uso no próprio monitorado.
+- SSID e RSSI em dBm da rede Wi-Fi mediante permissão explícita de localização no monitorado; estados indisponíveis não são inventados.
+- Recuperar dados: 12 níveis de pastas e um arquivo terminal, bloqueio de nomes ambíguos, cópia recursiva de pastas (até 20 arquivos, 128 MiB, 32 MiB/arquivo, 150 itens/pasta), até dois blocos por requisição autenticada, retries curtos, SHA-256 integral ao terminar.
+- Restrições ainda existentes: cópias dependem da Activity; não há retomada persistida após interrupção de processo, e conexões TCP não são persistentes. Build Gradle e testes físicos não realizados neste ambiente.
+
 ## 0.1.0-alpha.71 (versionCode 71) | 15/10/2026
 
 - Corrigida a falha real de compilação Kotlin do workflow **Gerar APK e Release #66**, `RemoteScreenActivity.kt:472:107`: inferência de tipo recursiva na propriedade `poll` ao referenciar `poll` no próprio inicializador (dentro do callback `main.post`).

@@ -62,6 +62,8 @@ class RemoteFilesActivity : Activity() {
     private var pendingPath = emptyList<String>()
     private var batchFiles = emptyList<JSONObject>()
     private var batchPath = emptyList<String>()
+    private var folderToCopy: String? = null
+    private var folderParent = emptyList<String>()
 
     private lateinit var frame: LinearLayout
     private lateinit var content: LinearLayout
@@ -187,7 +189,7 @@ class RemoteFilesActivity : Activity() {
             addView(label("Arquivos compartilhados", 19f, true))
             addView(label("Somente a pasta escolhida e autorizada no telefone monitorado. O acesso é de leitura: copiar não altera a origem.", 14f))
             addView(label("Para autorizar: no monitorado, abra Monitor Remoto → Configurações → Arquivos e recuperação → Escolher pasta.", 14f))
-            addView(label("Limites: 32 MiB por arquivo, 20 arquivos por lote, 128 MiB por lote. Não recupera arquivos apagados nem lê dados privados de outros apps.", 12f).apply { setTextColor(muted) })
+            addView(label("Limites: 32 MiB por arquivo, 20 arquivos por lote, 128 MiB por lote; pastas completas disponíveis no menu de cada pasta. Sem retomada após fechar o app. Não recupera arquivos apagados nem lê dados privados de outros apps.", 12f).apply { setTextColor(muted) })
         }
         AlertDialog.Builder(this).setView(body).setPositiveButton("Entendi", null).show()
     }
@@ -346,6 +348,7 @@ class RemoteFilesActivity : Activity() {
     private fun entryCard(item: JSONObject, grid: Boolean): View {
         val name = item.optString("name")
         val folder = item.optBoolean("folder")
+        val duplicated = entries.count { it.optString("name") == name } > 1
         val chosen = selected.contains(name)
         val box = LinearLayout(this).apply {
             orientation = if (grid) LinearLayout.VERTICAL else LinearLayout.HORIZONTAL
@@ -360,7 +363,7 @@ class RemoteFilesActivity : Activity() {
         }
         box.addView(icon, if (grid) LinearLayout.LayoutParams(-1, dp(48)) else LinearLayout.LayoutParams(dp(44), dp(44)))
         val info = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        info.addView(label(name, 14f, true).apply { maxLines = 2 })
+        info.addView(label(name + if (duplicated) " ⚠ nome repetido" else "", 14f, true).apply { maxLines = 2 })
         info.addView(label(if (folder) "Pasta" else entrySize(item), 12f).apply { setTextColor(muted) })
         if (!folder) info.addView(label(entryDate(item), 11f).apply { setTextColor(muted); maxLines = 1 })
         box.addView(info, if (grid) LinearLayout.LayoutParams(-1, -2) else LinearLayout.LayoutParams(0, -2, 1f))
@@ -380,18 +383,28 @@ class RemoteFilesActivity : Activity() {
     }
 
     private fun openFolder(name: String) {
+        if (entries.count { it.optString("name") == name } > 1) {
+            status.text = "Nome de pasta repetido: acesso bloqueado para evitar pasta errada."; return
+        }
         if (path.size >= RemoteFilePolicy.MAX_DEPTH) { status.text = "Limite de 12 níveis de pastas."; return }
         path = path + name
         queryText = ""
         listFolder()
     }
     private fun openActions(item: JSONObject) {
+        if (entries.count { it.optString("name") == item.optString("name") } > 1) {
+            status.text = "Há nomes repetidos nesta pasta. Renomeie na origem antes de copiar."; return
+        }
         val isFolder = item.optBoolean("folder")
-        val choices = if (isFolder) arrayOf("Abrir pasta", "Informações") else arrayOf("Copiar para este celular", "Informações", "Selecionar")
+        val choices = if (isFolder) arrayOf("Abrir pasta", "Copiar pasta e subpastas", "Informações") else arrayOf("Copiar para este celular", "Informações", "Selecionar")
         AlertDialog.Builder(this).setTitle(item.optString("name"))
             .setItems(choices) { _, which ->
                 if (isFolder) {
-                    if (which == 0) openFolder(item.optString("name")) else fileInfo(item)
+                    when (which) {
+                        0 -> openFolder(item.optString("name"))
+                        1 -> chooseFolderDestination(item.optString("name"))
+                        else -> fileInfo(item)
+                    }
                 } else when (which) {
                     0 -> chooseDestination(item, path)
                     1 -> fileInfo(item)
@@ -401,6 +414,9 @@ class RemoteFilesActivity : Activity() {
     }
     private fun toggleSelection(item: JSONObject) {
         val name = item.optString("name")
+        if (entries.count { it.optString("name") == name } > 1) {
+            status.text = "Arquivo ambíguo: renomeie o duplicado na origem."; return
+        }
         if (item.optBoolean("folder")) return
         if (!selected.remove(name)) {
             if (selected.size >= MAX_BATCH_ITEMS) { status.text = "Máximo de $MAX_BATCH_ITEMS arquivos por lote."; return }
@@ -421,6 +437,22 @@ class RemoteFilesActivity : Activity() {
         ))
     }
     private fun formatBytes(value: Long) = if (value >= 1024 * 1024) "${value / (1024 * 1024)} MiB" else "${value / 1024} KiB"
+
+    private fun chooseFolderDestination(name: String) {
+        if (copying || !RemoteFilePolicy.validSegment(name) ||
+            entries.count { it.optString("name") == name } != 1) return
+        folderToCopy = name
+        folderParent = path.toList()
+        try {
+            @Suppress("DEPRECATION")
+            startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+            }, CHOOSE_FOLDER)
+        } catch (error: Exception) {
+            folderToCopy = null
+            status.text = "Não foi possível escolher destino: ${error.message}"
+        }
+    }
 
     private fun chooseBatchDestination() {
         if (copying) return
@@ -481,26 +513,134 @@ class RemoteFilesActivity : Activity() {
             }
             CHOOSE_FOLDER -> {
                 val files = batchFiles
+                val folder = folderToCopy
+                folderToCopy = null
                 batchFiles = emptyList()
-                if (resultCode != RESULT_OK || data?.data == null || files.isEmpty() ||
+                if (resultCode != RESULT_OK || data?.data == null || (files.isEmpty() && folder == null) ||
                     data.flags and Intent.FLAG_GRANT_WRITE_URI_PERMISSION == 0) {
                     status.text = "Nenhuma pasta de destino autorizada."; return
                 }
-                copyBatch(data.data!!, files, batchPath)
+                if (folder != null) copyRemoteFolder(data.data!!, folderParent + folder, folder)
+                else copyBatch(data.data!!, files, batchPath)
             }
         }
     }
 
     /** Cria nomes novos com sufixo, nunca sobrescreve arquivo preexistente do destino. */
-    private fun safeNewDocumentName(tree: Uri, desired: String): String {
+    private fun safeNewDocumentName(tree: Uri, desired: String,
+        parentId: String = DocumentsContract.getTreeDocumentId(tree)): String {
         val resolver = contentResolver
-        val parentId = DocumentsContract.getTreeDocumentId(tree)
         val children = DocumentsContract.buildChildDocumentsUriUsingTree(tree, parentId)
         val used = mutableSetOf<String>()
         resolver.query(children, arrayOf(DocumentsContract.Document.COLUMN_DISPLAY_NAME), null, null, null)?.use { cursor ->
             while (cursor.moveToNext()) cursor.getString(0)?.let { used.add(it.lowercase(Locale.ROOT)) }
         } ?: error("Não foi possível conferir os arquivos existentes no destino.")
         return RemoteBatchPolicy.availableName(desired, used)
+    }
+
+    private data class RemoteFolderEntry(val relativePath: List<String>, val data: JSONObject?)
+
+    /** Pasta inteira, até os mesmos limites de lote. Pré-validação antes de criar arquivos. */
+    private fun collectRemoteFolder(path: List<String>): List<RemoteFolderEntry> {
+        val secret = key ?: error("Conexão sem chave.")
+        val result = ArrayList<RemoteFolderEntry>()
+        var total = 0L
+        var countFiles = 0
+        fun visit(current: List<String>, relative: List<String>) {
+            check(!cancel.get()) { "Cópia cancelada." }
+            check(current.size <= RemoteFilePolicy.MAX_DEPTH) { "Pasta além do limite de 12 níveis." }
+            check(SettingsStore.getRemoteHost(applicationContext) == host) { "O aparelho selecionado mudou." }
+            val response = RemoteClient.dataList(host, secret, applicationContext, method, current)
+            check(!response.optBoolean("truncated")) { "Pasta com mais de 150 itens: cópia completa não garantida." }
+            val list = response.optJSONArray("entries") ?: error("Listagem ausente.")
+            val unique = HashSet<String>()
+            for (index in 0 until list.length()) {
+                val item = list.optJSONObject(index) ?: error("Documento inválido.")
+                val name = item.optString("name")
+                check(RemoteFilePolicy.validSegment(name) && unique.add(name)) { "Nome repetido ou inválido: $name" }
+                val branch = relative + name
+                if (item.optBoolean("folder")) {
+                    result.add(RemoteFolderEntry(branch, null))
+                    check(result.size <= 200) { "Pasta com muitos diretórios: limite de 200 itens no resgate." }
+                    visit(current + name, branch)
+                } else {
+                    val length = item.optLong("size", -1)
+                    check(length in 1..RemoteFilePolicy.MAX_FILE_BYTES) { "Arquivo não permitido: $name" }
+                    total += length
+                    check(total <= RemoteBatchPolicy.MAX_TOTAL_BYTES) { "Pasta acima de 128 MiB." }
+                    result.add(RemoteFolderEntry(branch, JSONObject(item.toString())))
+                    countFiles++
+                    check(countFiles <= RemoteBatchPolicy.MAX_FILES && result.size <= 200) {
+                        "A pasta excede 20 arquivos ou 200 itens no total."
+                    }
+                }
+            }
+        }
+        visit(path, emptyList())
+        return result
+    }
+
+    private fun copyRemoteFolder(tree: Uri, sourceRoot: List<String>, title: String) {
+        if (copying) return
+        copying = true; cancel.set(false); ++generation
+        screenShell()
+        status.text = "Conferindo a pasta e os limites antes de copiar…"
+        add(button("Cancelar cópia", primary = true) { cancel.set(true) })
+        thread(name = "MonitorRemoto-data-folder") {
+            var createdRoot: Uri? = null
+            var finished = 0
+            val result = runCatching {
+                val items = collectRemoteFolder(sourceRoot)
+                val totalFiles = items.count { it.data != null }
+                check(totalFiles > 0) { "Pasta sem arquivos válidos para copiar." }
+                check(!cancel.get()) { "Cópia cancelada." }
+                val parentId = DocumentsContract.getTreeDocumentId(tree)
+                val rootParent = DocumentsContract.buildDocumentUriUsingTree(tree, parentId)
+                val targetName = safeNewDocumentName(tree, title)
+                val newRoot = DocumentsContract.createDocument(contentResolver, rootParent,
+                    DocumentsContract.Document.MIME_TYPE_DIR, targetName)
+                    ?: error("Não foi possível criar pasta de destino.")
+                createdRoot = newRoot
+                val destinations = hashMapOf<List<String>, Uri>(emptyList<String>() to newRoot)
+                for (entry in items) {
+                    check(!cancel.get()) { "Cópia cancelada." }
+                    val parent = entry.relativePath.dropLast(1)
+                    val parentUri = destinations[parent] ?: error("Subpasta de destino ausente.")
+                    val parentDocumentId = DocumentsContract.getDocumentId(parentUri)
+                    val name = entry.relativePath.last()
+                    val safeName = safeNewDocumentName(tree, name, parentDocumentId)
+                    if (entry.data == null) {
+                        val folderUri = DocumentsContract.createDocument(contentResolver, parentUri,
+                            DocumentsContract.Document.MIME_TYPE_DIR, safeName)
+                            ?: error("Não foi possível criar subpasta $name.")
+                        destinations[entry.relativePath] = folderUri
+                    } else {
+                        val mime = entry.data.optString("mime").takeIf { '/' in it && it.length in 3..110 }
+                            ?: "application/octet-stream"
+                        val uri = DocumentsContract.createDocument(contentResolver, parentUri, mime, safeName)
+                            ?: error("Não foi possível criar $name no destino.")
+                        transferTo(uri, entry.data, sourceRoot + entry.relativePath) { written, size ->
+                            main.post { if (!isDestroyed && !isFinishing)
+                                status.text = "${finished + 1}/$totalFiles · $name · ${written * 100 / size}%" }
+                        }
+                        finished++
+                    }
+                }
+            }
+            if (result.isFailure) createdRoot?.let { uri ->
+                // Apenas diretório que acabamos de criar, nunca outros documentos do usuário.
+                runCatching { DocumentsContract.deleteDocument(contentResolver, uri) }
+            }
+            main.post {
+                if (isFinishing || isDestroyed) return@post
+                copying = false
+                screenShell()
+                status.text = if (result.isSuccess) "Pasta copiada: $finished arquivo(s)." else
+                    "Falha na cópia da pasta: ${result.exceptionOrNull()?.message}. " +
+                        "Se o provedor não removeu os parciais, confira o destino."
+                add(button("Voltar aos arquivos", primary = true) { listFolder() })
+            }
+        }
     }
 
     private fun copyBatch(tree: Uri, files: List<JSONObject>, parent: List<String>) {
@@ -584,15 +724,19 @@ class RemoteFilesActivity : Activity() {
         val output = contentResolver.openOutputStream(destination, "wt") ?: error("Android não autorizou o destino.")
         output.use { stream ->
             var written = 0L
+            val digest = java.security.MessageDigest.getInstance("SHA-256")
             var lastBucket = -1L
             while (written < size) {
                 check(!cancel.get()) { "Transferência cancelada." }
                 check(SettingsStore.getRemoteHost(applicationContext) == host) { "O aparelho selecionado mudou." }
-                val bytes = RemoteClient.dataChunk(host, secret, applicationContext, method, source, size, modified, written)
-                check(bytes.isNotEmpty() && bytes.size <= RemoteFilePolicy.CHUNK_BYTES) { "Bloco inválido." }
-                check(!cancel.get()) { "Transferência cancelada." }
-                stream.write(bytes)
-                written += bytes.size
+                val chunks = fetchChunksWithRetry(secret, source, size, modified, written)
+                for (bytes in chunks) {
+                    check(bytes.isNotEmpty() && bytes.size <= RemoteFilePolicy.CHUNK_BYTES) { "Bloco inválido." }
+                    check(!cancel.get()) { "Transferência cancelada." }
+                    stream.write(bytes)
+                    digest.update(bytes)
+                    written += bytes.size
+                }
                 val bucket = (written * 100 / size) / 5
                 if (bucket != lastBucket || written == size) {
                     lastBucket = bucket
@@ -601,7 +745,31 @@ class RemoteFilesActivity : Activity() {
             }
             stream.flush()
             check(written == size) { "Cópia incompleta." }
+            check(!cancel.get()) { "Transferência cancelada." }
+            val expected = RemoteClient.dataHash(host, secret, applicationContext, method, source, size, modified)
+            val actual = digest.digest().joinToString("") { "%02x".format(it.toInt() and 255) }
+            check(expected == actual) { "Integridade final diferente da origem; arquivo descartado." }
         }
+    }
+
+    /** Repetição curta para instabilidades transitórias, sem prolongar cancelamentos. */
+    private fun fetchChunksWithRetry(secret: ByteArray, source: List<String>, size: Long,
+        modified: Long, offset: Long): List<ByteArray> {
+        var failure: Exception? = null
+        repeat(3) { attempt ->
+            check(!cancel.get()) { "Transferência cancelada." }
+            try { return RemoteClient.dataChunks(host, secret, applicationContext, method, source, size, modified, offset) }
+            catch (e: Exception) {
+                failure = e
+                if (attempt < 2) {
+                    // Não tentar novamente para falhas de versão, permissão ou integridade.
+                    val text = e.message.orEmpty().lowercase(Locale.ROOT)
+                    if (listOf("versão", "permiss", "integridade", "mudou", "recusad", "inválid").any { it in text }) throw e
+                    Thread.sleep((attempt + 1) * 400L)
+                }
+            }
+        }
+        throw failure ?: IllegalStateException("Sem resposta do monitorado.")
     }
 
     @Deprecated("Navegação por Activity")

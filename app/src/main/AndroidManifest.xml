@@ -7,6 +7,11 @@
     <!-- Solicitada no leitor QR ou na Activity local de câmera compartilhada. -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <!-- SSID/RSSI somente com autorização local explícita de localização. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <!-- Acesso ao uso precisa de autorização manual nas configurações especiais Android. -->
+    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" />
     <!-- Opcional: somente após autorização explícita no aparelho monitorado. -->
     <uses-permission android:name="android.permission.READ_PHONE_NUMBERS" />
     <!-- SMS particular, independente de Google Play: permissões runtime e restrições do instalador continuam vigentes. -->

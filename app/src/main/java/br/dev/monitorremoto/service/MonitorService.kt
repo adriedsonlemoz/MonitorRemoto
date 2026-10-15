@@ -91,6 +91,7 @@ class MonitorService : Service() {
             ACCESS_CHANNEL, "Acesso remoto detectado", NotificationManager.IMPORTANCE_DEFAULT
         ))
         br.dev.monitorremoto.core.RemotePhysicalControls.start(applicationContext)
+        br.dev.monitorremoto.core.DeviceStateReader.start(applicationContext)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -218,6 +219,7 @@ class MonitorService : Service() {
     }
 
     override fun onDestroy() {
+        br.dev.monitorremoto.core.DeviceStateReader.stop()
         serviceActive = false
         isServiceActive = false
         if (!stoppedExplicitly && SettingsStore.isMonitorEnabled(this)) {

@@ -99,15 +99,18 @@ object SharedDataFolder {
         for (name in path) {
             check(current.folder) { "Caminho não corresponde a uma pasta." }
             // Não aceitar pasta com mais itens que o limite, inclusive durante resolução.
-            current = children(context, tree, current.id, RemoteFilePolicy.MAX_ENTRIES).first
-                .firstOrNull { it.name == name } ?: error("Arquivo não disponível nessa pasta.")
+            val (children, truncated) = children(context, tree, current.id, RemoteFilePolicy.MAX_ENTRIES)
+            check(!truncated) { "Pasta tem mais de 150 itens; não é seguro identificar o arquivo." }
+            val matches = children.filter { it.name == name }
+            check(matches.size == 1) { if (matches.isEmpty()) "Arquivo não disponível nessa pasta." else "Existem nomes repetidos nesta pasta; cópia bloqueada para evitar o arquivo errado." }
+            current = matches.single()
         }
         return current
     }
 
     private fun path(request: JSONObject): List<String> {
         val array = request.optJSONArray("path") ?: error("Caminho ausente.")
-        require(array.length() <= RemoteFilePolicy.MAX_DEPTH) { "Muitas pastas aninhadas." }
+        require(array.length() <= RemoteFilePolicy.MAX_FILE_PATH_PARTS) { "Caminho muito profundo." }
         return (0 until array.length()).map { array.getString(it) }.also {
             require(RemoteFilePolicy.validPath(it)) { "Nome de pasta não permitido." }
         }
@@ -123,7 +126,7 @@ object SharedDataFolder {
             val parts = path(request)
             val node = resolve(context, tree, parts)
             if (request.optString("op") == "dataList") {
-                check(node.folder) { "Selecione uma pasta para listar." }
+                check(node.folder && parts.size <= RemoteFilePolicy.MAX_DEPTH) { "Limite de 12 níveis de pasta." }
                 val (files, truncated) = children(context, tree, node.id, RemoteFilePolicy.MAX_ENTRIES)
                 val entries = JSONArray()
                 files.sortedWith(compareBy<Item> { !it.folder }.thenBy { it.name.lowercase() })
@@ -135,19 +138,52 @@ object SharedDataFolder {
                     "Arquivo vazio, sem tamanho informado ou acima de 32 MiB; selecione outro arquivo."
                 }
                 val offset = request.optLong("offset", -1L)
-                require(RemoteFilePolicy.validChunk(node.size, offset)) { "Bloco inválido." }
+                val isHash = request.optString("op") == "dataHash"
+                val isMulti = request.optString("op") == "dataChunks"
+                require(isHash || RemoteFilePolicy.validChunk(node.size, offset)) { "Bloco inválido." }
                 // Metadados iniciais informados pelo controlador, evita cópias inconsistentes por alteração da origem.
                 require(request.optLong("size", -1L) == node.size &&
                     request.optLong("modified", -1L) == node.modified) { "Arquivo mudou desde a listagem." }
-                val count = RemoteFilePolicy.nextChunkLength(node.size, offset)
                 val document = DocumentsContract.buildDocumentUriUsingTree(tree, node.id)
-                val bytes = readSlice(context, document, offset, count)
-                check(bytes.size == count) { "Leitura incompleta do arquivo." }
-                response.put("ok", true).put("offset", offset).put("size", node.size)
-                    .put("modified", node.modified)
-                    .put("bytes", Base64.encodeToString(bytes, Base64.NO_WRAP))
-                    .put("sha256", MessageDigest.getInstance("SHA-256").digest(bytes)
-                        .joinToString("") { "%02x".format(it.toInt() and 255) })
+                if (isHash) {
+                    val digest = MessageDigest.getInstance("SHA-256")
+                    var received = 0L
+                    context.contentResolver.openInputStream(document)?.use { input ->
+                        val buffer = ByteArray(16 * 1024)
+                        while (true) {
+                            val n = input.read(buffer)
+                            if (n < 0) break
+                            if (n > 0) { received += n; check(received <= node.size) { "Origem mudou." }; digest.update(buffer, 0, n) }
+                        }
+                    } ?: error("Android não permitiu conferir a integridade da origem.")
+                    check(received == node.size) { "Tamanho da origem mudou." }
+                    response.put("ok", true).put("size", node.size).put("modified", node.modified)
+                        .put("sha256", digest.digest().joinToString("") { "%02x".format(it.toInt() and 255) })
+                } else if (isMulti) {
+                    val blocks = JSONArray()
+                    for (index in 0..1) {
+                        val at = offset + index * RemoteFilePolicy.CHUNK_BYTES.toLong()
+                        val count = RemoteFilePolicy.nextChunkLength(node.size, at)
+                        if (count == 0) break
+                        val bytes = readSlice(context, document, at, count)
+                        check(bytes.size == count) { "Bloco de origem incompleto." }
+                        blocks.put(JSONObject().put("offset", at)
+                            .put("bytes", Base64.encodeToString(bytes, Base64.NO_WRAP))
+                            .put("sha256", MessageDigest.getInstance("SHA-256").digest(bytes)
+                                .joinToString("") { "%02x".format(it.toInt() and 255) }))
+                    }
+                    response.put("ok", true).put("offset", offset)
+                        .put("size", node.size).put("modified", node.modified).put("chunks", blocks)
+                } else {
+                    val count = RemoteFilePolicy.nextChunkLength(node.size, offset)
+                    val bytes = readSlice(context, document, offset, count)
+                    check(bytes.size == count) { "Leitura incompleta do arquivo." }
+                    response.put("ok", true).put("offset", offset).put("size", node.size)
+                        .put("modified", node.modified)
+                        .put("bytes", Base64.encodeToString(bytes, Base64.NO_WRAP))
+                        .put("sha256", MessageDigest.getInstance("SHA-256").digest(bytes)
+                            .joinToString("") { "%02x".format(it.toInt() and 255) })
+                }
             }
             response
         }.getOrElse { error -> response.put("ok", false).put("message",

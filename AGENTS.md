@@ -1,4 +1,4 @@
-# Monitor Remoto 0.1.0-alpha.71
+# Monitor Remoto 0.1.0-alpha.72
 # Convenções permanentes do projeto Monitor Remoto
 
 - Toda alteração de código incrementa sequencialmente `versionCode` e `versionName` (ex.: `0.1.0-alpha.8` -> `0.1.0-alpha.9`). Sincronizar tela, README, CHANGELOG, RELEASE_NOTES e documentação.
@@ -21,7 +21,7 @@
 - Alpha.10: manter tema **claro padrão**, as opções da engrenagem, janela Conectar, botão de atualização compacto, lista de até 5 aparelhos recentes e os dados do Controle no topo. Não reintroduzir formulário longo na tela principal.
 - Credenciais por dispositivo usam `RecentDevices` + `SecretVault.profileKeyName`, com migração única da alpha.9. Não reaproveitar `CONTROLLER_KEY` antigo para IPs novos nem gravar segredo em preferências sem criptografia. Esquecer apaga o segredo correspondente.
 - Respostas HTTP/TCP não são conexão persistente. Exibir "Conectado" apenas após consulta autenticada bem-sucedida e "Sem resposta" após erro. Não inventar tempos de atualização.
-- Próxima versão sequencial: `0.1.0-alpha.72`, `versionCode 72`.
+- Próxima versão sequencial: `0.1.0-alpha.73`, `versionCode 73`.
 
 - Alpha.15: preservar a seleção Conectar → QR/Manual/Salvos, confirmação do QR antes de parear, cartões salvos com três ações e o scanner em Activity com tema Dialog.
 
@@ -143,3 +143,5 @@
 - Alpha.70: selos de Configurações usam exclusivamente `SettingsBadgeKind` com estado explícito, e não inferência de palavras nos subtítulos. Ao adicionar nova opção booleana, passar `badge = SettingsBadgeKind.forEnabled(valorReal)`. Revogação perigosa mantém prioridade visual. `CameraShareActivity` deve fechar o token que possui com `CameraFrameStore.stop(ownedSession)` e não chamar `CameraFrameStore.stop()` global em callbacks ou na pausa; somente serviço/ações globais revogam tudo. O polling da tela deve permanecer com executor reutilizável, um quadro de cada vez, resultado de visita antiga descartado. Compilação Gradle e testes físicos pendentes; próxima alpha.71.
 
 - Alpha.71: workflow GitHub Actions `Gerar APK e Release` #66 (15/10/2026) falhou em `:app:compileDebugKotlin`, `RemoteScreenActivity.kt:472:107` com "Type checking has run into a recursive problem". A causa foi `main.post(poll)` durante a inferência do tipo da propriedade `private val poll = object : Runnable`. Declarar `private val poll: Runnable` e reagendar a instância capturada `main.post(this)` dentro do callback. Não reintroduzir referência autorrecursiva no inicializador. Verificador estrutural mantém esta regressão; nenhuma mudança em consentimento, criptografia, rede, câmera ou captura. Nova compilação CI obrigatória antes de afirmar APK funcional. Próxima alpha.72.
+
+- Alpha.72: snapshots agora incluem `deviceState` (tela/bloqueio, câmera apenas como indício, app visível só com Usage Access), e `network` opcionalmente inclui SSID/RSSI quando ACCESS_FINE_LOCATION e localização estão ativas. Não alegar gravação do Minha Câmera a partir de CameraManager. As faixas de temperatura são indicativas. Transferência de arquivos preserva SAF e autorização local, verifica SHA-256 completo, evita ambiguidade por nomes repetidos, limita cópia de pastas e reduz sockets com operação `dataChunks` (dois blocos por solicitação). Sem retomada persistente/serviço de transferência ainda. Próxima versão alpha.73.

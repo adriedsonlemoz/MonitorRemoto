@@ -208,7 +208,29 @@ class RemoteDetailsActivity : Activity() {
             row(card, "Internet validada pelo Android", yesNo(network, "internetValidated"))
             row(card, "Rede tarifada", yesNo(network, "metered"))
             row(card, "IP informado pelo aparelho", labelValue(network, "localIpv4"))
+            row(card, "Nome do Wi-Fi (SSID)", labelValue(network, "wifiSsid"))
+            row(card, "Sinal recebido (RSSI)", if (network?.has("wifiRssiDbm") == true && !network.isNull("wifiRssiDbm")) "${network.optInt("wifiRssiDbm")} dBm" else "Sem leitura/permissão")
             row(card, "Método de pareamento", method.ifBlank { "Não disponível" })
+        }
+        section(R.drawable.ic_monitor, "Tela e câmera") { card ->
+            val state = payload.optJSONObject("deviceState")
+            row(card, "Display", state?.optString("screenState")?.takeIf { it.isNotBlank() } ?: "Não disponível")
+            row(card, "Bloqueio", when {
+                state == null || state.isNull("deviceLocked") -> "Não disponível"
+                state.optBoolean("deviceLocked") -> "Bloqueado"
+                else -> "Desbloqueado"
+            })
+            row(card, "Disponibilidade da câmera", when {
+                state == null || state.isNull("cameraPossiblyBusy") -> "Sem leitura"
+                state.optBoolean("cameraPossiblyBusy") -> "Possivelmente ocupada"
+                else -> "Disponível"
+            })
+            row(card, "App em primeiro plano", when {
+                state?.optBoolean("usagePermission") != true -> "Permissão não concedida"
+                state.isNull("foregroundPackage") -> "Não identificado"
+                else -> state.optString("foregroundPackage")
+            })
+            card.addView(text("Câmera ocupada não confirma gravação do Minha Câmera. Modo ambiente não é tela totalmente desligada.", 10.5f, muted = true))
         }
         section(R.drawable.ic_cellular, "Rede móvel e chip") { card ->
             pair(card, "Chip" to labelValue(sim, "simState"),

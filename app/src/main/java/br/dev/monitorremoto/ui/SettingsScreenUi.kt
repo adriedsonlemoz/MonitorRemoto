@@ -558,6 +558,21 @@ private fun MainActivity.fillDiagnosticsSettings(layout: LinearLayout) {
     card.addView(secondRow)
     sectionGap(card, 10)
     card.addView(dialogMetricRow("IP local", localIps().ifBlank { "Indisponível" }))
+    card.addView(dialogMetricRow("Tela local", br.dev.monitorremoto.core.DeviceStateReader.snapshot(this).optBoolean("screenInteractive").let { if (it) "Interativa" else "Apagada/não interativa" }))
+    card.addView(iconMenuRow(R.drawable.ic_wifi, "Nome e sinal da rede Wi-Fi",
+        if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) "Permissão concedida (localização também deve estar ligada)" else "Permissão opcional necessária") {
+        showAppConfirm("Mostrar rede Wi-Fi?", "Para informar o nome (SSID) e a intensidade do sinal, o Android exige a permissão de localização e que a localização esteja ligada. O Monitor Remoto não coleta coordenadas GPS para esse recurso.", R.drawable.ic_wifi, "Configurar permissão") {
+            if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED)
+                requestPermissions(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), 9262)
+            else startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+        }
+    })
+    card.addView(iconMenuRow(R.drawable.ic_phone, "Aplicativo visível",
+        if (br.dev.monitorremoto.core.DeviceStateReader.snapshot(this).optBoolean("usagePermission")) "Acesso ao uso permitido" else "Exige autorização especial opcional") {
+        showAppConfirm("Ver aplicativo em primeiro plano?", "Conceder Acesso ao uso permite identificar o último aplicativo em primeiro plano, sem ler a tela nem mensagens. Outros controladores pareados podem receber esse nome.", R.drawable.ic_phone, "Abrir acesso ao uso") {
+            startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
+        }
+    })
     card.addView(dialogMetricRow("Apps permitidos", SettingsStore.notificationAllowlist(this).size.toString()))
     card.addView(dialogMetricRow("Leitura SMS", if (SettingsStore.shareSmsInbox(this) &&
         checkSelfPermission(Manifest.permission.READ_SMS) == PackageManager.PERMISSION_GRANTED) "Autorizada" else "Desativada/sem permissão"))
@@ -724,7 +739,7 @@ private fun MainActivity.fillFileRecoverySettings(layout: LinearLayout) {
         }
     })
     sectionGap(layout, 12)
-    layout.addView(label("Limites desta etapa: arquivos individuais de até 32 MiB; " +
+    layout.addView(label("Limites desta etapa: arquivos individuais ou pastas (até 20 arquivos), máximo de 32 MiB por arquivo; " +
         "150 itens por pasta; sem acesso ao armazenamento inteiro ou arquivos excluídos. " +
         "A transferência exige o serviço Monitor Remoto ativo e a mesma versão nos dois aparelhos.",
         11.5f, muted = true))

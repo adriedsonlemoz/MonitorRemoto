@@ -1,3 +1,13 @@
+## Alpha.72 · telemetria e cópias SAF (15/10/2026)
+
+- [x] Base 0.1.0-alpha.71 preservada, versão Gradle/AppVersion, AGENTS, README, CHANGELOG e RELEASE_NOTES atualizados para 0.1.0-alpha.72+72.
+- [x] `tools/check_distribution.py` aprovado com novas invariantes para DeviceStateReader, NetworkReader, bateria e transferência de arquivos.
+- [x] Parser PSI Kotlin: 106 arquivos de produção sem erros de sintaxe; código puro Kotlin/JVM com 20 verificações de limites e temperatura executadas.
+- [x] Duplicatas SAF rejeitadas em vez de selecionar o primeiro documento, profundidade de caminho corrigida, limite de pasta recursiva e verificação SHA-256 da origem implementados.
+- [ ] **Build Android não realizado**: falta Android SDK e Gradle operacional no ambiente. Só o GitHub Actions confirmará compileDebugKotlin, testDebugUnitTest e assembleDebug.
+- [ ] Testes físicos: tela desligada com Minha Câmera, comportamento de permissão SSID, disponibilidade CameraManager, cópia de pasta completa, cancelamento, provedor SAF e consumo.
+- [ ] Retomada persistente após encerramento da Activity/processo e transferência desacoplada da Activity (futuro alpha.73; ainda não implementadas).
+
 ## Alpha.71 · correção da compilação #66 (15/10/2026)
 
 - [x] Examinado o log original do workflow #66: `:app:compileDebugKotlin` falhou em `RemoteScreenActivity.kt:472:107`, analisador Kotlin não resolve inferência recursiva.
