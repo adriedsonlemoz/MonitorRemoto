@@ -16,7 +16,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.75" and code.group(1) == "75", "Versões incompatíveis"
+assert version == "0.1.0-alpha.76" and code.group(1) == "76", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -1074,3 +1074,19 @@ assert 'RecentDevices.key(this, host)' in location_ui and 'RemoteClient.snapshot
 assert 'geo:$coords?q=$coords' in location_ui and 'locationEnabled' in location_store
 assert 'requestPermissions(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION), 9275)' in location_settings
 print('PASSOU: alpha.75, localização local autorizada, FGS, limpeza e consulta AES-GCM.')
+
+# Alpha.76: identidade visual + notificação de serviço autenticada, privada e deduplicada.
+notice = (root / 'app/src/main/java/br/dev/monitorremoto/service/MonitorService.kt').read_text()
+status_ui = (root / 'app/src/main/java/br/dev/monitorremoto/ui/MonitorStatusActivity.kt').read_text()
+policy = (root / 'app/src/main/java/br/dev/monitorremoto/core/MonitorNotificationPolicy.kt').read_text()
+assert 'android:icon="@mipmap/ic_launcher"' in manifest and 'android:roundIcon="@mipmap/ic_launcher"' in manifest
+assert 'android:name=".ui.MonitorStatusActivity" android:exported="false"' in manifest
+assert (root / 'app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml').exists()
+assert (root / 'app/src/main/res/drawable/ic_stat_shield.xml').exists()
+assert 'AuthenticatedAccess.recent()' in notice and 'setOnlyAlertOnce(true)' in notice
+assert 'setPublicVersion(publicNotification)' in notice and 'lastNotificationSignature' in notice
+assert '"Parar", stop' in notice and '"Detalhes", details' in notice
+assert 'LocationShareService.running' in notice and 'ScreenFrameStore.sharing' in notice
+assert 'CameraFrameStore.isActive()' in notice and 'MonitorNotificationPolicy.headline' in status_ui
+assert 'Conectado' not in policy and 'Aguardando controlador' in policy and 'acessos recentes' in policy
+print('PASSOU: alpha.76, ícones, notificação com estados reais, ações, privacidade e deduplicação.')

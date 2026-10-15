@@ -1,4 +1,4 @@
-# Arquitetura (0.1.0-alpha.75)
+# Arquitetura (0.1.0-alpha.76)
 
 ```text
 MONITORADO                                      CONTROLE
@@ -31,9 +31,9 @@ A captura usa `ImageReader` RGBA, `Bitmap` JPEG com largura máxima 540 px, taxa
 
 ## Distribuição e assinatura
 
-O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.75` e `versionCode=75`.
+O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.76` e `versionCode=76`.
 
-- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.75.apk`.
+- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.76.apk`.
 - `upload-artifact` sempre distribui um ZIP; GitHub Releases recebe o **arquivo APK direto**.
 - Com quatro Secrets, Gradle gera APK Release assinado e AAB. Sem Secrets, o arquivo é Debug de teste e não preserva necessariamente a assinatura entre execuções.
 - Releases são prévias, não substituem a futura revisão da Google Play e nem os ensaios reais.
@@ -283,3 +283,7 @@ O `RemotePhysicalControls`, propriedade lógica do `MonitorService`, mantém o a
 ## Localização alpha.75
 
 `LocationShareService` é FGS `location` independente de `MonitorService` e iniciado somente com autorização local e Activity visível. Solicita `LocationManager` GPS/rede nos intervalos conservadores de `LocationSharePolicy`, mantém último fix válido apenas em RAM (`LocationShareStore`), notificação contínua com botão Parar e limpeza ao parar ou perder `MonitorService`. `MonitorServer` acrescenta `location` ao snapshot autenticado apenas enquanto a sessão estiver ativa e o monitoramento habilitado. `RemoteLocationActivity` consulta pelo `RemoteClient.snapshot`, não pode pedir que o GPS ligue; mostra estados, idade, precisão e abre URI `geo:` em aplicativo de mapas externo. Não existe trilha ou base geográfica offline embutida.
+
+## Notificação do monitorado (alpha.76)
+
+O serviço FGS `connectedDevice` mantém uma notificação `IMPORTANCE_LOW` com ícone monocromático. Um snapshot local dos estados dos módulos e acessos `AuthenticatedAccess.recent()` (expiração de 45 s) orienta as atualizações, deduplicadas. O estado apresentado não pressupõe socket TCP persistente. O nome informado pelo cliente não é uma identidade comprovada. `MonitorStatusActivity` abre apenas após toque do usuário e não é exportada. A notificação pública de tela bloqueada não mostra controladores nem módulo ativo.

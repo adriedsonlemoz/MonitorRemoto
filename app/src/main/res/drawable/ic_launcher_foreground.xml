@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <!-- Desenho concentrado na região segura central do ícone adaptativo. -->
+    <path android:fillColor="#FFFFFFFF"
+        android:pathData="M54,22 L79,33 L79,53 C79,69 68,82 54,87 C40,82 29,69 29,53 L29,33 Z"/>
+    <path android:fillColor="#FF137D83"
+        android:pathData="M49,60 L42,53 L38,57 L49,68 L70,47 L66,43 Z"/>
+</vector>

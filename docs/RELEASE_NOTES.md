@@ -1,3 +1,16 @@
+# Monitor Remoto v0.1.0-alpha.76
+
+## Notificação inteligente e identidade visual
+
+- Ícone de escudo próprio na tela inicial e nas notificações.
+- Notificação do serviço indica **Aguardando controlador**, **Acesso(s) recente(s)** ou **Reconectando**, usando acessos autenticados com validade de até 45 segundos e o estado do servidor.
+- O resumo mostra módulos locais ativos: localização, compartilhamento de tela, câmera do Monitor Remoto e alertas ativados. Em Detalhes são mostrados acessos recentes e seus horários. **Nome informado pelo controlador não confirma identidade.**
+- Botões **Parar** e **Detalhes** no aviso permanente. Atualizações sem alerta sonoro repetido; conteúdo sensível oculto na versão pública da tela bloqueada.
+- A notificação independente da localização continua com a própria ação Parar localização. Sem novas permissões, mudanças no protocolo de pareamento ou captura oculta.
+- Ambos os celulares devem utilizar a alpha.76. A compilação Android completa e a verificação do layout real em aparelhos continuam pendentes.
+
+---
+
 # Monitor Remoto v0.1.0-alpha.75
 
 ## Localização remota autorizada

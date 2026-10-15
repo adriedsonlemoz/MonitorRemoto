@@ -1,3 +1,11 @@
+## 0.1.0-alpha.76 (versionCode 76) | 15/10/2026
+
+- Notificação principal do serviço passa a apresentar o estado do servidor, acessos autenticados recentes (expiração de 45 segundos) e módulos ativos: localização, tela, câmera e alertas. Não considera consultas TCP uma conexão permanente.
+- A ação Detalhes abre MonitorStatusActivity, que mostra o estado atual e deixa explícito que nomes enviados pelo controlador não são autenticados como identidade; Parar preservado.
+- Atualização da notificação apenas quando muda o resumo, com baixa importância, `setOnlyAlertOnce` e versão pública genérica para a tela bloqueada. Nenhum rastreamento oculto ou vazamento de IP/chaves.
+- Ícone adaptativo próprio de escudo para o app e glifo monocromático para notificações principais, de localização, tela e saúde.
+- Testes de regressão da política de estados e validações estruturais. Build Android completo e testes em aparelhos ainda pendentes.
+
 ## 0.1.0-alpha.75 (versionCode 75) | 15/10/2026
 
 - Localização: sessão GPS/rede opt-in iniciada somente no aparelho monitorado com permissões Android, notificação FGS `location` e ação Parar. Não inicia remotamente nem no boot.

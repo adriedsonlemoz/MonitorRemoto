@@ -82,7 +82,7 @@ object HealthAlertMonitor {
         val launch = PendingIntent.getActivity(context, 0, Intent(context, MainActivity::class.java),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val details = listOfNotNull(percent?.let { "$it%" }, temp?.let { "%.1f °C".format(it) }).joinToString(" · ")
-        val note = Notification.Builder(context, CHANNEL).setSmallIcon(android.R.drawable.ic_dialog_alert)
+        val note = Notification.Builder(context, CHANNEL).setSmallIcon(br.dev.monitorremoto.R.drawable.ic_stat_shield)
             .setContentTitle(status.reason).setContentText(details)
             .setContentIntent(launch).setAutoCancel(true).setVisibility(Notification.VISIBILITY_PRIVATE).build()
         nm.notify(290, note)

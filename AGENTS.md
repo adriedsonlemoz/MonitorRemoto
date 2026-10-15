@@ -1,4 +1,4 @@
-# Monitor Remoto 0.1.0-alpha.75
+# Monitor Remoto 0.1.0-alpha.76
 # Convenções permanentes do projeto Monitor Remoto
 
 - Toda alteração de código incrementa sequencialmente `versionCode` e `versionName` (ex.: `0.1.0-alpha.8` -> `0.1.0-alpha.9`). Sincronizar tela, README, CHANGELOG, RELEASE_NOTES e documentação.
@@ -21,7 +21,7 @@
 - Alpha.10: manter tema **claro padrão**, as opções da engrenagem, janela Conectar, botão de atualização compacto, lista de até 5 aparelhos recentes e os dados do Controle no topo. Não reintroduzir formulário longo na tela principal.
 - Credenciais por dispositivo usam `RecentDevices` + `SecretVault.profileKeyName`, com migração única da alpha.9. Não reaproveitar `CONTROLLER_KEY` antigo para IPs novos nem gravar segredo em preferências sem criptografia. Esquecer apaga o segredo correspondente.
 - Respostas HTTP/TCP não são conexão persistente. Exibir "Conectado" apenas após consulta autenticada bem-sucedida e "Sem resposta" após erro. Não inventar tempos de atualização.
-- Próxima versão sequencial: `0.1.0-alpha.76`, `versionCode 76`.
+- Próxima versão sequencial: `0.1.0-alpha.77`, `versionCode 77`.
 
 - Alpha.15: preservar a seleção Conectar → QR/Manual/Salvos, confirmação do QR antes de parear, cartões salvos com três ações e o scanner em Activity com tema Dialog.
 
@@ -150,4 +150,5 @@
 
 - Alpha.75: Localização somente após sessão iniciada localmente na tela Configurações > Localização; serviço `LocationShareService` FGS do tipo location, notificação persistente e ação Parar. Nunca acionar GPS a partir do controlador, receptor de boot ou polling. As coordenadas ficam só em RAM e a sessão desaparece ao encerrar serviço/monitoramento, revogar permissão ou processo. `LocationShareStore` distingue sem permissão, Android sem localização, aguardando, leitura antiga e expirada; não fingir precisão, atualização instantânea, histórico ou mapa offline embutido. O snapshot AES-GCM leva posição apenas durante sessão válida. Conceder chave a vários controladores lhes concede a mesma autorização enquanto a sessão estiver ativa; não afirmar autorização individual. Android 14+ exige FGS location iniciado de Activity visível, e Android 13+ exige POST_NOTIFICATIONS no fluxo local. Próxima alpha.76; build Gradle e testes físicos obrigatórios.
 
-- Alpha.75: Localização somente após sessão iniciada localmente na tela Configurações > Localização; serviço `LocationShareService` FGS do tipo location, notificação persistente e ação Parar. Nunca acionar GPS a partir do controlador, receptor de boot ou polling. As coordenadas ficam só em RAM e a sessão desaparece ao encerrar serviço/monitoramento, revogar permissão ou processo. `LocationShareStore` distingue sem permissão, Android sem localização, aguardando, leitura antiga e expirada; não fingir precisão, atualização instantânea, histórico ou mapa offline embutido. O snapshot AES-GCM leva posição apenas durante sessão válida. Conceder chave a vários controladores lhes concede a mesma autorização enquanto a sessão estiver ativa; não afirmar autorização individual. Android 14+ exige FGS location iniciado de Activity visível, e Android 13+ exige POST_NOTIFICATIONS no fluxo local. Próxima alpha.76; build Gradle e testes físicos obrigatórios.
+
+- Alpha.76: ícone do app deve ser adaptativo, com escudo e notificação monocromática própria. O MonitorService apresenta apenas acessos autenticamente consultados nos 45 segundos anteriores como **acessos recentes**, nunca conexões permanentes. Nomes de controladores são autodeclarados e jamais podem ser apresentados como identidade verificada; tela bloqueada usa versão pública genérica. Estado dos módulos deve vir de ScreenFrameStore, CameraFrameStore, LocationShareService/Store e preferências reais. Atualizações da notificação precisam ser deduplicadas, sem reiniciar FGS ou alertar repetidamente. Ações Parar e Detalhes devem continuar funcionais. Sem alteração de protocolos/permissões. Próxima alpha.77.

@@ -43,6 +43,8 @@
     </queries>
 
     <application
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher"
         android:allowBackup="false"
         android:fullBackupContent="false"
         android:usesCleartextTraffic="false"
@@ -65,6 +67,7 @@
         <activity android:name=".ui.RemoteCatalogActivity" android:exported="false" />
         <activity android:name=".ui.RemoteFilesActivity" android:exported="false" />
         <activity android:name=".ui.RemoteLocationActivity" android:exported="false" />
+        <activity android:name=".ui.MonitorStatusActivity" android:exported="false" />
 
         <activity
             android:name=".ui.IncomingAccessActivity"

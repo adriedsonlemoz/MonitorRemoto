@@ -56,7 +56,7 @@ class LocationShareService : Service(), LocationListener {
             Intent(this, LocationShareService::class.java).setAction(ACTION_STOP),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val note = Notification.Builder(this, CHANNEL)
-            .setSmallIcon(android.R.drawable.ic_menu_mylocation)
+            .setSmallIcon(br.dev.monitorremoto.R.drawable.ic_stat_shield)
             .setContentTitle("Localização compartilhada")
             .setContentText("${LocationSharePolicy.label(mode)} · toque para gerenciar")
             .setContentIntent(open).setOngoing(true)

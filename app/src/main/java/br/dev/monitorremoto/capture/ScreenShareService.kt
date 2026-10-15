@@ -99,7 +99,7 @@ class ScreenShareService : Service() {
         val stop = PendingIntent.getService(this, 1, Intent(this, ScreenShareService::class.java)
             .setAction(ACTION_STOP), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val notification = Notification.Builder(this, CHANNEL)
-            .setSmallIcon(android.R.drawable.ic_menu_view)
+            .setSmallIcon(br.dev.monitorremoto.R.drawable.ic_stat_shield)
             .setContentTitle("Tela sendo compartilhada")
             .setContentText("Sessão ativa até tocar em Parar; reconexões não exigem nova captura.")
             .setContentIntent(open)

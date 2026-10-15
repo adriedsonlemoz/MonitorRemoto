@@ -12,6 +12,8 @@ import android.Manifest
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
+import br.dev.monitorremoto.core.MonitorNotificationPolicy
+import br.dev.monitorremoto.core.LocationShareStore
 import br.dev.monitorremoto.core.EventJournal
 import br.dev.monitorremoto.core.SettingsStore
 import br.dev.monitorremoto.security.SecretVault
@@ -20,6 +22,7 @@ import br.dev.monitorremoto.transport.MonitorServer
 import br.dev.monitorremoto.transport.PairingSession
 import br.dev.monitorremoto.ui.MainActivity
 import br.dev.monitorremoto.ui.IncomingAccessActivity
+import br.dev.monitorremoto.ui.MonitorStatusActivity
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
@@ -65,6 +68,7 @@ class MonitorService : Service() {
         override fun run() {
             if (!serviceActive || !SettingsStore.isMonitorEnabled(this@MonitorService)) return
             ensureServerReady()
+            refreshMainNotification()
             mainHandler.postDelayed(this, 15_000L)
         }
     }
@@ -73,18 +77,27 @@ class MonitorService : Service() {
             if (!serviceActive || !SettingsStore.isMonitorEnabled(this@MonitorService)) return
             runCatching { br.dev.monitorremoto.core.HealthAlertMonitor.check(this@MonitorService) }
                 .onFailure { Log.w("MonitorRemotoHealth", "Leitura de saúde indisponível", it) }
+            refreshMainNotification()
             mainHandler.postDelayed(this, 30_000L)
         }
     }
     private val accessAlerts = mutableSetOf<String>()
+    private var foregroundStarted = false
+    private var lastNotificationSignature: String? = null
+    private var lastControllerSeenMs = 0L
+    private val mainNotificationId = 42
     private val mainHandler = Handler(Looper.getMainLooper())
     private val accessListener: () -> Unit = {
-        mainHandler.post { refreshAccessAlert() }
+        mainHandler.post {
+            refreshAccessAlert()
+            refreshMainNotification()
+        }
     }
     private val alertCleanup = object : Runnable {
         override fun run() {
             refreshAccessAlert()
-            if (isRunning) mainHandler.postDelayed(this, 10_000L)
+            refreshMainNotification()
+            if (serviceActive) mainHandler.postDelayed(this, 10_000L)
         }
     }
     override fun onBind(intent: Intent?): IBinder? = null
@@ -111,25 +124,16 @@ class MonitorService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
-        val openIntent = PendingIntent.getActivity(this, 0,
-            Intent(this, MainActivity::class.java),
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-        val stopIntent = PendingIntent.getService(this, 1,
-            Intent(this, MonitorService::class.java).setAction(ACTION_STOP),
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-        val notification = Notification.Builder(this, CHANNEL)
-            .setSmallIcon(android.R.drawable.ic_lock_idle_lock)
-            .setContentTitle("Monitor Remoto ativo")
-            .setContentText("Dados acessíveis somente com sua chave de pareamento")
-            .setContentIntent(openIntent)
-            .setOngoing(true)
-            .addAction(Notification.Action.Builder(null, "Parar", stopIntent).build())
-            .build()
+        val notification = buildMainNotification(MonitorNotificationPolicy.State(
+            serviceActive = true, serverReady = false, recentAccessCount = 0,
+            locationActive = false, screenActive = false, cameraActive = false,
+            alertsEnabled = SettingsStore.localHealthAlerts(this) && notificationsAllowed()
+        ), "")
         if (Build.VERSION.SDK_INT >= 34) {
-            startForeground(42, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
-        } else startForeground(42, notification)
+            startForeground(mainNotificationId, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
+        } else startForeground(mainNotificationId, notification)
+        foregroundStarted = true
+        lastNotificationSignature = null
         serviceActive = true
         isServiceActive = true
         stoppedExplicitly = false
@@ -139,6 +143,7 @@ class MonitorService : Service() {
         registerConnectivityWatch()
         // Serviço ativo não significa porta disponível; o supervisor valida ambos.
         ensureServerReady()
+        refreshMainNotification()
         mainHandler.removeCallbacks(serverWatchdog)
         mainHandler.postDelayed(serverWatchdog, 15_000L)
         mainHandler.removeCallbacks(healthWatchdog)
@@ -148,6 +153,71 @@ class MonitorService : Service() {
         mainHandler.removeCallbacks(alertCleanup)
         mainHandler.postDelayed(alertCleanup, 10_000L)
         return START_STICKY
+    }
+
+    private fun notificationsAllowed(): Boolean = Build.VERSION.SDK_INT < 33 ||
+        checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+
+    private fun buildMainNotification(state: MonitorNotificationPolicy.State, accessLine: String): Notification {
+        val open = PendingIntent.getActivity(this, 0,
+            Intent(this, MainActivity::class.java).putExtra(MainActivity.EXTRA_OPEN_MONITOR, true),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        val details = PendingIntent.getActivity(this, 76,
+            Intent(this, MonitorStatusActivity::class.java),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        val stop = PendingIntent.getService(this, 1,
+            Intent(this, MonitorService::class.java).setAction(ACTION_STOP),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        val summary = MonitorNotificationPolicy.headline(state)
+        val modules = MonitorNotificationPolicy.modules(state)
+        val expanded = listOf(summary, accessLine, modules).filter { it.isNotBlank() }.joinToString("\n")
+        val privateNotification = Notification.Builder(this, CHANNEL)
+            .setSmallIcon(br.dev.monitorremoto.R.drawable.ic_stat_shield)
+            .setContentTitle("Monitoramento protegido")
+            .setContentText(summary + if (state.locationActive) " · Localização ativa" else "")
+            .setStyle(Notification.BigTextStyle().bigText(expanded))
+            .setContentIntent(open)
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .setCategory(Notification.CATEGORY_SERVICE)
+            .setVisibility(Notification.VISIBILITY_PRIVATE)
+            .addAction(Notification.Action.Builder(null, "Parar", stop).build())
+            .addAction(Notification.Action.Builder(null, "Detalhes", details).build())
+        // Tela de bloqueio recebe texto genérico, sem nome/IP do controlador ou módulos.
+        val publicNotification = Notification.Builder(this, CHANNEL)
+            .setSmallIcon(br.dev.monitorremoto.R.drawable.ic_stat_shield)
+            .setContentTitle("Monitor Remoto ativo")
+            .setContentText("Serviço de monitoramento")
+            .build()
+        return privateNotification.setPublicVersion(publicNotification).build()
+    }
+
+    private fun refreshMainNotification() {
+        if (!serviceActive || !foregroundStarted || !SettingsStore.isMonitorEnabled(this)) return
+        val peers = AuthenticatedAccess.recent()
+        val recent = peers.firstOrNull()
+        if (recent != null && recent.lastSeenMs >= lastControllerSeenMs) {
+            lastControllerSeenMs = recent.lastSeenMs
+        }
+        val ready = isRunning && server?.isHealthy() == true
+        val state = MonitorNotificationPolicy.State(
+            serviceActive = true, serverReady = ready, recentAccessCount = peers.size,
+            locationActive = LocationShareService.running && LocationShareStore.active(),
+            screenActive = br.dev.monitorremoto.capture.ScreenFrameStore.sharing,
+            cameraActive = br.dev.monitorremoto.capture.CameraFrameStore.isActive(),
+            alertsEnabled = SettingsStore.localHealthAlerts(this) && notificationsAllowed()
+        )
+        val accessLine = if (recent != null) {
+            "Nome informado: ${recent.name.ifBlank { "Não informado" }.take(48)} · Última consulta: " +
+                android.text.format.DateFormat.format("HH:mm", recent.lastSeenMs)
+        } else if (lastControllerSeenMs > 0L) {
+            "Último acesso: " + android.text.format.DateFormat.format("HH:mm", lastControllerSeenMs)
+        } else ""
+        val key = listOf(state, accessLine).joinToString("|")
+        if (key == lastNotificationSignature) return
+        lastNotificationSignature = key
+        getSystemService(NotificationManager::class.java)
+            ?.notify(mainNotificationId, buildMainNotification(state, accessLine))
     }
 
     /** Reinicia somente o listener TCP; não tenta abrir Activities nem revogar consentimento. */
@@ -217,7 +287,7 @@ class MonitorService : Service() {
                 Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
             ), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val note = Notification.Builder(this, ACCESS_CHANNEL)
-            .setSmallIcon(android.R.drawable.ic_lock_lock)
+            .setSmallIcon(br.dev.monitorremoto.R.drawable.ic_stat_shield)
             .setContentTitle("Acesso remoto autorizado")
             .setContentText("Outro aparelho consultou os dados. Toque para ver detalhes.")
             .setContentIntent(launch)
@@ -232,6 +302,10 @@ class MonitorService : Service() {
         // Localização nunca permanece ativa após perda do serviço principal.
         LocationShareService.stop(this)
         br.dev.monitorremoto.core.DeviceStateReader.stop()
+        foregroundStarted = false
+        lastNotificationSignature = null
+        lastControllerSeenMs = 0L
+        lastControllerName = ""
         serviceActive = false
         isServiceActive = false
         if (!stoppedExplicitly && SettingsStore.isMonitorEnabled(this)) {
