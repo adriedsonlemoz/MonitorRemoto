@@ -1,3 +1,10 @@
+## 0.1.0-alpha.55 (14/10/2026)
+
+- Corrigido o teste `AdbPolicyTest.commandAllowlist` que falhou no workflow 53 (`:app:testDebugUnitTest`): a asserção antiga esperava 4 comandos, mas a política atual possui 7 comandos explicitamente permitidos (diagnóstico, heartbeat, navegação e volume).
+- O teste agora valida **cada nome e comando shell exato**, além de proibir comandos ADB não autorizados; não amplia a lista de operações disponíveis.
+- Mantido o reinício normal por serviço separado `reboot:` exclusivamente após confirmação explícita. Não foram alterados o protocolo, as permissões, a recuperação SAF, as telas nem a segurança da manutenção.
+- Atualizados versionName/versionCode/AppVersion, documentação, notas de release e verificador estrutural. Build Android completo e testes físicos da alpha.55 ainda pendentes.
+
 ## 0.1.0-alpha.54 (14/10/2026)
 
 - Corrigida a falha real de `:app:compileDebugKotlin` reportada no workflow 52: `MainActivity.kt:192:9 Unresolved reference 'lastRecoveryAttemptMs'`.

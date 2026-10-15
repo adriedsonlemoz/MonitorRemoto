@@ -1,5 +1,9 @@
 # Modo avançado ADB — implementação alpha.52
 
+## Regressão de comandos autorizados (alpha.55)
+
+A lista fechada de `AdbPolicy.Command` contém **sete comandos**: `DIAGNOSTIC`, `HEARTBEAT`, `BACK`, `HOME`, `RECENTS`, `VOLUME_UP` e `VOLUME_DOWN`. O workflow 53 falhou porque `AdbPolicyTest.commandAllowlist` ainda esperava quatro. Na alpha.55, o teste verifica a lista completa e o comando exato de cada item; não amplia privilégios. O serviço `reboot:` de manutenção é uma operação separada e continua exigindo confirmação explícita.
+
 ## Reinício remoto explícito (alpha.53)
 
 O serviço ADB `reboot:` é solicitado somente por toque explícito na opção Reiniciar da Manutenção e confirmação digitada `REINICIAR`, após reconexão ADB autorizada com o mesmo aparelho. Não inclui desligamento, bootloader, recovery, shell arbitrário nem repetição do comando após EOF/timeout. O Android pode não reativar Depuração sem fios após iniciar; em aparelho sem botão Power, há risco relevante de perda de acesso.

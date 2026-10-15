@@ -16,7 +16,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.54" and code.group(1) == "54", "Versões incompatíveis"
+assert version == "0.1.0-alpha.55" and code.group(1) == "55", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -754,3 +754,16 @@ assert 'SystemClock.elapsedRealtime()' in main_ui
 assert 'now - lastRecoveryAttemptMs < 60_000L' in main_ui
 assert 'lastRecoveryAttemptMs = now' in main_ui
 print('PASSOU: alpha.54, timestamp monotônico para recuperação autorizada declarado e utilizado')
+
+# Alpha.55: falha de teste unitário do workflow 53 por contagem de allowlist antiga.
+allowlist_test55 = (root / 'app/src/test/java/br/dev/monitorremoto/adb/AdbPolicyTest.kt').read_text(encoding='utf-8')
+adb_policy55 = (root / 'app/src/main/java/br/dev/monitorremoto/adb/AdbPolicy.kt').read_text(encoding='utf-8')
+assert 'assertEquals(4,AdbPolicy.Command.entries.size)' not in allowlist_test55
+assert 'assertEquals(7, AdbPolicy.Command.entries.size)' in allowlist_test55
+for name in ['DIAGNOSTIC', 'HEARTBEAT', 'BACK', 'HOME', 'RECENTS', 'VOLUME_UP', 'VOLUME_DOWN']:
+    assert ('AdbPolicy.Command.' + name + ' to ') in allowlist_test55
+    assert name in adb_policy55
+assert 'assertEquals(expected.keys, AdbPolicy.Command.entries.toSet())' in allowlist_test55
+assert 'poweroff' in allowlist_test55 and 'shutdown' in allowlist_test55
+assert 'active.open("reboot:")' in (root / 'app/src/main/java/br/dev/monitorremoto/adb/AdbClient.kt').read_text(encoding='utf-8')
+print('PASSOU: alpha.55, allowlist de sete comandos ADB testada sem ampliar permissões')

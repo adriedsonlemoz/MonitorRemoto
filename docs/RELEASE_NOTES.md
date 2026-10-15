@@ -1,4 +1,11 @@
-# Monitor Remoto v0.1.0-alpha.54
+# Monitor Remoto v0.1.0-alpha.55
+
+## Correção dos testes ADB do workflow 53 (alpha.55)
+
+- Atualizado `AdbPolicyTest.commandAllowlist`: a política ADB contém atualmente 7 comandos, não mais 4.
+- O teste confere a lista fechada de comandos, os comandos shell esperados e palavras-chave proibidas; não adiciona novas permissões ou comandos.
+- Preservados manutenção com reinício normal `reboot:` confirmado, reconexão ADB, recuperação de arquivos, vídeos e interface das versões anteriores.
+- Build Android completo e testes em aparelhos físicos continuam pendentes.
 
 ## Correção de compilação no workflow 52 (alpha.54)
 
