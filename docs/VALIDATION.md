@@ -1,3 +1,27 @@
+## Alpha.64 — validação local (15/10/2026)
+
+- [x] Código base alpha.63, AGENTS, README, CHANGELOG e documentação lidos antes da modificação.
+- [x] `versionName=0.1.0-alpha.64`, `versionCode=64`, AppVersion e documentação sincronizados.
+- [x] `python3 tools/check_distribution.py`: APROVADO (incluindo requisitos alpha.64).
+- [x] Testes Kotlin/JVM isolados com stubs de `SystemClock` e JUnit: 11/11 aprovados (CameraStreamPolicy e CameraFrameStore, incluindo demanda/delta JPEG).
+- [x] Parser PSI Kotlin: 130 arquivos de produção e testes sem erros sintáticos; sem resolução Android completa.
+- [x] 44 XML Android e 1 workflow YAML válidos.
+- [x] Política de demanda autenticada Camera2 e resposta delta JPEG inspecionadas e protegidas por validador.
+- [ ] Não há métricas reais de ganho de bateria/banda: medir nos aparelhos antes de quantificar economia.
+- [ ] Build completo `:app:testDebugUnitTest :app:assembleDebug`: não disponível neste ambiente sem SDK Android/Gradle.
+- [ ] Instalação e testes reais de camera front/back, orientação, abertura/fechamento e consumo energético.
+- [ ] Medir FPS/latência ponta a ponta em rede real antes de prometer desempenho.
+
+## Alpha.63 · orientação e concorrência Camera2 (15/10/2026)
+
+- [x] Base alpha.62 revisada e `AGENTS.md` consultado; `versionName=0.1.0-alpha.63`, `versionCode=63`, versão de protocolo de aplicação, README/CHANGELOG/Release Notes/arquitetura sincronizados.
+- [x] `python3 tools/check_distribution.py`: aprovado, incluindo invariantes de Camera2 e sessões anteriores.
+- [x] Testes Kotlin isolados em JVM (executor de asserções compatível com JUnit e stub somente para `SystemClock`): **14 testes aprovados**, incluindo rotações NV21 de 0/90/180/270°, frontal/traseira, rejeição de dados inválidos, limites JPEG, troca e revogação de sessão. Não confundir com suíte Gradle.
+- [x] Parser Kotlin PSI: **130 fontes `.kt` sem erros de sintaxe** (não é compilação com resolução de símbolos).
+- [x] **46 XMLs válidos**; nenhuma nova permissão no manifesto, nem captura sem Activity local.
+- [ ] **APK/build completo com Android Gradle Plugin não realizado**: ambiente sem SDK Android/Gradle de projeto.
+- [ ] **Hardware e regressões não realizados**: câmera frontal/traseira, rotações reais do fabricante, espelhamento/preview local, toque para salvar, fluxo com dois telefones, rede e consumo; verificar também câmera indisponível e serviço encerrado durante captura.
+
 ## Alpha.62 · módulo de câmera visível e JPEG autenticado (15/10/2026)
 
 - Política de streaming JPEG, expiração e limite de payload com testes JVM, verificador estrutural e integridade ZIP.

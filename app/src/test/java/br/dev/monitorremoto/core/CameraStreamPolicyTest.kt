@@ -22,5 +22,12 @@ class CameraStreamPolicyTest {
         assertFalse(CameraStreamPolicy.shouldEncode(true, 999))
         assertTrue(CameraStreamPolicy.shouldEncode(true, 1000))
     }
+    @Test fun demandaAutenticadaExpiraSemPedidosRecentes() {
+        assertFalse(CameraStreamPolicy.hasRecentViewer(0L, 5_000L))
+        assertFalse(CameraStreamPolicy.hasRecentViewer(1_000L, 999L))
+        assertTrue(CameraStreamPolicy.hasRecentViewer(1_000L, 1_000L))
+        assertTrue(CameraStreamPolicy.hasRecentViewer(1_000L, 5_500L))
+        assertFalse(CameraStreamPolicy.hasRecentViewer(1_000L, 5_501L))
+    }
     @Test fun expiracao() { assertEquals(3000L, CameraStreamPolicy.MAX_FRAME_AGE_MS) }
 }

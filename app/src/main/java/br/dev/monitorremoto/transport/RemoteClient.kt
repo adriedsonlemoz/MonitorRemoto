@@ -190,10 +190,12 @@ object RemoteClient {
     }
 
     /** Somente lê quadros de uma sessão Camera2 iniciada LOCALMENTE no monitorado. */
-    fun cameraFrame(host: String, key: ByteArray, context: Context, method: String): JSONObject {
+    fun cameraFrame(host: String, key: ByteArray, context: Context, method: String, afterSequence: Long = 0L): JSONObject {
         require(host.isNotBlank() && host.length <= 253 && !host.contains('/') &&
             !host.contains(':') && !host.contains(' ')) { "Host inválido." }
+        require(afterSequence >= 0L) { "Sequência inválida." }
         val request = JSONObject().put("v", WireProtocol.VERSION).put("op", "cameraFrame")
+            .put("afterSequence", afterSequence)
             .put("appVersion", AppVersion.NAME).put("ts", System.currentTimeMillis())
             .put("clientId", SettingsStore.controllerId(context))
             .put("clientName", listOf(Build.MANUFACTURER, Build.MODEL).joinToString(" ").take(72))

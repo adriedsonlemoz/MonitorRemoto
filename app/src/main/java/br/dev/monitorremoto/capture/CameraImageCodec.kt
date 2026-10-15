@@ -5,11 +5,12 @@ import android.graphics.Rect
 import android.graphics.YuvImage
 import android.media.Image
 import br.dev.monitorremoto.core.CameraStreamPolicy
+import br.dev.monitorremoto.core.CameraNv21Rotation
 import java.io.ByteArrayOutputStream
 
 /** YUV_420_888 para JPEG, respeitando rowStride e pixelStride de cada plano. */
 internal object CameraImageCodec {
-    fun encode(image: Image): ByteArray? {
+    fun encode(image: Image, rotationDegrees: Int): ByteArray? {
         if (image.format != ImageFormat.YUV_420_888) return null
         val width = image.width
         val height = image.height
@@ -20,9 +21,12 @@ internal object CameraImageCodec {
         // NV21 intercala V,U; não assumir layout NV21 nativo ou padding igual em fabricantes.
         if (!copyPlane(image.planes[2], width / 2, height / 2, nv21, width * height, 2)) return null
         if (!copyPlane(image.planes[1], width / 2, height / 2, nv21, width * height + 1, 2)) return null
+        val rotated = CameraNv21Rotation.rotate(nv21, width, height, rotationDegrees)
         val out = ByteArrayOutputStream(60_000)
-        YuvImage(nv21, ImageFormat.NV21, width, height, null)
-            .compressToJpeg(Rect(0, 0, width, height), 46, out)
+        val compressed = YuvImage(rotated.bytes, ImageFormat.NV21,
+            rotated.width, rotated.height, null).compressToJpeg(
+            Rect(0, 0, rotated.width, rotated.height), 46, out)
+        if (!compressed) return null
         val encoded = out.toByteArray()
         return encoded.takeIf { CameraStreamPolicy.validFrame(it) }
     }

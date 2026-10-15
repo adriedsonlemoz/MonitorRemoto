@@ -1,4 +1,4 @@
-# Arquitetura (0.1.0-alpha.62)
+# Arquitetura (0.1.0-alpha.64)
 
 ```text
 MONITORADO                                      CONTROLE
@@ -31,9 +31,9 @@ A captura usa `ImageReader` RGBA, `Bitmap` JPEG com largura máxima 540 px, taxa
 
 ## Distribuição e assinatura
 
-O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.62` e `versionCode=62`.
+O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.64` e `versionCode=64`.
 
-- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.62.apk`.
+- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.64.apk`.
 - `upload-artifact` sempre distribui um ZIP; GitHub Releases recebe o **arquivo APK direto**.
 - Com quatro Secrets, Gradle gera APK Release assinado e AAB. Sem Secrets, o arquivo é Debug de teste e não preserva necessariamente a assinatura entre execuções.
 - Releases são prévias, não substituem a futura revisão da Google Play e nem os ensaios reais.
@@ -241,3 +241,16 @@ O `RemotePhysicalControls`, propriedade lógica do `MonitorService`, mantém o a
 ## Câmeras locais e JPEG remoto (alpha.62)
 
 `CameraShareActivity` só abre Camera2 em foreground visível no monitorado com CAMERA autorizada; fecha ao sair. Prévia TextureView + ImageReader YUV_420_888 compartilham uma CameraCaptureSession. `CameraImageCodec` respeita os strides e gera JPEG de no máximo 110 KB a até um quadro/s, volátil por 3 segundos em `CameraFrameStore`. Um request autenticado AES-GCM `cameraFrame` no `MonitorServer` retorna estado e, se disponível, JPEG recente. `RemoteCameraActivity` só consulta enquanto visível, descarta respostas antigas e salva manualmente. Não inicia câmera via rede, nem FGS/background, nem H.264, áudio ou gravação.
+
+### Orientação e geração da câmera (alpha.63)
+
+- `CameraNv21Rotation.degrees` combina `CameraCharacteristics.SENSOR_ORIENTATION`, `Surface.ROTATION_*` e lente, sem usar orientação assumida pelo modelo. `rotate` transforma planos Y e pares VU do NV21 (0/90/180/270) antes de `YuvImage.compressToJpeg`.
+- `CameraFrameStore.begin` devolve token por sessão. O callback valida geração e `publish(token, jpeg)` não aceita sessão obsoleta; o serviço revoga a memória em `onDestroy`, e o endpoint de leitura também valida `MonitorService.isRunning`.
+- Ainda é necessário validar câmera e rotação reais e executar o build Android completo.
+
+## Alpha.64: economia na câmera JPEG e telemetria da visualização
+
+- `cameraFrame` permanece uma **leitura cifrada/autenticada**. O controlador manda `afterSequence`; o servidor responde com `sequence` e envia `jpeg` apenas se o quadro for diferente e ainda válido. Dados de `active/lens/frameAgeMs/sequence` são obtidos de uma única leitura sincronizada do store.
+- Cada consulta válida e autorizada marca `viewerPing` no `CameraFrameStore`. Somente `CameraShareActivity` visível, com sessão Camera2 ativa e ping nos últimos 4,5 segundos, converte YUV em JPEG. `ImageReader` continua descartando imagens e fechando cada `Image`; Camera2 é encerrado em `onPause`. Sem pedidos, a conversão para, mas a prévia local ainda está ativa.
+- Controlador mede tempo de requisição/resposta (inclui leitura de credencial + rede + processamento), bytes reais de JPEG e intervalo observado entre novos quadros. Esses valores **não** são latência ponta a ponta, FPS da câmera, nem estatísticas de rede desagregadas. Ao perder a Activity/expirar um quadro, limpa o preview.
+- Comandos remotos de ativar e trocar câmera continuam inexistentes. A alternância entre frontal e traseira segue **somente local** no aparelho monitorado.

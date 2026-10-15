@@ -1,5 +1,7 @@
 package br.dev.monitorremoto.transport
 
+import br.dev.monitorremoto.service.MonitorService
+
 import android.content.Context
 import br.dev.monitorremoto.core.BatteryReader
 import br.dev.monitorremoto.core.NetworkReader
@@ -284,18 +286,22 @@ class MonitorServer(private val context: Context) {
                         return
                     }
                     if (regular.optString("op") == "cameraFrame") {
-                        // A câmera só transmite quando CameraShareActivity está visível no monitorado.
-                        val active = br.dev.monitorremoto.capture.CameraFrameStore.isActive() &&
-                            SettingsStore.isMonitorEnabled(context)
-                        val frame = if (active) br.dev.monitorremoto.capture.CameraFrameStore.snapshot() else null
+                        // Somente consulta autenticada solicita a próxima codificação JPEG.
+                        // Nunca inicia Camera2, que depende da Activity local visível.
+                        val allowed = SettingsStore.isMonitorEnabled(context) && MonitorService.isRunning
+                        val store = br.dev.monitorremoto.capture.CameraFrameStore
+                        if (allowed) store.viewerPing()
+                        val knownSequence = regular.optLong("afterSequence", 0L).coerceAtLeast(0L)
+                        val status = if (allowed) store.status(knownSequence)
+                            else br.dev.monitorremoto.capture.CameraFrameStore.Status(false, null, -1L, 0L, null)
                         val response = JSONObject().put("v", WireProtocol.VERSION)
                             .put("op", "cameraFrame").put("appVersion", AppVersion.NAME)
-                            .put("active", active)
-                            .put("lens", if (active) br.dev.monitorremoto.capture.CameraFrameStore.lens() else JSONObject.NULL)
-                            .put("frameAgeMs", if (active) br.dev.monitorremoto.capture.CameraFrameStore.frameAgeMs() else -1L)
-                        if (frame != null) {
-                            response.put("sequence", frame.sequence)
-                                .put("jpeg", Base64.encodeToString(frame.jpeg, Base64.NO_WRAP))
+                            .put("active", status.active)
+                            .put("lens", status.lens ?: JSONObject.NULL)
+                            .put("frameAgeMs", status.ageMs)
+                            .put("sequence", status.sequence)
+                        if (status.jpeg != null) {
+                            response.put("jpeg", Base64.encodeToString(status.jpeg, Base64.NO_WRAP))
                         }
                         WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(permanentKey, response))
                         AuthenticatedAccess.authenticated(socket.inetAddress?.hostAddress.orEmpty(),

@@ -9,6 +9,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.util.Base64
 import android.view.Gravity
 import android.widget.Button
@@ -39,6 +40,9 @@ class RemoteCameraActivity : Activity() {
     private var lastReceivedAt = 0L
     private var frame: ByteArray? = null
     private var pendingDocument: ByteArray? = null
+    private var lastRttMs = -1L
+    private var lastJpegBytes = 0
+    private var observedPeriodMs = -1L
     private lateinit var picture: ImageView
     private lateinit var status: TextView
     private lateinit var save: Button
@@ -112,6 +116,8 @@ class RemoteCameraActivity : Activity() {
         frame = null
         lastReceivedAt = 0L
         lastSequence = 0L
+        lastJpegBytes = 0
+        observedPeriodMs = -1L
         picture.setImageDrawable(null)
         save.isEnabled = false
     }
@@ -120,19 +126,23 @@ class RemoteCameraActivity : Activity() {
         if (!active || busy) return
         val callGeneration = generation
         busy = true
+        val knownSequence = lastSequence
         executor.execute {
+            val startedAt = SystemClock.elapsedRealtime()
             val result = runCatching {
                 val key = RecentDevices.key(this, host) ?: error("Chave deste aparelho não está disponível.")
-                RemoteClient.cameraFrame(host, key, this, method)
+                RemoteClient.cameraFrame(host, key, this, method, knownSequence)
             }
+            val measuredRttMs = SystemClock.elapsedRealtime() - startedAt
             handler.post {
                 busy = false
-                if (!active || callGeneration != generation || isFinishing) {
+                if (!active || callGeneration != generation || isFinishing || isDestroyed) {
                     // Uma resposta antiga não deve impedir o polling ao voltar à Activity.
                     if (active && !isFinishing) handler.post(poll)
                     return@post
                 }
                 result.fold(onSuccess = { response ->
+                    lastRttMs = measuredRttMs
                     val running = response.optBoolean("active", false)
                     val age = response.optLong("frameAgeMs", -1L)
                     val base64 = response.optString("jpeg", "")
@@ -146,18 +156,28 @@ class RemoteCameraActivity : Activity() {
                                 picture.setImageBitmap(bitmap)
                                 frame = bytes
                                 lastSequence = sequence
-                                lastReceivedAt = android.os.SystemClock.elapsedRealtime()
+                                val receivedNow = SystemClock.elapsedRealtime()
+                                if (lastReceivedAt > 0L && receivedNow > lastReceivedAt)
+                                    observedPeriodMs = receivedNow - lastReceivedAt
+                                lastReceivedAt = receivedNow
+                                lastJpegBytes = bytes.size
                             }
                         }
                     }
-                    if (!running || !isFresh || android.os.SystemClock.elapsedRealtime() - lastReceivedAt > 3_500L) {
+                    if (!running || !isFresh || SystemClock.elapsedRealtime() - lastReceivedAt > CameraStreamPolicy.MAX_FRAME_AGE_MS) {
                         clearPreview()
                     }
                     save.isEnabled = frame != null
+                    val network = if (lastRttMs >= 0L) " · resposta ${lastRttMs} ms" else ""
                     status.text = when {
                         !running -> "Câmera fechada. Inicie no Modo monitorado do outro aparelho."
-                        frame == null -> "Câmera autorizada, aguardando quadros válidos…"
-                        else -> "● Câmera ${response.optString("lens", "ativa")} · quadro de ${age} ms · JPEG"
+                        frame == null && age > CameraStreamPolicy.MAX_FRAME_AGE_MS ->
+                            "Câmera ativa, mas o último quadro expirou$network"
+                        frame == null -> "Câmera ativa, aguardando JPEG$network"
+                        else -> {
+                            val interval = if (observedPeriodMs > 0L) " · intervalo ${observedPeriodMs} ms" else ""
+                            "● ${response.optString("lens", "Câmera")} · JPEG ${lastJpegBytes / 1024} KiB · quadro ${age} ms$network$interval"
+                        }
                     }
                 }, onFailure = {
                     clearPreview()
@@ -170,7 +190,7 @@ class RemoteCameraActivity : Activity() {
 
     private fun saveStill() {
         val bytes = frame?.copyOf() ?: return
-        val age = android.os.SystemClock.elapsedRealtime() - lastReceivedAt
+        val age = SystemClock.elapsedRealtime() - lastReceivedAt
         if (age > CameraStreamPolicy.MAX_FRAME_AGE_MS || !CameraStreamPolicy.validFrame(bytes)) {
             clearPreview()
             Toast.makeText(this, "Imagem expirou. Aguarde um novo quadro.", Toast.LENGTH_SHORT).show()

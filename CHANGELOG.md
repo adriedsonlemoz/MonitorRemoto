@@ -1,3 +1,19 @@
+## 0.1.0-alpha.64 (versionCode 64)
+
+- Otimizado consumo da câmera compartilhada: somente converter/comprimir quadros JPEG se houver consulta `cameraFrame` autenticada nos últimos 4,5 segundos. Sem visualizador conectado, permanece a prévia local, mas a conversão JPEG é suspensa. A demanda é descartada na troca/fechamento da câmera.
+- `CameraFrameStore.status(afterSequence)` devolve metadados coerentes em leitura sincronizada. `cameraFrame` não envia novamente bytes JPEG que o controlador já recebeu. Isso reduz transferências redundantes, sem alterar a autenticação AES-GCM, limites de 110 KB ou expiração de quadros.
+- Visualizador mostra tempo medido de requisição/resposta, tamanho real do JPEG e intervalo medido entre novas imagens. Estados fechada/aguardando/expirada continuam conservadores. Nenhuma métrica artificial de FPS ou atraso real da câmera.
+- Incluídos testes JVM de demanda expirada, revogação, consistência e supressão de quadro repetido; atualizados AGENTS, arquitetura, notas e versionamento. Não há comando para alternar câmeras remotamente: a escolha continua local e visível.
+- **Build Android e testes em celulares reais ainda não executados nesta versão.**
+
+## 0.1.0-alpha.63 (versionCode 63)
+
+- Camera2: corrigida a orientação dos quadros remotos JPEG com rotação real do plano NV21 (Y e VU), considerando a orientação relatada pelo sensor, a rotação da tela e a lente frontal/traseira. Mantida a proporção e dimensões corretas após giro de 90°/270°.
+- Segurança contra callbacks atrasados: token único de sessão em `CameraFrameStore`, verificado antes de publicar bytes. Encerrar/recriar câmera não publica quadro de sessão anterior.
+- Ao encerrar o serviço de monitoramento, descarta quadros; consulta `cameraFrame` também exige serviço em execução. Recursos alocados são liberados em erros Camera2 e falhas de configuração.
+- Mantidos início local, tela visível, consentimento, limite de 110 KB/1 JPEG por segundo, AES-GCM e versões iguais. Nenhuma nova permissão, câmera oculta, áudio, gravação ou comando ADB.
+- Testes da transformação NV21 adicionados. **Compilação APK Android e ensaios com câmeras físicas permanecem pendentes.**
+
 ## 0.1.0-alpha.62 (versionCode 62)
 
 - Módulo inicial de câmeras: Activity local de Camera2 com prévia visível, consentimento explícito e permissão CAMERA, alternância frontal/traseira exclusivamente local e interrupção ao sair da tela.

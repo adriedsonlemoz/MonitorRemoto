@@ -26,6 +26,7 @@ import android.widget.TextView
 import br.dev.monitorremoto.capture.CameraFrameStore
 import br.dev.monitorremoto.capture.CameraImageCodec
 import br.dev.monitorremoto.core.CameraStreamPolicy
+import br.dev.monitorremoto.core.CameraNv21Rotation
 import br.dev.monitorremoto.core.SettingsStore
 import br.dev.monitorremoto.service.MonitorService
 
@@ -39,10 +40,12 @@ class CameraShareActivity : Activity(), TextureView.SurfaceTextureListener {
     private var workerHandler: Handler? = null
     private var camera: CameraDevice? = null
     private var session: CameraCaptureSession? = null
-    private var imageReader: ImageReader? = null
+    @Volatile private var imageReader: ImageReader? = null
     private var previewSurface: Surface? = null
     private var lastEncodedMs = 0L
-    private var cameraGeneration = 0
+    @Volatile private var cameraGeneration = 0
+    @Volatile private var frameSessionToken = -1L
+    @Volatile private var frameRotation = 0
     private lateinit var preview: TextureView
     private lateinit var status: TextView
     private lateinit var switchButton: Button
@@ -111,10 +114,8 @@ class CameraShareActivity : Activity(), TextureView.SurfaceTextureListener {
         super.onPause()
     }
 
-    override fun onDestroy() {
-        CameraFrameStore.stop()
-        super.onDestroy()
-    }
+    // onPause já encerra a sessão. Não limpar novamente em onDestroy: uma Activity
+    // antiga destruída depois de recriação não pode apagar a nova câmera.
 
     private fun report(message: String) = runOnUiThread {
         if (!isFinishing && !isDestroyed) status.text = message
@@ -148,16 +149,24 @@ class CameraShareActivity : Activity(), TextureView.SurfaceTextureListener {
                 manager.getCameraCharacteristics(it).get(CameraCharacteristics.LENS_FACING) == direction
             }
             if (cameraId == null) { report("Câmera ${if (front) "frontal" else "traseira"} não disponível."); return }
-            val map = manager.getCameraCharacteristics(cameraId)
-                .get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
+            val characteristics = manager.getCameraCharacteristics(cameraId)
+            val sensorOrientation = characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION)
+            if (sensorOrientation == null) {
+                report("Orientação do sensor não informada pelo Android.")
+                return
+            }
+            frameRotation = CameraNv21Rotation.degrees(
+                sensorOrientation, display?.rotation ?: Surface.ROTATION_0, front
+            )
+            val map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
             val sizes = map?.getOutputSizes(ImageFormat.YUV_420_888).orEmpty()
             val selected = sizes.filter { it.width <= 800 && it.height <= 800 && it.width % 2 == 0 && it.height % 2 == 0 }
                 .minByOrNull { kotlin.math.abs(it.width.toLong() * it.height - 640L * 480L) }
             if (selected == null) { report("Esta câmera não fornece quadros YUV compactos."); return }
-            imageReader = ImageReader.newInstance(selected.width, selected.height, ImageFormat.YUV_420_888, 2)
-            imageReader?.setOnImageAvailableListener({ reader -> onFrame(reader) }, workerHandler)
-            opening = true
             val generation = cameraGeneration
+            imageReader = ImageReader.newInstance(selected.width, selected.height, ImageFormat.YUV_420_888, 2)
+            imageReader?.setOnImageAvailableListener({ reader -> onFrame(reader, generation) }, workerHandler)
+            opening = true
             manager.openCamera(cameraId, object : CameraDevice.StateCallback() {
                 override fun onOpened(device: CameraDevice) {
                     if (generation != cameraGeneration) { device.close(); return }
@@ -172,7 +181,12 @@ class CameraShareActivity : Activity(), TextureView.SurfaceTextureListener {
                     if (camera === device) camera = null
                     opening = false
                     CameraFrameStore.stop()
-                    report("Câmera desconectada.")
+                    runOnUiThread {
+                        if (generation == cameraGeneration) {
+                            closeCamera()
+                            report("Câmera desconectada.")
+                        }
+                    }
                 }
                 override fun onError(device: CameraDevice, error: Int) {
                     device.close()
@@ -180,12 +194,16 @@ class CameraShareActivity : Activity(), TextureView.SurfaceTextureListener {
                     if (camera === device) camera = null
                     opening = false
                     CameraFrameStore.stop()
-                    report("Android não liberou a câmera (erro $error).")
+                    runOnUiThread {
+                        if (generation == cameraGeneration) {
+                            closeCamera()
+                            report("Android não liberou a câmera (erro $error).")
+                        }
+                    }
                 }
             }, workerHandler)
         } catch (e: Exception) {
-            opening = false
-            CameraFrameStore.stop()
+            closeCamera() // inclusive ImageReader alocado antes de openCamera falhar
             report("Falha na câmera: ${e.javaClass.simpleName}")
         }
     }
@@ -210,38 +228,59 @@ class CameraShareActivity : Activity(), TextureView.SurfaceTextureListener {
                             addTarget(reader.surface)
                             set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
                         }
-                        CameraFrameStore.begin(if (front) "Frontal" else "Traseira")
+                        frameSessionToken = CameraFrameStore.begin(if (front) "Frontal" else "Traseira")
                         lastEncodedMs = 0L
                         configured.setRepeatingRequest(request.build(), null, workerHandler)
-                        report("● Transmitindo câmera ${if (front) "frontal" else "traseira"} · JPEG ~1 quadro/s")
+                        report("● Câmera ${if (front) "frontal" else "traseira"} ativa · envia JPEG somente com visualizador aberto")
                     } catch (e: Exception) {
                         CameraFrameStore.stop()
-                        report("Falha ao iniciar captura: ${e.javaClass.simpleName}")
+                        runOnUiThread {
+                            if (generation == cameraGeneration) {
+                                closeCamera()
+                                report("Falha ao iniciar captura: ${e.javaClass.simpleName}")
+                            }
+                        }
                     }
                 }
                 override fun onConfigureFailed(configured: CameraCaptureSession) {
                     configured.close()
                     if (generation != cameraGeneration) return
                     CameraFrameStore.stop()
-                    report("Não foi possível configurar a câmera.")
+                    runOnUiThread {
+                        if (generation == cameraGeneration) {
+                            closeCamera()
+                            report("Não foi possível configurar a câmera.")
+                        }
+                    }
                 }
             }, workerHandler)
         } catch (e: Exception) {
             CameraFrameStore.stop()
-            report("Erro na prévia: ${e.javaClass.simpleName}")
+            runOnUiThread {
+                if (generation == cameraGeneration) {
+                    closeCamera()
+                    report("Erro na prévia: ${e.javaClass.simpleName}")
+                }
+            }
         }
     }
 
-    private fun onFrame(reader: ImageReader) {
+    private fun onFrame(reader: ImageReader, generation: Int) {
         var image: Image? = null
         try {
             image = reader.acquireLatestImage() ?: return
-            if (reader !== imageReader) return
-            if (!authorized()) { runOnUiThread { finish() }; return }
+            if (generation != cameraGeneration || reader !== imageReader) return
+            if (!authorized()) { runOnUiThread { if (!isFinishing) finish() }; return }
+            val token = frameSessionToken
             val now = SystemClock.elapsedRealtime()
-            if (!CameraStreamPolicy.shouldEncode(CameraFrameStore.isActive(), now - lastEncodedMs)) return
+            if (!CameraStreamPolicy.shouldEncode(CameraFrameStore.isActive() && CameraFrameStore.hasRecentViewer() && token > 0L,
+                    now - lastEncodedMs)) return
             lastEncodedMs = now
-            CameraImageCodec.encode(image)?.let { CameraFrameStore.publish(it) }
+            val rotation = frameRotation
+            val encoded = CameraImageCodec.encode(image, rotation) ?: return
+            if (generation == cameraGeneration && reader === imageReader && authorized()) {
+                CameraFrameStore.publish(token, encoded)
+            }
         } catch (_: Exception) {
             // Quadros inválidos são descartados; nunca compartilhar bytes parciais.
         } finally {
@@ -250,8 +289,9 @@ class CameraShareActivity : Activity(), TextureView.SurfaceTextureListener {
     }
 
     private fun closeCamera() {
-        CameraFrameStore.stop()
         cameraGeneration++
+        frameSessionToken = -1L
+        CameraFrameStore.stop()
         opening = false
         try { session?.close() } catch (_: Exception) { }
         session = null

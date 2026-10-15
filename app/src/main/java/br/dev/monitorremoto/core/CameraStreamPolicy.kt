@@ -5,6 +5,12 @@ object CameraStreamPolicy {
     const val MAX_FRAME_BYTES = 110_000
     const val MAX_FRAME_AGE_MS = 3_000L
     const val MIN_INTERVAL_MS = 1_000L
+    /** Sem controlador consultando, nenhuma conversão/compressão JPEG é necessária. */
+    const val VIEWER_TIMEOUT_MS = 4_500L
+
+    fun hasRecentViewer(lastRequestAtMs: Long, nowMs: Long): Boolean =
+        lastRequestAtMs > 0L && nowMs >= lastRequestAtMs &&
+            nowMs - lastRequestAtMs <= VIEWER_TIMEOUT_MS
 
     fun validFrame(bytes: ByteArray): Boolean = bytes.size in 4..MAX_FRAME_BYTES &&
         bytes[0] == 0xFF.toByte() && bytes[1] == 0xD8.toByte() &&

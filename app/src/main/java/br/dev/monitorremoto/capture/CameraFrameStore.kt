@@ -10,26 +10,56 @@ object CameraFrameStore {
     private var receivedAt = 0L
     private var sequence = 0L
     private var activeLens: String? = null
+    private var session = 0L
+    private var lastViewerRequestAt = 0L
 
-    @Synchronized fun begin(lens: String) {
+    /** Dados coerentes de UMA leitura; jpeg omitido quando o controlador já o possui. */
+    data class Status(val active: Boolean, val lens: String?, val ageMs: Long,
+        val sequence: Long, val jpeg: ByteArray?)
+
+    /** Cada abertura recebe um token; quadros de câmeras antigas nunca são reutilizados. */
+    @Synchronized fun begin(lens: String): Long {
         require(lens in setOf("Frontal", "Traseira"))
         sequence++
         current = null
         receivedAt = 0L
         activeLens = lens
+        lastViewerRequestAt = 0L
+        session++
+        return session
     }
 
     @Synchronized fun stop() {
         activeLens = null
+        lastViewerRequestAt = 0L
         current = null
         receivedAt = 0L
         sequence++
+        session++
+    }
+
+    @Synchronized fun viewerPing() {
+        if (activeLens != null) lastViewerRequestAt = SystemClock.elapsedRealtime()
+    }
+
+    @Synchronized fun hasRecentViewer(): Boolean =
+        activeLens != null && CameraStreamPolicy.hasRecentViewer(
+            lastViewerRequestAt, SystemClock.elapsedRealtime())
+
+    /** Evita estado misto se a câmera for fechada/trocada durante a consulta. */
+    @Synchronized fun status(afterSequence: Long): Status {
+        val lens = activeLens ?: return Status(false, null, -1L, 0L, null)
+        val age = frameAgeMs()
+        val fresh = current?.takeIf { age in 0..CameraStreamPolicy.MAX_FRAME_AGE_MS }
+        return Status(true, lens, age, fresh?.sequence ?: 0L,
+            if (fresh != null && fresh.sequence != afterSequence) fresh.jpeg.copyOf() else null)
     }
 
     @Synchronized fun isActive() = activeLens != null
     @Synchronized fun lens(): String? = activeLens
 
-    @Synchronized fun publish(bytes: ByteArray) {
+    @Synchronized fun publish(sessionToken: Long, bytes: ByteArray) {
+        if (sessionToken != session) return
         val lens = activeLens ?: return
         if (!CameraStreamPolicy.validFrame(bytes)) return
         sequence++

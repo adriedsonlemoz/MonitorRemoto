@@ -225,6 +225,7 @@ class MonitorService : Service() {
             RecoveryScheduler.refresh(this)
         }
         br.dev.monitorremoto.capture.ScreenShareService.stop(this)
+        br.dev.monitorremoto.capture.CameraFrameStore.stop()
         br.dev.monitorremoto.core.RemotePhysicalControls.shutdown()
         mainHandler.removeCallbacks(serverWatchdog)
         if (networkCallbackRegistered) {

@@ -1,4 +1,4 @@
-# Monitor Remoto 0.1.0-alpha.62
+# Monitor Remoto 0.1.0-alpha.64
 # Convenções permanentes do projeto Monitor Remoto
 
 - Toda alteração de código incrementa sequencialmente `versionCode` e `versionName` (ex.: `0.1.0-alpha.8` -> `0.1.0-alpha.9`). Sincronizar tela, README, CHANGELOG, RELEASE_NOTES e documentação.
@@ -21,7 +21,7 @@
 - Alpha.10: manter tema **claro padrão**, as opções da engrenagem, janela Conectar, botão de atualização compacto, lista de até 5 aparelhos recentes e os dados do Controle no topo. Não reintroduzir formulário longo na tela principal.
 - Credenciais por dispositivo usam `RecentDevices` + `SecretVault.profileKeyName`, com migração única da alpha.9. Não reaproveitar `CONTROLLER_KEY` antigo para IPs novos nem gravar segredo em preferências sem criptografia. Esquecer apaga o segredo correspondente.
 - Respostas HTTP/TCP não são conexão persistente. Exibir "Conectado" apenas após consulta autenticada bem-sucedida e "Sem resposta" após erro. Não inventar tempos de atualização.
-- Próxima versão sequencial: `0.1.0-alpha.63`, `versionCode 63`.
+- Próxima versão sequencial: `0.1.0-alpha.65`, `versionCode 65`.
 
 - Alpha.15: preservar a seleção Conectar → QR/Manual/Salvos, confirmação do QR antes de parear, cartões salvos com três ações e o scanner em Activity com tema Dialog.
 
@@ -124,3 +124,7 @@
 - Alpha.61: bloquear tela somente com `DevicePolicyManager.lockNow` após `ACTION_ADD_DEVICE_ADMIN` concedido localmente para Receiver estável com SOMENTE `<force-lock/>`, senha/PIN/padrão configurados e preferência `remote_lock=false` por padrão. O controlador exige digitar BLOQUEAR; endpoint `deviceControl` exige confirmação exata e rate-limit 15s. É solicitação aceita, não comprovação do bloqueio. Não adicionar resetPassword, wipeData, shell ADB ou ativação automática de administrador. Usuário pode revogar no sistema e no app. Build/hardware pendentes. Próxima alpha.62.
 
 - Alpha.62: transmissão de câmera JPEG somente via Activity `CameraShareActivity` visível no próprio monitorado, iniciada localmente após confirmação e permissão CAMERA. Não adicionar captura em segundo plano, serviço FGS de câmera, boot, comando remoto de ativar câmera, microfone ou gravação. Camera2 usa prévia local e ImageReader YUV, JPEG reduzido em RAM, limite de 110 KB e 1 quadro/s. `CameraFrameStore` fecha ao sair/revogar, e `cameraFrame` aceita apenas consulta autenticada AES-GCM com versão exata. No controlador, `RemoteCameraActivity` consulta quadros apenas enquanto visível e só salva foto após toque. Troca frontal/traseira ocorre localmente; câmera indisponível/ocupada e permissão recusada não geram imagem inventada. Android 14+ exige respeitar restrições de câmera while-in-use. Build completo/hardware pendentes. Próxima alpha.63.
+
+- Alpha.63: correção determinística de orientação dos quadros NV21, rodando Y/VU 0/90/180/270 conforme SENSOR_ORIENTATION, Surface.ROTATION_* e lente frontal/traseira antes de comprimir JPEG. Não espelhar selfies silenciosamente nem adicionar metadados falsos. CameraFrameStore exige token por abertura e rejeita callback tardio da geração anterior; fechar Activity revoga sem re-stop tardio em onDestroy. MonitorService.onDestroy apaga o frame store e MonitorServer.cameraFrame exige serviço em execução além de monitoramento autorizado. Limites JPEG 110 KB/1 quadro por segundo, origem local e somente RAM mantidos. Testes Kotlin puros, PSI e análise estrutural não substituem build Gradle nem teste em celulares reais. Próxima alpha.64.
+
+- Alpha.64: conversão JPEG da câmera somente com `CameraFrameStore.hasRecentViewer()` após `viewerPing` por pedido de `cameraFrame` autenticado no servidor; a demanda expira em 4,5s e é zerada em `begin/stop`. Nunca usar esse ping para abrir Camera2 remotamente. Cliente envia `afterSequence`, servidor omite `jpeg` se o número de sequência for o mesmo, e retorna `active/lens/age/sequence` de snapshot sincronizado. UI apresenta duração real das consultas, tamanho do último JPEG e intervalo entre quadros novos, sem chamar essas métricas de latência ponta a ponta ou FPS de hardware. Manter troca de lente exclusivamente no monitorado; não adicionar câmera em background, notificações ocultas ou controles remotos sem revisão de segurança. Próxima alpha.65.

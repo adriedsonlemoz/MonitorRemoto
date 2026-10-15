@@ -16,11 +16,12 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.62" and code.group(1) == "62", "Versões incompatíveis"
+assert version == "0.1.0-alpha.64" and code.group(1) == "64", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
 assert f"versionCode={code.group(1)}" in (root / 'docs/ARCHITECTURE.md').read_text(), "Arquitetura com versionCode desatualizado"
+assert f"v{version} / versionCode {code.group(1)}" in (root / 'README.md').read_text(), "README com versionCode incorreto"
 # alpha.9 remove a Activity antiga do ZXing Embedded; Camera2 + ZXing Core offline.
 assert 'IntentIntegrator' not in ui and 'BarcodeEncoder' not in ui
 assert 'startActivityForResult(Intent(this, QrScanActivity::class.java), qrScanRequest)' in ui
@@ -892,7 +893,7 @@ camera_store = (root / 'app/src/main/java/br/dev/monitorremoto/capture/CameraFra
 camera_codec = (root / 'app/src/main/java/br/dev/monitorremoto/capture/CameraImageCodec.kt').read_text(encoding='utf-8')
 assert 'CameraShareActivity' in manifest and 'RemoteCameraActivity' in manifest
 assert 'FOREGROUND_SERVICE_CAMERA' not in manifest and 'foregroundServiceType="camera"' not in manifest
-assert 'cameraFrame' in server and 'CameraFrameStore.snapshot()' in server
+assert 'cameraFrame' in server and 'store.status(knownSequence)' in server
 assert '"cameraFrame"' in (root / 'app/src/main/java/br/dev/monitorremoto/transport/RemoteClient.kt').read_text()
 assert 'startActivity(Intent(this, CameraShareActivity::class.java))' in (ui_root / 'MonitorScreenUi.kt').read_text()
 assert 'showAppConfirm("Compartilhar câmera ao vivo?"' in (ui_root / 'MonitorScreenUi.kt').read_text()
@@ -904,3 +905,34 @@ assert 'MAX_FRAME_BYTES = 110_000' in (root / 'app/src/main/java/br/dev/monitorr
 assert 'fun saveStill()' in camera_viewer and 'RemoteImageSaver.save(' in camera_viewer
 assert 'fun requestFrame()' in camera_viewer and 'onPause()' in camera_viewer
 print('PASSOU: alpha.62, câmera visível, JPEG em RAM, câmera sem ativação remota ou FGS')
+
+# alpha.63: orientação YUV realmente aplicada ANTES da conversão JPEG,
+# sessão de captura por token e revogação também quando serviço para.
+rotation = (root / 'app/src/main/java/br/dev/monitorremoto/core/CameraNv21Rotation.kt').read_text()
+assert 'fun degrees(' in rotation and 'fun rotate(' in rotation
+assert 'result[dst + 1] = data[src + 1]' in rotation, 'Pares NV21 VU alterados'
+assert (root / 'app/src/test/java/br/dev/monitorremoto/core/CameraNv21RotationTest.kt').is_file()
+assert 'CameraNv21Rotation.rotate(nv21, width, height, rotationDegrees)' in camera_codec
+assert 'CameraImageCodec.encode(image, rotation)' in camera_local
+assert 'frameSessionToken = CameraFrameStore.begin(' in camera_local
+assert 'CameraFrameStore.publish(token, encoded)' in camera_local
+assert 'sessionToken != session' in camera_store, 'Frames de geração antiga não isolados'
+service = (root / 'app/src/main/java/br/dev/monitorremoto/service/MonitorService.kt').read_text()
+assert 'br.dev.monitorremoto.capture.CameraFrameStore.stop()' in service
+assert 'SettingsStore.isMonitorEnabled(context) && MonitorService.isRunning' in server
+print('PASSOU: alpha.63, orientação NV21 + token de sessão + encerramento no serviço')
+
+# Alpha.64: JPEG é produzido somente quando há consulta autenticada recente; um
+# quadro repetido não deve retransmitir bytes, e estado remoto é atômico.
+policy64 = (root / 'app/src/main/java/br/dev/monitorremoto/core/CameraStreamPolicy.kt').read_text()
+assert 'VIEWER_TIMEOUT_MS = 4_500L' in policy64 and 'fun hasRecentViewer(' in policy64
+assert 'CameraFrameStore.hasRecentViewer()' in camera_local
+assert 'fun viewerPing()' in camera_store and 'fun status(afterSequence:' in camera_store
+assert 'lastViewerRequestAt = 0L' in camera_store
+assert 'fresh.sequence != afterSequence' in camera_store
+assert 'store.viewerPing()' in server and 'store.status(knownSequence)' in server
+assert '.put("afterSequence", afterSequence)' in (root / 'app/src/main/java/br/dev/monitorremoto/transport/RemoteClient.kt').read_text()
+assert 'lastRttMs = measuredRttMs' in camera_viewer and 'observedPeriodMs' in camera_viewer
+assert 'CameraFrameStore.begin(' in camera_local and 'CameraFrameStore.stop()' in camera_local
+assert '"cameraStart"' not in server and '"cameraSwitch"' not in server
+print('PASSOU: alpha.64, demanda autenticada, resposta delta JPEG, métricas medidas e captura apenas local')

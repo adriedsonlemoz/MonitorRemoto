@@ -1,3 +1,27 @@
+# Monitor Remoto v0.1.0-alpha.64
+
+## Câmera JPEG: menos consumo e diagnóstico de transmissão
+
+- A câmera compartilhada só comprime quadros quando há consultas recentes e autenticadas de um controlador. A prévia local permanece visível e fecha ao sair.
+- A mesma imagem não é retransmitida se o controlador já a recebeu; a atualização ocorre quando um novo JPEG válido fica disponível.
+- Em **Câmeras**, o status mostra o tempo da consulta, tamanho do JPEG e intervalo entre quadros novos. Esses números são medições do app, não garantia de FPS ou latência ponta a ponta.
+- Trocar frontal/traseira continua sendo uma ação local no telefone monitorado. Sem gravação, microfone, captura oculta ou permissões novas.
+- **Pendente:** compilar com Gradle/SDK em CI e validar em dois aparelhos (troca/rotação, câmera ocupada, Wi-Fi ruim, bateria e retomada). Ambos devem rodar alpha.64.
+
+---
+
+# Monitor Remoto v0.1.0-alpha.63
+
+## Câmera JPEG: orientação e estabilidade
+
+- A imagem transmitida é girada no monitorado para respeitar a orientação Camera2 e rotação da tela. A correção transforma Y e VU da imagem NV21 antes de gerar JPEG; nada é inventado na imagem.
+- Quadros de sessões anteriores são rejeitados, inclusive se callbacks chegarem depois de uma troca de câmera. Fechar o serviço revoga a memória da câmera.
+- Falhas de abertura/desconexão liberam ImageReader, sessão e superfícies, permitindo uma nova tentativa local.
+- O início permanece **exclusivamente local e visível** no aparelho monitorado. Sem gravação de vídeos, áudio ou câmera em segundo plano; nenhuma permissão nova.
+- **Pendente:** compilar via Gradle/CI e testar câmera frontal/traseira, rotação, interrupção e desempenho nos aparelhos reais. Ambos os aparelhos exigem alpha.63.
+
+---
+
 # Monitor Remoto v0.1.0-alpha.62
 
 ## Câmera remota JPEG com consentimento no monitorado
