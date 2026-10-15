@@ -1,4 +1,4 @@
-# Monitor Remoto 0.1.0-alpha.64
+# Monitor Remoto 0.1.0-alpha.65
 # Convenções permanentes do projeto Monitor Remoto
 
 - Toda alteração de código incrementa sequencialmente `versionCode` e `versionName` (ex.: `0.1.0-alpha.8` -> `0.1.0-alpha.9`). Sincronizar tela, README, CHANGELOG, RELEASE_NOTES e documentação.
@@ -21,7 +21,7 @@
 - Alpha.10: manter tema **claro padrão**, as opções da engrenagem, janela Conectar, botão de atualização compacto, lista de até 5 aparelhos recentes e os dados do Controle no topo. Não reintroduzir formulário longo na tela principal.
 - Credenciais por dispositivo usam `RecentDevices` + `SecretVault.profileKeyName`, com migração única da alpha.9. Não reaproveitar `CONTROLLER_KEY` antigo para IPs novos nem gravar segredo em preferências sem criptografia. Esquecer apaga o segredo correspondente.
 - Respostas HTTP/TCP não são conexão persistente. Exibir "Conectado" apenas após consulta autenticada bem-sucedida e "Sem resposta" após erro. Não inventar tempos de atualização.
-- Próxima versão sequencial: `0.1.0-alpha.65`, `versionCode 65`.
+- Próxima versão sequencial: `0.1.0-alpha.66`, `versionCode 66`.
 
 - Alpha.15: preservar a seleção Conectar → QR/Manual/Salvos, confirmação do QR antes de parear, cartões salvos com três ações e o scanner em Activity com tema Dialog.
 
@@ -128,3 +128,5 @@
 - Alpha.63: correção determinística de orientação dos quadros NV21, rodando Y/VU 0/90/180/270 conforme SENSOR_ORIENTATION, Surface.ROTATION_* e lente frontal/traseira antes de comprimir JPEG. Não espelhar selfies silenciosamente nem adicionar metadados falsos. CameraFrameStore exige token por abertura e rejeita callback tardio da geração anterior; fechar Activity revoga sem re-stop tardio em onDestroy. MonitorService.onDestroy apaga o frame store e MonitorServer.cameraFrame exige serviço em execução além de monitoramento autorizado. Limites JPEG 110 KB/1 quadro por segundo, origem local e somente RAM mantidos. Testes Kotlin puros, PSI e análise estrutural não substituem build Gradle nem teste em celulares reais. Próxima alpha.64.
 
 - Alpha.64: conversão JPEG da câmera somente com `CameraFrameStore.hasRecentViewer()` após `viewerPing` por pedido de `cameraFrame` autenticado no servidor; a demanda expira em 4,5s e é zerada em `begin/stop`. Nunca usar esse ping para abrir Camera2 remotamente. Cliente envia `afterSequence`, servidor omite `jpeg` se o número de sequência for o mesmo, e retorna `active/lens/age/sequence` de snapshot sincronizado. UI apresenta duração real das consultas, tamanho do último JPEG e intervalo entre quadros novos, sem chamar essas métricas de latência ponta a ponta ou FPS de hardware. Manter troca de lente exclusivamente no monitorado; não adicionar câmera em background, notificações ocultas ou controles remotos sem revisão de segurança. Próxima alpha.65.
+
+- Alpha.65: novo `cameraSwitch` **somente** troca frontal/traseira em sessão `CameraShareActivity` já visível, após opt-in local temporário OFF por padrão no CheckBox da própria Activity. Nenhuma permissão persistente, serviço de câmera em background ou comando de abertura remota. `CameraFrameStore` exige sessionToken retornado por `cameraFrame`, lente em allowlist, controlador recentemente consultando, opt-in ativo e rate-limit. O comando remoto indica solicitação aceita, **não confirmação de troca**; o controlador deve verificar o novo `lens`/`sessionToken` no polling. Limpar pedidos em `begin/stop/revoke`, controlar callbacks obsoletos e revogar ao pausar/parar monitoramento. Na alpha.66, priorizar build real/testes físicos e correção de regressões antes de gravação de vídeo.

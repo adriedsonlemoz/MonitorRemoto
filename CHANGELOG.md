@@ -1,3 +1,10 @@
+## 0.1.0-alpha.65 (versionCode 65)
+
+- Alternância frontal/traseira solicitável pelo controlador exclusivamente quando a câmera está aberta na Activity local e o monitorado marcou opt-in temporário nesta sessão, desligado por padrão.
+- `cameraFrame` acrescenta `sessionToken` e `remoteSwitchAllowed`; novo `cameraSwitch` mantém criptografia AES-GCM, checagem de versão exata, credencial pareada, whitelist de lente, demanda autenticada recente, token atual e limite de 2 segundos entre solicitações. Não abre câmeras.
+- `CameraFrameStore` descarta solicitações pendentes na revogação, troca, encerramento do serviço ou pausa da Activity. Apenas a Activity visível executa a troca Camera2. O controlador informa pedido pendente e aguarda nova leitura da lente real.
+- Mantidas câmera JPEG 110 KB/1 s, prévia visível, permissões anteriores, todos os demais módulos, sem áudio/gravação/captura oculta/ADB adicional. Adicionados testes da política e da revogação; APK e hardware ainda não validados.
+
 ## 0.1.0-alpha.64 (versionCode 64)
 
 - Otimizado consumo da câmera compartilhada: somente converter/comprimir quadros JPEG se houver consulta `cameraFrame` autenticada nos últimos 4,5 segundos. Sem visualizador conectado, permanece a prévia local, mas a conversão JPEG é suspensa. A demanda é descartada na troca/fechamento da câmera.

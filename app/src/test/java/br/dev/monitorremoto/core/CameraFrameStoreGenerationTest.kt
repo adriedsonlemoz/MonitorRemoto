@@ -82,4 +82,38 @@ class CameraFrameStoreGenerationTest {
             assertNull(CameraFrameStore.snapshot())
         } finally { CameraFrameStore.stop() }
     }
+    @Test fun comandoSoExecutaComConsentimentoSessaoAtualEDemanda() {
+        CameraFrameStore.stop()
+        try {
+            val token = CameraFrameStore.begin("Traseira")
+            assertFalse(CameraFrameStore.requestRemoteSwitch(token, "Frontal"))
+            CameraFrameStore.setRemoteSwitchAllowed(token, true)
+            assertFalse(CameraFrameStore.requestRemoteSwitch(token, "Frontal")) // sem visualizador
+            CameraFrameStore.viewerPing()
+            assertFalse(CameraFrameStore.requestRemoteSwitch(token - 1L, "Frontal"))
+            assertFalse(CameraFrameStore.requestRemoteSwitch(token, "Abrir"))
+            assertTrue(CameraFrameStore.requestRemoteSwitch(token, "Frontal"))
+            assertFalse(CameraFrameStore.requestRemoteSwitch(token, "Frontal")) // pendente
+            assertEquals("Frontal", CameraFrameStore.consumeSwitchRequest(token)?.lens)
+            assertNull(CameraFrameStore.consumeSwitchRequest(token))
+            val newer = CameraFrameStore.begin("Frontal")
+            assertTrue(token != newer)
+            assertFalse(CameraFrameStore.status(0L).remoteSwitchAllowed)
+            assertNull(CameraFrameStore.consumeSwitchRequest(token))
+        } finally { CameraFrameStore.stop() }
+    }
+
+    @Test fun revogarPermissaoLimpaPedidoPendente() {
+        CameraFrameStore.stop()
+        try {
+            val token = CameraFrameStore.begin("Traseira")
+            CameraFrameStore.setRemoteSwitchAllowed(token, true)
+            CameraFrameStore.viewerPing()
+            assertTrue(CameraFrameStore.requestRemoteSwitch(token, "Frontal"))
+            CameraFrameStore.setRemoteSwitchAllowed(token, false)
+            assertNull(CameraFrameStore.consumeSwitchRequest(token))
+            assertFalse(CameraFrameStore.status(0L).remoteSwitchAllowed)
+        } finally { CameraFrameStore.stop() }
+    }
+
 }

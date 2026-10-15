@@ -43,6 +43,12 @@ class RemoteCameraActivity : Activity() {
     private var lastRttMs = -1L
     private var lastJpegBytes = 0
     private var observedPeriodMs = -1L
+    private var cameraSession = 0L
+    private var currentLens = ""
+    private var switchAllowed = false
+    private var pendingLens: String? = null
+    private var switchRequestedAt = 0L
+    private lateinit var switchCameraButton: Button
     private lateinit var picture: ImageView
     private lateinit var status: TextView
     private lateinit var save: Button
@@ -79,12 +85,17 @@ class RemoteCameraActivity : Activity() {
         val buttons = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
         save = Button(this).apply { text = "Salvar foto"; isAllCaps = false; isEnabled = false; setOnClickListener { saveStill() } }
         buttons.addView(save, LinearLayout.LayoutParams(0, dp(54), 1f))
-        buttons.addView(Button(this).apply {
-            text = "Voltar"; isAllCaps = false; setOnClickListener { finish() }
-        }, LinearLayout.LayoutParams(0, dp(54), 1f))
+        switchCameraButton = Button(this).apply {
+            text = "Trocar câmera"; isAllCaps = false; isEnabled = false
+            setOnClickListener { requestSwitch() }
+        }
+        buttons.addView(switchCameraButton, LinearLayout.LayoutParams(0, dp(54), 1f))
         body.addView(buttons)
+        body.addView(Button(this).apply {
+            text = "Voltar"; isAllCaps = false; setOnClickListener { finish() }
+        }, LinearLayout.LayoutParams(-1, dp(48)))
         body.addView(TextView(this).apply {
-            text = "Somente JPEG sob demanda (~1 quadro/s). Sem áudio, gravação ou comando para abrir a câmera à distância. Para trocar frontal/traseira, use a tela de câmera no monitorado."
+            text = "JPEG sob demanda (~1 quadro/s). Sem áudio ou gravação. A troca remota só fica disponível se o monitorado marcar a autorização nesta sessão, mantendo a câmera aberta e visível."
             textSize = 12f
             setTextColor(Color.LTGRAY)
             setPadding(0, dp(9), 0, 0)
@@ -104,6 +115,11 @@ class RemoteCameraActivity : Activity() {
         generation++
         handler.removeCallbacks(poll)
         clearPreview()
+        cameraSession = 0L
+        currentLens = ""
+        switchAllowed = false
+        pendingLens = null
+        updateSwitchButton()
         super.onPause()
     }
 
@@ -120,6 +136,41 @@ class RemoteCameraActivity : Activity() {
         observedPeriodMs = -1L
         picture.setImageDrawable(null)
         save.isEnabled = false
+    }
+
+    private fun updateSwitchButton() {
+        if (!::switchCameraButton.isInitialized) return
+        val target = if (currentLens == "Traseira") "Frontal" else "Traseira"
+        switchCameraButton.text = if (pendingLens != null) "Trocando…" else "Usar $target"
+        switchCameraButton.isEnabled = active && switchAllowed && cameraSession > 0L &&
+            currentLens in setOf("Frontal", "Traseira") && pendingLens == null
+    }
+
+    private fun requestSwitch() {
+        if (!active || !switchAllowed || pendingLens != null || cameraSession <= 0L) return
+        val target = if (currentLens == "Traseira") "Frontal" else "Traseira"
+        val capturedSession = cameraSession
+        val callGeneration = generation
+        pendingLens = target
+        switchRequestedAt = SystemClock.elapsedRealtime()
+        status.text = "Solicitando câmera $target…"
+        updateSwitchButton()
+        executor.execute {
+            val result = runCatching {
+                val key = RecentDevices.key(this, host) ?: error("Chave deste aparelho não está disponível.")
+                RemoteClient.cameraSwitch(host, key, this, method, capturedSession, target)
+            }
+            handler.post {
+                if (!active || callGeneration != generation || isFinishing || isDestroyed) return@post
+                result.fold(onSuccess = {
+                    if (pendingLens == target) status.text = "Solicitação recebida. Aguardando confirmação da câmera…"
+                }, onFailure = {
+                    if (pendingLens == target) pendingLens = null
+                    status.text = "Troca não realizada: ${it.message ?: it.javaClass.simpleName}"
+                })
+                updateSwitchButton()
+            }
+        }
     }
 
     private fun requestFrame() {
@@ -148,6 +199,17 @@ class RemoteCameraActivity : Activity() {
                     val base64 = response.optString("jpeg", "")
                     val sequence = response.optLong("sequence", 0L)
                     val isFresh = running && age in 0..CameraStreamPolicy.MAX_FRAME_AGE_MS
+                    val newSession = response.optLong("sessionToken", 0L)
+                    val newLens = response.optString("lens", "")
+                    if (cameraSession != 0L && newSession != cameraSession) clearPreview()
+                    cameraSession = if (running) newSession else 0L
+                    currentLens = if (running) newLens else ""
+                    switchAllowed = running && response.optBoolean("remoteSwitchAllowed", false)
+                    if (!running || !switchAllowed) pendingLens = null
+                    if (pendingLens != null && currentLens == pendingLens && newSession > 0L) {
+                        pendingLens = null // confirmada somente após o status Camera2 mudar
+                    } else if (pendingLens != null &&
+                        SystemClock.elapsedRealtime() - switchRequestedAt > 12_000L) pendingLens = null
                     if (isFresh && base64.isNotBlank() && sequence != lastSequence) {
                         val bytes = runCatching { Base64.decode(base64, Base64.NO_WRAP) }.getOrNull()
                         if (bytes != null && CameraStreamPolicy.validFrame(bytes)) {
@@ -168,8 +230,10 @@ class RemoteCameraActivity : Activity() {
                         clearPreview()
                     }
                     save.isEnabled = frame != null
+                    updateSwitchButton()
                     val network = if (lastRttMs >= 0L) " · resposta ${lastRttMs} ms" else ""
                     status.text = when {
+                        pendingLens != null -> "Aguardando troca para $pendingLens…$network"
                         !running -> "Câmera fechada. Inicie no Modo monitorado do outro aparelho."
                         frame == null && age > CameraStreamPolicy.MAX_FRAME_AGE_MS ->
                             "Câmera ativa, mas o último quadro expirou$network"
@@ -181,6 +245,11 @@ class RemoteCameraActivity : Activity() {
                     }
                 }, onFailure = {
                     clearPreview()
+                    cameraSession = 0L
+                    currentLens = ""
+                    switchAllowed = false
+                    pendingLens = null
+                    updateSwitchButton()
                     status.text = "Sem confirmação da câmera: ${it.message ?: it.javaClass.simpleName}"
                 })
                 handler.postDelayed(poll, 1_200L)

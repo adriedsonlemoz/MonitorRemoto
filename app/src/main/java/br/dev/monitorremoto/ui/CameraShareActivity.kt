@@ -21,6 +21,7 @@ import android.view.Gravity
 import android.view.Surface
 import android.view.TextureView
 import android.widget.Button
+import android.widget.CheckBox
 import android.widget.LinearLayout
 import android.widget.TextView
 import br.dev.monitorremoto.capture.CameraFrameStore
@@ -46,9 +47,11 @@ class CameraShareActivity : Activity(), TextureView.SurfaceTextureListener {
     @Volatile private var cameraGeneration = 0
     @Volatile private var frameSessionToken = -1L
     @Volatile private var frameRotation = 0
+    @Volatile private var allowSwitchThisSession = false
     private lateinit var preview: TextureView
     private lateinit var status: TextView
     private lateinit var switchButton: Button
+    private lateinit var remoteSwitchConsent: CheckBox
 
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
     private fun button(text: String, action: () -> Unit) = Button(this).apply {
@@ -88,6 +91,17 @@ class CameraShareActivity : Activity(), TextureView.SurfaceTextureListener {
         actions.addView(switchButton, LinearLayout.LayoutParams(0, dp(52), 1f))
         actions.addView(button("Parar e voltar") { finish() }, LinearLayout.LayoutParams(0, dp(52), 1f))
         body.addView(actions)
+        remoteSwitchConsent = CheckBox(this).apply {
+            text = "Permitir troca frontal/traseira pelo controlador nesta sessão"
+            textSize = 13f
+            setTextColor(Color.WHITE)
+            isChecked = false
+            setOnCheckedChangeListener { _, checked ->
+                allowSwitchThisSession = checked && authorized()
+                CameraFrameStore.setRemoteSwitchAllowed(frameSessionToken, allowSwitchThisSession)
+            }
+        }
+        body.addView(remoteSwitchConsent)
         body.addView(TextView(this).apply {
             text = "A câmera só transmite enquanto esta tela está aberta. Quadros JPEG em memória, sem microfone ou gravação. Voltar ou bloquear a tela encerra a captura."
             textSize = 12f
@@ -100,6 +114,8 @@ class CameraShareActivity : Activity(), TextureView.SurfaceTextureListener {
     override fun onResume() {
         super.onResume()
         resumed = true
+        remoteSwitchConsent.isChecked = false // autorização não persiste após sair desta tela
+        allowSwitchThisSession = false
         worker = HandlerThread("MR-CameraShare").also { it.start() }
         workerHandler = Handler(requireNotNull(worker).looper)
         if (preview.isAvailable) ensurePermissionAndOpen()
@@ -107,6 +123,8 @@ class CameraShareActivity : Activity(), TextureView.SurfaceTextureListener {
 
     override fun onPause() {
         resumed = false
+        remoteSwitchConsent.isChecked = false
+        allowSwitchThisSession = false
         closeCamera()
         worker?.quitSafely()
         worker = null
@@ -229,6 +247,7 @@ class CameraShareActivity : Activity(), TextureView.SurfaceTextureListener {
                             set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
                         }
                         frameSessionToken = CameraFrameStore.begin(if (front) "Frontal" else "Traseira")
+                        CameraFrameStore.setRemoteSwitchAllowed(frameSessionToken, allowSwitchThisSession)
                         lastEncodedMs = 0L
                         configured.setRepeatingRequest(request.build(), null, workerHandler)
                         report("● Câmera ${if (front) "frontal" else "traseira"} ativa · envia JPEG somente com visualizador aberto")
@@ -272,6 +291,18 @@ class CameraShareActivity : Activity(), TextureView.SurfaceTextureListener {
             if (generation != cameraGeneration || reader !== imageReader) return
             if (!authorized()) { runOnUiThread { if (!isFinishing) finish() }; return }
             val token = frameSessionToken
+            val switchRequest = CameraFrameStore.consumeSwitchRequest(token)
+            if (switchRequest != null) {
+                runOnUiThread {
+                    if (resumed && generation == cameraGeneration && frameSessionToken == switchRequest.sessionToken &&
+                        allowSwitchThisSession && authorized()) {
+                        front = switchRequest.lens == "Frontal"
+                        closeCamera()
+                        openCamera()
+                    }
+                }
+                return
+            }
             val now = SystemClock.elapsedRealtime()
             if (!CameraStreamPolicy.shouldEncode(CameraFrameStore.isActive() && CameraFrameStore.hasRecentViewer() && token > 0L,
                     now - lastEncodedMs)) return

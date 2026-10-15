@@ -213,6 +213,31 @@ object RemoteClient {
         }
     }
 
+    /** Pede somente troca de lente com opt-in local ativo, não inicia captura. */
+    fun cameraSwitch(host: String, key: ByteArray, context: Context, method: String,
+        expectedSession: Long, targetLens: String) {
+        require(host.isNotBlank() && host.length <= 253 && !host.contains('/') &&
+            !host.contains(':') && !host.contains(' ')) { "Host inválido." }
+        require(expectedSession > 0L && br.dev.monitorremoto.core.CameraRemoteSwitchPolicy.validLens(targetLens))
+        val request = JSONObject().put("v", WireProtocol.VERSION).put("op", "cameraSwitch")
+            .put("sessionToken", expectedSession).put("lens", targetLens)
+            .put("appVersion", AppVersion.NAME).put("ts", System.currentTimeMillis())
+            .put("clientId", SettingsStore.controllerId(context))
+            .put("clientName", listOf(Build.MANUFACTURER, Build.MODEL).joinToString(" ").take(72))
+            .put("accessMethod", method)
+        Socket().use { socket ->
+            socket.connect(InetSocketAddress(host, WireProtocol.PORT), 4500)
+            socket.soTimeout = 6500
+            WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(key, request))
+            val reply = WireProtocol.decode(key, WireProtocol.receive(socket.getInputStream(), 16 * 1024))
+            if (reply.optString("op") == "versionMismatch")
+                error(AppVersion.incompatibility(reply.optString("appVersion")))
+            check(reply.optString("op") == "cameraSwitch" && reply.optInt("v") == WireProtocol.VERSION &&
+                AppVersion.compatible(reply.optString("appVersion"))) { "Resposta de troca de câmera inválida." }
+            check(reply.optBoolean("accepted")) { reply.optString("message", "Troca não permitida no monitorado.") }
+        }
+    }
+
     /** Quadro JPEG de sessão consentida. Nunca armazena frame nem credencial fora da memória. */
     fun screenFrame(host: String, key: ByteArray, context: Context, method: String): JSONObject {
         require(host.isNotBlank() && host.length <= 253 && !host.contains('/') &&

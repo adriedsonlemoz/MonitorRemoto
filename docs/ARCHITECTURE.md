@@ -1,4 +1,4 @@
-# Arquitetura (0.1.0-alpha.64)
+# Arquitetura (0.1.0-alpha.65)
 
 ```text
 MONITORADO                                      CONTROLE
@@ -31,9 +31,9 @@ A captura usa `ImageReader` RGBA, `Bitmap` JPEG com largura máxima 540 px, taxa
 
 ## Distribuição e assinatura
 
-O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.64` e `versionCode=64`.
+O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.65` e `versionCode=65`.
 
-- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.64.apk`.
+- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.65.apk`.
 - `upload-artifact` sempre distribui um ZIP; GitHub Releases recebe o **arquivo APK direto**.
 - Com quatro Secrets, Gradle gera APK Release assinado e AAB. Sem Secrets, o arquivo é Debug de teste e não preserva necessariamente a assinatura entre execuções.
 - Releases são prévias, não substituem a futura revisão da Google Play e nem os ensaios reais.
@@ -254,3 +254,10 @@ O `RemotePhysicalControls`, propriedade lógica do `MonitorService`, mantém o a
 - Cada consulta válida e autorizada marca `viewerPing` no `CameraFrameStore`. Somente `CameraShareActivity` visível, com sessão Camera2 ativa e ping nos últimos 4,5 segundos, converte YUV em JPEG. `ImageReader` continua descartando imagens e fechando cada `Image`; Camera2 é encerrado em `onPause`. Sem pedidos, a conversão para, mas a prévia local ainda está ativa.
 - Controlador mede tempo de requisição/resposta (inclui leitura de credencial + rede + processamento), bytes reais de JPEG e intervalo observado entre novos quadros. Esses valores **não** são latência ponta a ponta, FPS da câmera, nem estatísticas de rede desagregadas. Ao perder a Activity/expirar um quadro, limpa o preview.
 - Comandos remotos de ativar e trocar câmera continuam inexistentes. A alternância entre frontal e traseira segue **somente local** no aparelho monitorado.
+
+## Alpha.65: troca remota de lente limitada à sessão consentida
+
+- `CameraShareActivity` é **a única entidade que pode abrir/reconfigurar Camera2**. O CheckBox de autorização, OFF por padrão e não persistido, chama `CameraFrameStore.setRemoteSwitchAllowed` na sessão ativa. Pausa/encerramento revogam autorização e pedidos.
+- Endpoint cifrado `cameraSwitch` recebe somente `lens` da allowlist `Frontal`/`Traseira` e `sessionToken` obtido após `cameraFrame`. Não inicia câmera nem usa ADB. `CameraRemoteSwitchPolicy` rejeita ausência de consentimento, demanda expirada, token obsoleto, solicitação duplicada, lente inválida e frequência menor que 2 segundos.
+- O store enfileira apenas uma mudança; o callback ImageReader da Activity visível consome o pedido e reabre Camera2. O controlador só considera a lente alterada depois que `cameraFrame` reporta a lente real de nova sessão. Quadro antigo não atravessa gerações.
+- Não existe persistência de autorização, comando de gravação/áudio, foreground service de câmera ou permissão Android adicional.

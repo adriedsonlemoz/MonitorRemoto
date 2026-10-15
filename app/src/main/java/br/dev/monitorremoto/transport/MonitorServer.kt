@@ -116,7 +116,7 @@ class MonitorServer(private val context: Context) {
                 val regular = runCatching { WireProtocol.decode(permanentKey, encrypted) }.getOrNull()
                 if (regular != null) {
                     if (regular.optInt("v") != WireProtocol.VERSION ||
-                        regular.optString("op") !in setOf("snapshot", "disconnect", "notificationReply", "smsReply", "screenFrame", "screenCapture", "remoteTouch", "audioChunk", "requestScreen", "videoFrame", "wakeScreen", "dataList", "dataChunk", "appsList", "deviceControl", "cameraFrame")) return
+                        regular.optString("op") !in setOf("snapshot", "disconnect", "notificationReply", "smsReply", "screenFrame", "screenCapture", "remoteTouch", "audioChunk", "requestScreen", "videoFrame", "wakeScreen", "dataList", "dataChunk", "appsList", "deviceControl", "cameraFrame", "cameraSwitch")) return
                     if (abs(now - regular.optLong("ts")) > 5 * 60 * 1000L) return
                     synchronized(seenNonces) {
                         // Retenção compatível com ±5 minutos de validade do envelope.
@@ -300,9 +300,29 @@ class MonitorServer(private val context: Context) {
                             .put("lens", status.lens ?: JSONObject.NULL)
                             .put("frameAgeMs", status.ageMs)
                             .put("sequence", status.sequence)
+                            .put("sessionToken", status.sessionToken)
+                            .put("remoteSwitchAllowed", status.remoteSwitchAllowed)
                         if (status.jpeg != null) {
                             response.put("jpeg", Base64.encodeToString(status.jpeg, Base64.NO_WRAP))
                         }
+                        WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(permanentKey, response))
+                        AuthenticatedAccess.authenticated(socket.inetAddress?.hostAddress.orEmpty(),
+                            regular.optString("clientId"), regular.optString("clientName"), regular.optString("accessMethod"))
+                        return
+                    }
+                    if (regular.optString("op") == "cameraSwitch") {
+                        // Opt-in separado na tela CameraShareActivity, válido só enquanto ela está aberta.
+                        // Este endpoint NÃO abre câmera e não confirma que a troca terminou.
+                        val allowed = SettingsStore.isMonitorEnabled(context) && MonitorService.isRunning
+                        val targetLens = regular.optString("lens", "")
+                        val expectedSession = regular.optLong("sessionToken", 0L)
+                        val accepted = allowed &&
+                            br.dev.monitorremoto.capture.CameraFrameStore.requestRemoteSwitch(expectedSession, targetLens)
+                        val response = JSONObject().put("v", WireProtocol.VERSION)
+                            .put("op", "cameraSwitch").put("appVersion", AppVersion.NAME)
+                            .put("accepted", accepted)
+                            .put("message", if (accepted) "Solicitação recebida; aguardando confirmação visual da troca."
+                                else "Troca indisponível: autorize na tela da câmera ou atualize a sessão.")
                         WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(permanentKey, response))
                         AuthenticatedAccess.authenticated(socket.inetAddress?.hostAddress.orEmpty(),
                             regular.optString("clientId"), regular.optString("clientName"), regular.optString("accessMethod"))

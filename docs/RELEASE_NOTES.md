@@ -1,3 +1,16 @@
+# Monitor Remoto v0.1.0-alpha.65
+
+## Troca de câmeras sob consentimento local temporário
+
+- Com câmera compartilhada aberta e visível no telefone monitorado, a caixa **Permitir troca frontal/traseira pelo controlador nesta sessão** libera apenas a alternância entre as duas lentes. Começa OFF e é automaticamente revogada ao pausar/sair.
+- Controlador recebe informação de autorização e sessão via `cameraFrame`, mostra botão para escolher a outra lente somente se permitida, e envia comando autenticado `cameraSwitch` com token da sessão atual.
+- Servidor apenas enfileira o pedido com política restrita, viewer autenticado recente, proteção de sessão antiga, limite entre solicitações e rejeição de comandos fora das lentes permitidas. **Não inicia Camera2**; apenas a Activity local visível consome o pedido.
+- A resposta do comando indica apenas que a solicitação foi aceita. Confirmação da lente efetiva vem da próxima consulta `cameraFrame`; erro/expiração não é apresentado como sucesso. Desmarcar a caixa ou fechar câmera revoga pedidos pendentes.
+- Mantém JPEG limitado, captura somente em primeiro plano, sem gravação/áudio/ativação remota, sem nova permissão Android e demais módulos preservados.
+- **Pendente:** compilar APK no Android SDK/Gradle, instalar em dois aparelhos e validar todos os cenários Camera2 e regressões.
+
+---
+
 # Monitor Remoto v0.1.0-alpha.64
 
 ## Câmera JPEG: menos consumo e diagnóstico de transmissão

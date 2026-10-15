@@ -1,3 +1,15 @@
+## Alpha.65 — alternância remota de câmera com opt-in temporário (15/10/2026)
+
+- [x] Base alpha.64 extraída e `AGENTS.md`, README, CHANGELOG, código da câmera e documentação examinados antes das alterações.
+- [x] Versão `0.1.0-alpha.65` / `versionCode 65`, `AppVersion`, workflow de nomes APK, notas, arquitetura e documentação sincronizados.
+- [x] `python3 tools/check_distribution.py`: aprovado, incluindo ausência de comando de abertura remota, autorização local temporária, token e descarte de pedido após revogação.
+- [x] 22 testes Kotlin/JVM isolados executados com stubs de `SystemClock` e asserções compatíveis com JUnit. Cobrem validação da câmera, sessão corrente, demanda recente, revogação, duplicatas, limite entre pedidos e continuidade do JPEG. Este ensaio **não equivale** a Android Gradle Test.
+- [x] Parser PSI Kotlin: 132 arquivos `*.kt` sem erros sintáticos. A análise não resolve APIs Android.
+- [x] 46 XML Android válidos e workflow YAML interpretável.
+- [x] Não acrescentadas permissões Android, comando ADB nem serviço de câmera em background.
+- [ ] Build completo `:app:testDebugUnitTest :app:assembleDebug` ainda não executado: não há Android SDK/Gradle preparado neste ambiente.
+- [ ] Troca de câmera em dois dispositivos, recusa por câmera ocupada, revogação durante pedido, orientação, reconexão, consumo e latência reais continuam pendentes.
+
 ## Alpha.64 — validação local (15/10/2026)
 
 - [x] Código base alpha.63, AGENTS, README, CHANGELOG e documentação lidos antes da modificação.

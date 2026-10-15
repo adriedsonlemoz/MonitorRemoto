@@ -16,7 +16,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.64" and code.group(1) == "64", "Versões incompatíveis"
+assert version == "0.1.0-alpha.65" and code.group(1) == "65", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -934,5 +934,24 @@ assert 'store.viewerPing()' in server and 'store.status(knownSequence)' in serve
 assert '.put("afterSequence", afterSequence)' in (root / 'app/src/main/java/br/dev/monitorremoto/transport/RemoteClient.kt').read_text()
 assert 'lastRttMs = measuredRttMs' in camera_viewer and 'observedPeriodMs' in camera_viewer
 assert 'CameraFrameStore.begin(' in camera_local and 'CameraFrameStore.stop()' in camera_local
-assert '"cameraStart"' not in server and '"cameraSwitch"' not in server
+assert '"cameraStart"' not in server
 print('PASSOU: alpha.64, demanda autenticada, resposta delta JPEG, métricas medidas e captura apenas local')
+
+# Alpha.65: troca de lente só durante Activity Camera2 visível com opt-in
+# local independente da autenticação. Não há operação remota para iniciar captura.
+switch_policy = (root / 'app/src/main/java/br/dev/monitorremoto/core/CameraRemoteSwitchPolicy.kt').read_text()
+assert 'fun accept(' in switch_policy and 'expectedSession == currentSession' in switch_policy
+assert 'MIN_REQUEST_INTERVAL_MS = 2_000L' in switch_policy
+assert 'remoteSwitchConsent.isChecked = false' in camera_local
+assert 'setRemoteSwitchAllowed(frameSessionToken' in camera_local
+assert 'CameraFrameStore.consumeSwitchRequest(token)' in camera_local
+assert 'fun requestRemoteSwitch(' in camera_store and 'fun consumeSwitchRequest(' in camera_store
+assert 'if (!allowed) pendingSwitch = null' in camera_store
+assert 'remoteSwitchAllowed = false' in camera_store and 'pendingSwitch = null' in camera_store
+assert '"cameraSwitch"' in server and 'requestRemoteSwitch(expectedSession, targetLens)' in server
+assert '"cameraStart"' not in server and '"cameraRecord"' not in server
+assert 'fun cameraSwitch(' in (root / 'app/src/main/java/br/dev/monitorremoto/transport/RemoteClient.kt').read_text()
+assert 'RemoteClient.cameraSwitch(' in camera_viewer and 'response.optBoolean("remoteSwitchAllowed", false)' in camera_viewer
+assert 'CameraRemoteSwitchPolicyTest.kt' in str(root / 'app/src/test/java/br/dev/monitorremoto/core/CameraRemoteSwitchPolicyTest.kt')
+assert (root / 'app/src/test/java/br/dev/monitorremoto/core/CameraRemoteSwitchPolicyTest.kt').is_file()
+print('PASSOU: alpha.65, opt-in local temporário, token de sessão, allowlist, revogação e confirmação posterior')
