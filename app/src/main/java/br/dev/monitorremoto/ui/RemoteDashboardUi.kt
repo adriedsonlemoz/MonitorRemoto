@@ -29,7 +29,9 @@ internal fun MainActivity.displayResult(root: JSONObject, fromCache: Boolean = f
     sectionGap(container, 19)
 
     container.addView(label("Funções remotas", 17f, strong = true).apply { setPadding(0, 0, 0, dp(12)) })
-    val eventCount = root.optJSONArray("events")?.length() ?: 0
+    val eventCount = root.optJSONArray("events")?.let { events ->
+        (0 until events.length()).count { events.optJSONObject(it)?.optString("type") == "notificacao" }
+    } ?: 0
     val cards = listOf(
         actionTile(R.drawable.ic_folder_download, "Recuperar dados", "Pasta autorizada", enabled = true) {
             startActivity(Intent(this, RemoteFilesActivity::class.java).apply {
@@ -39,7 +41,18 @@ internal fun MainActivity.displayResult(root: JSONObject, fromCache: Boolean = f
         },
         actionTile(R.drawable.ic_phone, "Detalhes", "", enabled = true) { showRemoteDetailsDialog(root) },
         actionTile(R.drawable.ic_bell, "Notificações", if (eventCount > 0) "$eventCount evento(s)" else "", enabled = true) {
-            showRemoteNotifications(root)
+            startActivity(Intent(this, RemoteCatalogActivity::class.java).apply {
+                putExtra(RemoteCatalogActivity.EXTRA_HOST, br.dev.monitorremoto.core.SettingsStore.getRemoteHost(this@displayResult))
+                putExtra(RemoteCatalogActivity.EXTRA_METHOD, remoteConnection.method)
+                putExtra(RemoteCatalogActivity.EXTRA_TYPE, "notifications")
+            })
+        },
+        actionTile(R.drawable.ic_phone, "Aplicativos", "Instalados · autorizados", enabled = true) {
+            startActivity(Intent(this, RemoteCatalogActivity::class.java).apply {
+                putExtra(RemoteCatalogActivity.EXTRA_HOST, br.dev.monitorremoto.core.SettingsStore.getRemoteHost(this@displayResult))
+                putExtra(RemoteCatalogActivity.EXTRA_METHOD, remoteConnection.method)
+                putExtra(RemoteCatalogActivity.EXTRA_TYPE, "apps")
+            })
         },
         actionTile(R.drawable.ic_message, "Mensagens", "SMS e respostas", enabled = true) {
             openRemoteMessagesScreen()
@@ -171,38 +184,6 @@ private fun MainActivity.addActionGrid(parent: LinearLayout, tiles: List<LinearL
 
 private fun MainActivity.showFeatureSoon(name: String, description: String) {
     showAppNotice(name, "$description\n\nEste recurso ainda não está implementado.", R.drawable.ic_info)
-}
-
-private fun MainActivity.showRemoteNotifications(root: JSONObject) {
-    val events = root.optJSONArray("events")
-    val (wrapper, layout) = dialogWrapper()
-    dialogIntro(layout, "Notificações novas e autorizadas no outro aparelho.")
-    if (events == null || events.length() == 0) {
-        layout.addView(label("Nenhum evento autorizado registrado.", 13f, muted = true))
-    } else {
-        for (index in events.length() - 1 downTo 0) {
-            val event = events.optJSONObject(index) ?: continue
-            val item = panel(12)
-            item.addView(label("${event.optString("type").uppercase(Locale.getDefault())} · ${event.optString("app")}", 11f, muted = true))
-            item.addView(label(event.optString("title"), 14f, strong = true))
-            val preview = event.optString("preview")
-            if (preview.isNotBlank()) {
-                item.addView(label(preview, 12f))
-                item.addView(actionButton("Copiar") { copyRemoteMessage(preview) })
-            }
-            val token = event.optString("replyToken")
-            if (token.isNotBlank() && root.optJSONObject("messagingPermissions")?.optBoolean("notificationReply") == true) {
-                item.addView(actionButton("Responder") {
-                    showRemoteMessageEditor("notificationReply", token, "Responder ${event.optString("title")}")
-                })
-            }
-            item.addView(label(formatDate(event.optLong("whenMs")), 11f, muted = true))
-            layout.addView(item)
-            sectionGap(layout, 7)
-        }
-    }
-    AlertDialog.Builder(this).setTitle("Notificações")
-        .setView(wrapper).setPositiveButton("Fechar", null).create().let { showManagedDialog(it) }
 }
 
 private fun MainActivity.showRemoteDetailsDialog(root: JSONObject) {

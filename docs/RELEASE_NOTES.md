@@ -1,4 +1,11 @@
-# Monitor Remoto v0.1.0-alpha.57
+### Alpha.58 · notificações e aplicativos
+
+- Tela de Notificações redesenhada e diagnóstico para eventos ausentes.
+- Captura de notificações ainda ativas quando o listener se reconecta; sem persistência do conteúdo.
+- Nova lista de aplicativos com acesso autorizado no monitorado, disponível sob demanda e sem alterações remotas.
+- Build completo e validação em aparelhos pendentes.
+
+# Monitor Remoto v0.1.0-alpha.58
 
 ## Gerenciador remoto SAF e manutenção
 

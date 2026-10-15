@@ -1,4 +1,4 @@
-# Arquitetura (0.1.0-alpha.57)
+# Arquitetura (0.1.0-alpha.58)
 
 ```text
 MONITORADO                                      CONTROLE
@@ -31,9 +31,9 @@ A captura usa `ImageReader` RGBA, `Bitmap` JPEG com largura máxima 540 px, taxa
 
 ## Distribuição e assinatura
 
-O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.57` e `versionCode=57`.
+O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.58` e `versionCode=58`.
 
-- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.57.apk`.
+- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.58.apk`.
 - `upload-artifact` sempre distribui um ZIP; GitHub Releases recebe o **arquivo APK direto**.
 - Com quatro Secrets, Gradle gera APK Release assinado e AAB. Sem Secrets, o arquivo é Debug de teste e não preserva necessariamente a assinatura entre execuções.
 - Releases são prévias, não substituem a futura revisão da Google Play e nem os ensaios reais.
@@ -220,3 +220,7 @@ O monitorado usa `ACTION_OPEN_DOCUMENT_TREE` para o usuário selecionar diretame
 A `AdbActivity` pode passar a instância **já conectada** do `AdbClient` para a ponte volátil `AdbScreenBridge` somente após ação explícita **Ver tela remota • controle ADB**, confirmação da mesma origem IPv4 e presença de uma chave do protocolo normal em `RecentDevices`. Ao entrar em `RemoteScreenActivity`, a imagem continua vinda de `RemoteClient.screenFrame`/`videoFrame` com AES-GCM e MediaProjection autorizada; **ADB não é transporte de imagem**. `AdbScreenRouting` mapeia somente `back`, `home` e `recents` para comandos ADB permitidos, e a Activity exige que uma consulta da imagem tenha retornado autenticada antes de enviar esses comandos à ponte.
 
 A sessão ADB é detida no processo, não em um serviço. Ao sair do visualizador, `onPause()` encerra a ponte/socket. Ao voltar para a tela ADB visível, a reconexão da alpha.51 pode retomar o dispositivo explicitamente escolhido. Se ADB cair durante a visualização, os comandos de navegação podem seguir por `RemoteClient.touch` quando a Acessibilidade no monitorado estiver autorizada. A reconexão automática da alpha.51 não é transportada para a ponte enquanto o visualizador está ativo; isso exigirá outra revisão de ciclo de vida. Sem acesso ADB livre, gravação de vídeo, captura sem MediaProjection nem novos privilégios.
+
+## Catálogos remotos (alpha.58)
+
+`RemoteCatalogActivity` abre somente após seleção de aparelho pareado e consulta o snapshot autenticado ou `appsList` AES-GCM. `NotificationCaptureService` sinaliza estado em `NotificationCaptureStatus` (RAM), reintegra apenas eventos ainda ativos após reconexão e mantém filtros de segurança. `InstalledAppsReader` retorna até 120 atividades de lançador (únicas por pacote), sujeitas à visibilidade de pacotes Android. `SettingsStore.shareInstalledApps()` é um opt-in local revogável; a resposta ao cliente é sempre autenticada e não altera aplicativos.

@@ -1,4 +1,4 @@
-# Monitor Remoto 0.1.0-alpha.57
+# Monitor Remoto 0.1.0-alpha.58
 # Convenções permanentes do projeto Monitor Remoto
 
 - Toda alteração de código incrementa sequencialmente `versionCode` e `versionName` (ex.: `0.1.0-alpha.8` -> `0.1.0-alpha.9`). Sincronizar tela, README, CHANGELOG, RELEASE_NOTES e documentação.
@@ -21,7 +21,7 @@
 - Alpha.10: manter tema **claro padrão**, as opções da engrenagem, janela Conectar, botão de atualização compacto, lista de até 5 aparelhos recentes e os dados do Controle no topo. Não reintroduzir formulário longo na tela principal.
 - Credenciais por dispositivo usam `RecentDevices` + `SecretVault.profileKeyName`, com migração única da alpha.9. Não reaproveitar `CONTROLLER_KEY` antigo para IPs novos nem gravar segredo em preferências sem criptografia. Esquecer apaga o segredo correspondente.
 - Respostas HTTP/TCP não são conexão persistente. Exibir "Conectado" apenas após consulta autenticada bem-sucedida e "Sem resposta" após erro. Não inventar tempos de atualização.
-- Próxima versão sequencial: `0.1.0-alpha.58`, `versionCode 58`.
+- Próxima versão sequencial: `0.1.0-alpha.59`, `versionCode 59`.
 
 - Alpha.15: preservar a seleção Conectar → QR/Manual/Salvos, confirmação do QR antes de parear, cartões salvos com três ações e o scanner em Activity com tema Dialog.
 
@@ -113,3 +113,6 @@
 - Alpha.56: manter espaçamento mínimo vertical de 9dp e horizontal de 10dp em pares de ações ADB e diálogos. Não duplicar o celular conectado no histórico; renomear o ativo diretamente e preservar apelido quando diagnóstico não trouxer modelo legível. Reconstruir cartões apenas ao mudar os dados, não no polling de 2s. Visualizador oferece seletor segmentado JPEG (padrão) / H.264 (experimental); mensagens de toque diferenciam captura encerrada, tela apagada, bloqueio e Acessibilidade. ADB não remove PIN/biometria nem substitui consentimento MediaProjection. Não afirmar que ajustes de interface resolvem quedas de Wi-Fi sem testes físicos.
 
 - Alpha.57: Manutenção do painel remoto mostra cartão do aparelho e alerta compacto; a confirmação final ADB ainda exige digitar REINICIAR e usa somente `reboot:`. Aviso ADB não configurado segue a linguagem visual do app e nunca envia comandos por conexão comum. Recuperar dados é um mini gerenciador SAF SOMENTE LEITURA: topo com voltar/atualizar/ajuda, pasta, lista/grade, busca/ordem/infos, seleção múltipla e cópia para árvore de destino do controlador escolhida pelo usuário. Limites 20 arquivos por lote / 128 MiB agregado / 32 MiB individual; evitar sobrescrever com sufixo, tentar excluir cópia parcial em erro; nada de apagar/mover/renomear origem. Preservar AES-GCM, hashes, permissões locais, proteção de caminhos. Build real e ensaios SAF pendentes.
+
+- Alpha.58: Notificações passam a ter tela própria com cartões no estilo Detalhes, atualização autenticada sob demanda e indicadores separados de permissão, listener e filtros. `NotificationCaptureService` recarrega somente notificações **ainda ativas** após o listener reconectar e solicita rebind apenas quando monitoramento autorizado. Não criar armazenamento histórico persistente nem incluir notificações sensíveis no snapshot.
+- Alpha.58: novo catálogo de aplicativos **visíveis no lançador**, sob autorização local desligada por padrão. Endpoint `appsList` cifrado/authenticated, somente leitura, até 120 nomes e pacotes, sem `QUERY_ALL_PACKAGES`, nem iniciar, desinstalar ou extrair dados dos apps.

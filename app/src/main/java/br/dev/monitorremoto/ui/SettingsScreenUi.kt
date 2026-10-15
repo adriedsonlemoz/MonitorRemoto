@@ -30,6 +30,7 @@ internal fun MainActivity.showSettingsDialog() = openSettingsModule()
 internal fun MainActivity.renderSettingsModule() {
     val labelBySection = mapOf(
         "notifications" to "Notificações",
+        "apps" to "Aplicativos instalados",
         "sms" to "SMS e telefonia",
         "service" to "Serviço e recuperação",
         "files" to "Arquivos e recuperação",
@@ -56,6 +57,7 @@ internal fun MainActivity.renderSettingsModule() {
         sectionGap(groupA, 10)
         settingsEntry(groupA, R.drawable.ic_bell, "Notificações",
             "Escolher aplicativos e permitir respostas", "notifications")
+        settingsEntry(groupA, R.drawable.ic_phone, "Aplicativos instalados", "Compartilhar lista de apps sob demanda", "apps")
         settingsEntry(groupA, R.drawable.ic_message, "SMS e telefonia",
             "Ler, receber, responder e selecionar chip", "sms")
         settingsEntry(groupA, R.drawable.ic_folder_download, "Arquivos e recuperação",
@@ -87,6 +89,7 @@ internal fun MainActivity.renderSettingsModule() {
         val page = panel(15)
         when (section) {
             "notifications" -> fillNotificationSettings(page)
+            "apps" -> fillAppsSettings(page)
             "sms" -> fillSmsSettings(page)
             "screen" -> fillScreenSettings(page)
             "files" -> fillFileRecoverySettings(page)
@@ -111,7 +114,11 @@ private fun MainActivity.settingsEntry(
 }
 
 private fun MainActivity.fillNotificationSettings(layout: LinearLayout) {
-    val state = if (hasListener()) "Autorizado" else "Sem acesso"
+    val state = when {
+        !hasListener() -> "Sem permissão do Android"
+        !br.dev.monitorremoto.capture.NotificationCaptureStatus.connected -> "Autorizado · serviço desconectado"
+        else -> "Autorizado · serviço ativo"
+    }
     val count = SettingsStore.notificationAllowlist(this).size
     dialogIntro(layout, "O monitoramento da bateria funciona sem esta permissão. As notificações só são enviadas para apps autorizados e não financeiros.")
     layout.addView(iconMenuRow(R.drawable.ic_bell, "Acesso às notificações", state) {
@@ -120,6 +127,11 @@ private fun MainActivity.fillNotificationSettings(layout: LinearLayout) {
             "O Android poderá mostrar notificações sensíveis. Somente aplicativos escolhidos serão transmitidos, com filtros que podem falhar. O acesso pode ser revogado nas Configurações do Android.",
             R.drawable.ic_bell, "Configurar no Android"
         ) { startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) }
+    })
+    sectionGap(layout, 8)
+    layout.addView(iconMenuRow(R.drawable.ic_activity, "Diagnóstico da captura",
+        if (br.dev.monitorremoto.capture.NotificationCaptureStatus.connected) "Listener conectado" else "Listener sem conexão; verifique autorização e bateria") {
+        message("A permissão do Android e a lista de aplicativos são necessárias. Uma notificação existente só pode ser recuperada enquanto ainda estiver ativa no sistema. Verifique também restrições de bateria.")
     })
     sectionGap(layout, 8)
     val allApps = SettingsStore.allNotifications(this)
@@ -152,6 +164,26 @@ private fun MainActivity.fillNotificationSettings(layout: LinearLayout) {
         }
     })
     sectionGap(layout, 8)
+}
+
+private fun MainActivity.fillAppsSettings(layout: LinearLayout) {
+    val allowed = SettingsStore.shareInstalledApps(this)
+    layout.addView(iconSectionHeader(R.drawable.ic_phone, "Aplicativos instalados", "Apenas apps com ícone no lançador"))
+    sectionGap(layout, 10)
+    layout.addView(label("Consulta sob demanda pelos controladores pareados. Compartilha nomes e identificadores de pacote, sem dados internos; alguns apps podem não aparecer pelas restrições do Android.", 12.5f, muted = true))
+    sectionGap(layout, 10)
+    layout.addView(iconMenuRow(R.drawable.ic_shield,
+        "Permitir consulta de aplicativos", if (allowed) "Autorizado · tocar para revogar" else "Desativado por padrão") {
+        if (allowed) {
+            SettingsStore.setShareInstalledApps(this, false)
+            message("Compartilhamento da lista de aplicativos desativado.")
+        } else showAppConfirm("Compartilhar lista de aplicativos?",
+            "Qualquer controlador que possua a chave deste monitorado poderá consultar os nomes dos aplicativos com ícone de launcher. Nenhum dado interno dos aplicativos será compartilhado.",
+            R.drawable.ic_phone, "Autorizar lista") {
+            SettingsStore.setShareInstalledApps(this, true)
+            message("Lista de aplicativos autorizada para consulta autenticada.")
+        }
+    })
 }
 
 private fun MainActivity.fillSmsSettings(layout: LinearLayout) {

@@ -1,4 +1,13 @@
-## 0.1.0-alpha.57 (14/10/2026)
+## 0.1.0-alpha.58 (14/10/2026)
+
+- Tela própria de Notificações no padrão dos cartões de Detalhes, com Atualizar, estado da captura, informação da fonte e mensagens mais úteis em caso de ausência de eventos.
+- NotificationListenerService: reprocessa até 30 notificações ainda ativas ao ser conectado, tenta solicitar religação ao sistema em caso de interrupção e registra em RAM o diagnóstico sem conteúdo sensível.
+- Snapshot autenticado agora inclui `notificationStatus` para diferenciar monitoramento interrompido, ausência de permissão, listener desconectado e lista de aplicativos vazia.
+- Módulo Aplicativos instalados: consulta autenticada sob demanda dos apps com lançador visíveis ao Android, mediante autorização explícita local e revogável, desativada por padrão. Sem permissão QUERY_ALL_PACKAGES ou gerenciamento remoto de apps.
+- Novos cartões de acesso rápido no painel remoto e seção de configurações de compartilhamento dos aplicativos. Lista de até 120 apps por nome e identificador de pacote.
+- README, documentação, versionamento, testes estruturais e notas de release atualizados; compilação Android completa e testes físicos pendentes.
+
+## 0.1.0-alpha.58 (14/10/2026)
 
 - **Manutenção** redesenhada com ícone, cartão do aparelho, aviso breve sobre ausência de botão Power, opção única para reiniciar normalmente e confirmação final ADB com digitação `REINICIAR`. A reinicialização continua usando apenas `reboot:`, sem desligamento, recovery ou repetição automática.
 - Mensagem de **ADB não configurado** atualizada para diálogo no estilo do aplicativo, com botão para iniciar o pareamento em vez de alerta Android sem formatação.

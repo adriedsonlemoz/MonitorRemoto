@@ -45,6 +45,27 @@ object RemoteClient {
         }
     }
 
+    /** Consulta autorizada da lista de apps com lançador, em canal criptografado. */
+    fun installedApps(host: String, key: ByteArray, context: Context, method: String): JSONObject {
+        require(host.isNotBlank() && host.length <= 253 && !host.contains('/') && !host.contains(':') && !host.contains(' '))
+        val request = JSONObject().put("v", WireProtocol.VERSION).put("op", "appsList")
+            .put("appVersion", AppVersion.NAME).put("ts", System.currentTimeMillis())
+            .put("clientId", SettingsStore.controllerId(context))
+            .put("clientName", listOf(Build.MANUFACTURER, Build.MODEL).joinToString(" ").take(72))
+            .put("accessMethod", method)
+        return Socket().use { socket ->
+            socket.connect(InetSocketAddress(host, WireProtocol.PORT), 4500)
+            socket.soTimeout = 9000
+            WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(key, request))
+            val result = WireProtocol.decode(key, WireProtocol.receive(socket.getInputStream(), 100 * 1024))
+            if (result.optString("op") == "versionMismatch") error(AppVersion.incompatibility(result.optString("appVersion")))
+            check(result.optString("op") == "appsList" && result.optInt("v") == WireProtocol.VERSION &&
+                AppVersion.compatible(result.optString("appVersion"))) { "Resposta de aplicativos inválida." }
+            check(result.optBoolean("ok")) { result.optString("message", "Acesso não autorizado no monitorado.") }
+            result
+        }
+    }
+
     /** Lista somente a árvore SAF autorizada localmente no telefone monitorado. */
     fun dataList(host: String, key: ByteArray, context: Context, method: String,
         path: List<String>): JSONObject = dataRequest(host, key, context, method, "dataList", path, 0L, 0L, 0L)

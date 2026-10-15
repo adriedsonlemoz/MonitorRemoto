@@ -16,7 +16,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.57" and code.group(1) == "57", "Versões incompatíveis"
+assert version == "0.1.0-alpha.58" and code.group(1) == "58", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -167,7 +167,7 @@ print('PASSOU: alpha.18, menus compactos, Home após desconexão, alertas autent
 assert 'internal fun MainActivity.networkIcon(host: String)' in ui and 'internal fun MainActivity.connectionKind(host: String)' in ui
 assert 'private fun MainActivity.compactMetricCard(' in ui and 'private fun MainActivity.addMetricGrid(' in ui
 assert 'private fun MainActivity.actionTile(' in ui and 'private fun MainActivity.addActionGrid(' in ui
-assert 'private fun MainActivity.showRemoteNotifications(root: JSONObject)' in ui
+assert 'RemoteCatalogActivity::class.java' in ui and (ui_root / 'RemoteCatalogActivity.kt').is_file()
 assert 'private fun MainActivity.showRemoteDetailsDialog(root: JSONObject)' in ui
 assert 'private fun MainActivity.showRemoteDetailsDialog(root: JSONObject)' in ui
 assert 'Funções remotas' in ui and 'Mensagens' in ui and 'Ver tela' in ui and 'Localização' in ui
@@ -800,3 +800,23 @@ assert 'val deviceCard = card(body, fill = soft)' in ui56
 assert 's?.toString()?.trim() == "REINICIAR"' in ui56
 assert 'adb.requestNormalReboot()' in ui56
 print('PASSOU: alpha.57, cópia múltipla SAF somente leitura, manutenção protegida e interface aprimorada')
+
+# Alpha.58: notificações com diagnóstico e apps com opt-in explícito, sem alcance universal.
+cat58 = (ui_root / 'RemoteCatalogActivity.kt').read_text()
+listener58 = (root / 'app/src/main/java/br/dev/monitorremoto/capture/NotificationCaptureService.kt').read_text()
+status58 = (root / 'app/src/main/java/br/dev/monitorremoto/capture/NotificationCaptureStatus.kt').read_text()
+apps58 = (root / 'app/src/main/java/br/dev/monitorremoto/core/InstalledAppsReader.kt').read_text()
+settings58 = (root / 'app/src/main/java/br/dev/monitorremoto/core/SettingsStore.kt').read_text()
+for token in ['Notificações', 'Aplicativos instalados', 'Atualizar', 'notificationStatus', 'listenerGranted', 'listenerConnected', 'lastEventAt', 'RemoteClient.installedApps', 'RemoteClient.snapshot']:
+    assert token in cat58, 'alpha.58: catálogo sem ' + token
+for token in ['override fun onListenerConnected()', 'activeNotifications', 'override fun onListenerDisconnected()', 'requestRebind', 'SettingsStore.isMonitorEnabled(this)']:
+    assert token in listener58, 'alpha.58: listener sem ' + token
+assert 'lastConnectedAt' in status58 and 'connected' in status58
+assert 'Intent.CATEGORY_LAUNCHER' in apps58 and '.take(120)' in apps58
+assert '"share_installed_apps", false' in settings58 and 'setShareInstalledApps' in settings58
+assert '"appsList"' in server and 'shareInstalledApps(context)' in server and 'InstalledAppsReader.launchable(context)' in server
+assert 'fun installedApps(' in client and 'WireProtocol.encode(key, request)' in client
+assert '<uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"' not in (root / 'app/src/main/AndroidManifest.xml').read_text()
+assert 'RemoteCatalogActivity" android:exported="false"' in (root / 'app/src/main/AndroidManifest.xml').read_text()
+assert 'RemoteCatalogActivity::class.java' in (ui_root / 'RemoteDashboardUi.kt').read_text()
+print('PASSOU: alpha.58, notificações e apps autorizados sob demanda')

@@ -22,6 +22,10 @@ object SettingsStore {
             NotificationReplyActions.clear()
             SmsLiveJournal.clear()
             SmsDeliveryJournal.clear()
+            br.dev.monitorremoto.capture.NotificationCaptureStatus.resetCaptureMetrics()
+        }
+        if (enabled && !wasEnabled) {
+            br.dev.monitorremoto.capture.NotificationCaptureService.recoverActiveAfterLocalStart()
         }
     }
 
@@ -34,6 +38,11 @@ object SettingsStore {
         EventJournal.clear()
         NotificationReplyActions.clear()
     }
+
+    /** Leitura sob demanda da lista de aplicativos com ícone de launcher; desativada por padrão. */
+    fun shareInstalledApps(context: Context) = prefs(context).getBoolean("share_installed_apps", false)
+    fun setShareInstalledApps(context: Context, enabled: Boolean) =
+        prefs(context).edit().putBoolean("share_installed_apps", enabled).apply()
 
     fun receiveSmsEvents(context: Context): Boolean = prefs(context).getBoolean("receive_sms_events", false)
     fun setReceiveSmsEvents(context: Context, value: Boolean) {

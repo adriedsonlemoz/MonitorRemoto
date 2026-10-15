@@ -15,6 +15,8 @@ import br.dev.monitorremoto.core.MmsMetadataReader
 import br.dev.monitorremoto.core.SensitiveContent
 import br.dev.monitorremoto.core.SharedDataFolder
 import br.dev.monitorremoto.capture.NotificationReplyActions
+import br.dev.monitorremoto.capture.NotificationCaptureStatus
+import br.dev.monitorremoto.core.InstalledAppsReader
 import br.dev.monitorremoto.capture.ScreenFrameStore
 import br.dev.monitorremoto.capture.AudioChunkStore
 import br.dev.monitorremoto.capture.ScreenShareRequest
@@ -109,7 +111,7 @@ class MonitorServer(private val context: Context) {
                 val regular = runCatching { WireProtocol.decode(permanentKey, encrypted) }.getOrNull()
                 if (regular != null) {
                     if (regular.optInt("v") != WireProtocol.VERSION ||
-                        regular.optString("op") !in setOf("snapshot", "disconnect", "notificationReply", "smsReply", "screenFrame", "screenCapture", "remoteTouch", "audioChunk", "requestScreen", "videoFrame", "wakeScreen", "dataList", "dataChunk")) return
+                        regular.optString("op") !in setOf("snapshot", "disconnect", "notificationReply", "smsReply", "screenFrame", "screenCapture", "remoteTouch", "audioChunk", "requestScreen", "videoFrame", "wakeScreen", "dataList", "dataChunk", "appsList")) return
                     if (abs(now - regular.optLong("ts")) > 5 * 60 * 1000L) return
                     synchronized(seenNonces) {
                         // Retenção compatível com ±5 minutos de validade do envelope.
@@ -304,6 +306,18 @@ class MonitorServer(private val context: Context) {
                             regular.optString("clientId"), regular.optString("clientName"), regular.optString("accessMethod"))
                         return
                     }
+                    if (regular.optString("op") == "appsList") {
+                        val authorized = SettingsStore.isMonitorEnabled(context) && SettingsStore.shareInstalledApps(context)
+                        val response = JSONObject().put("v", WireProtocol.VERSION)
+                            .put("op", "appsList").put("appVersion", AppVersion.NAME)
+                            .put("ok", authorized)
+                            .put("message", if (authorized) "" else "Autorize Aplicativos instalados nas Configurações do monitorado.")
+                            .put("items", if (authorized) InstalledAppsReader.launchable(context) else org.json.JSONArray())
+                        WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(permanentKey, response))
+                        AuthenticatedAccess.authenticated(socket.inetAddress?.hostAddress.orEmpty(),
+                            regular.optString("clientId"), regular.optString("clientName"), regular.optString("accessMethod"))
+                        return
+                    }
                     if (regular.optString("op") == "disconnect") {
                         val reply = JSONObject()
                             .put("v", WireProtocol.VERSION)
@@ -356,6 +370,20 @@ class MonitorServer(private val context: Context) {
                         put("smsStatus", if (regular.optBoolean("includeSms") && SettingsStore.shareSmsInbox(context)) SmsDeliveryJournal.latest() else org.json.JSONArray())
                         put("mmsMetadata", if (regular.optBoolean("includeSms")) MmsMetadataReader.snapshot(context) else org.json.JSONArray())
                         put("smsSubscriptions", if (regular.optBoolean("includeSms") && SettingsStore.allowSmsReplies(context)) SmsSubscriptions.options(context) else org.json.JSONArray())
+                        put("notificationStatus", JSONObject()
+                            .put("monitorEnabled", SettingsStore.isMonitorEnabled(context))
+                            .put("listenerGranted", runCatching {
+                                android.provider.Settings.Secure.getString(context.contentResolver, "enabled_notification_listeners")
+                                    .orEmpty().split(':').any { entry ->
+                                        android.content.ComponentName.unflattenFromString(entry) ==
+                                            android.content.ComponentName(context, br.dev.monitorremoto.capture.NotificationCaptureService::class.java)
+                                    }
+                            }.getOrDefault(false))
+                            .put("listenerConnected", NotificationCaptureStatus.connected)
+                            .put("allowedCount", SettingsStore.notificationAllowlist(context).size)
+                            .put("allApps", SettingsStore.allNotifications(context))
+                            .put("lastEventAt", NotificationCaptureStatus.lastEventAt)
+                            .put("recoveredActive", NotificationCaptureStatus.lastRecoveryCount))
                         put("messagingPermissions", JSONObject().put("smsRead", SettingsStore.shareSmsInbox(context) && SmsInboxReader.hasAccess(context))
                             .put("smsReply", SettingsStore.allowSmsReplies(context) && SmsInboxReader.hasAccess(context) &&
                                 context.checkSelfPermission(android.Manifest.permission.SEND_SMS) == android.content.pm.PackageManager.PERMISSION_GRANTED)
