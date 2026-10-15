@@ -1,3 +1,10 @@
+## 0.1.0-alpha.54 (14/10/2026)
+
+- Corrigida a falha real de `:app:compileDebugKotlin` reportada no workflow 52: `MainActivity.kt:192:9 Unresolved reference 'lastRecoveryAttemptMs'`.
+- Declarado `private var lastRecoveryAttemptMs = 0L` no ciclo de vida da `MainActivity`, com carimbo monotônico de `SystemClock.elapsedRealtime()` em memória para limitar tentativas de recuperação do serviço de monitoramento a uma por minuto, somente quando o app está visível e autorizado.
+- Incluída regressão no verificador `tools/check_distribution.py` para impedir que a declaração seja esquecida novamente; atualizados versionName/versionCode/AppVersion e documentação para alpha.54/54.
+- A correção é pontual: mantidos a manutenção Reiniciar por ADB confirmada, navegação não invasiva, recuperação de dados SAF e o restante da alpha.53. Build Android completo e testes físicos ainda dependem do workflow.
+
 ## 0.1.0-alpha.53 (14/10/2026)
 
 - Adicionado cartão **Manutenção** aos principais recursos remotos: pop-up de opção única **Reiniciar aparelho · ADB**, com navegação até sessão ADB do mesmo aparelho. A conexão AES-GCM não concede capacidade ADB.
@@ -13,7 +20,7 @@
 - Voltar/Início/Recentes usam comandos ADB permitidos durante a visualização após resposta autenticada da captura normal no mesmo host. Demais comandos e interação por toque continuam usando o protocolo Monitor Remoto e as permissões anteriores.
 - Para abrir o visualizador via ADB, exige chave normal já pareada para o mesmo IP. Sem ela, explica que o ADB não transmite vídeo nesta versão e orienta o consentimento local no monitorado.
 - Sessão ADB da ponte é encerrada quando Ver tela deixa o primeiro plano. Nenhum segredo/código/QR é persistido pelo visualizador e não foi adicionado serviço de fundo. Não há reconexão ADB durante a visualização nesta etapa.
-- Versionamento alpha.52 / versionCode 53, documentação, notas e verificações sincronizados. Build Android completo e testes de hardware continuam pendentes.
+- Versionamento alpha.52 / versionCode 52, documentação, notas e verificações sincronizados. Build Android completo e testes de hardware continuam pendentes.
 
 ## 0.1.0-alpha.51 (14/10/2026)
 

@@ -16,7 +16,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.53" and code.group(1) == "53", "Versões incompatíveis"
+assert version == "0.1.0-alpha.54" and code.group(1) == "54", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -744,3 +744,13 @@ assert 'desiredTarget = null' in adb53
 assert 'showListingError' in files53 and 'Tentar novamente' in files53 and 'Voltar ao painel' in files53
 assert '‹ Voltar ' in files53 and 'private fun goBack()' in files53
 print('PASSOU: alpha.53, reboot ADB de sistema, consentimento reforçado, aviso não invasivo e arquivos com Voltar')
+
+# Alpha.54: o workflow 52 falhou por referência inexistente em MainActivity.
+# A análise sintática PSI não detecta símbolos indefinidos; exigir propriedade declarada.
+assert len(re.findall(r'\bprivate\s+var\s+lastRecoveryAttemptMs\s*=\s*0L\b', main_ui)) == 1, (
+    'alpha.54: declarar uma única vez lastRecoveryAttemptMs na MainActivity'
+)
+assert 'SystemClock.elapsedRealtime()' in main_ui
+assert 'now - lastRecoveryAttemptMs < 60_000L' in main_ui
+assert 'lastRecoveryAttemptMs = now' in main_ui
+print('PASSOU: alpha.54, timestamp monotônico para recuperação autorizada declarado e utilizado')

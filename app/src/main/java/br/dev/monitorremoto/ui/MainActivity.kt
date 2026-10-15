@@ -81,6 +81,9 @@ class MainActivity : Activity() {
     internal val smsSimPermissionRequest = 107
     internal val audioPermissionRequest = 108
     internal var active = false
+    // Tempo monotônico em RAM da última tentativa de retomar o serviço autorizado.
+    // Não sobreviver à Activity evita aplicar um timestamp antigo após recriação.
+    private var lastRecoveryAttemptMs = 0L
     internal var resultBox: LinearLayout? = null
     companion object { const val EXTRA_OPEN_MONITOR = "br.dev.monitorremoto.OPEN_MONITOR" }
     // Alpha.53: acesso autenticado permanece visível no cartão Monitorado e na

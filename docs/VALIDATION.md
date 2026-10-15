@@ -1,3 +1,10 @@
+## Alpha.54 — correção do workflow 52 (14/10/2026)
+
+- Evidência: log fornecido pelo usuário, workflow *Gerar APK e Release 52*. Erro em `:app:compileDebugKotlin`: `MainActivity.kt:192:9 Unresolved reference 'lastRecoveryAttemptMs'`.
+- Correção: declaração de `lastRecoveryAttemptMs` em RAM na Activity, inicializada em zero, usando relógio monotônico já existente para limitar retomadas autorizadas do serviço.
+- Regressão adicionada ao verificador estrutural; este erro não é sintático e pode passar no parser Kotlin/PSI sem resolução de símbolos.
+- Build Android e instalação não executados localmente; testar no GitHub Actions.
+
 ## Alpha.53 — Manutenção / navegação / Recuperar dados (14/10/2026)
 
 - Código: opção Reiniciar normal por ADB `reboot:` com confirmação digitada; remoção da Activity automática de acesso remoto, mantendo notificação/cartão; novo Voltar e instruções SAF.

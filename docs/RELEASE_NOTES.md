@@ -1,4 +1,10 @@
-# Monitor Remoto v0.1.0-alpha.53
+# Monitor Remoto v0.1.0-alpha.54
+
+## Correção de compilação no workflow 52 (alpha.54)
+
+- Resolvida a referência indefinida `lastRecoveryAttemptMs` em `MainActivity.kt`, mantendo o controle de frequência da retomada conservadora do serviço previamente autorizado.
+- Nenhuma alteração ao ADB, permissões, reinicialização ou acesso aos arquivos. Mantidas todas as funcionalidades da alpha.53.
+- Compilação Android completa e testes físicos da alpha.54 pendentes.
 
 ## Manutenção e recuperação visual (alpha.53)
 
