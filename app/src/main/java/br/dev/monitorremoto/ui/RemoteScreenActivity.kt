@@ -338,7 +338,8 @@ class RemoteScreenActivity : Activity() {
         frameRate.reset(); measuredFps = 0f
     }
 
-    private val poll = object : Runnable {
+    // Tipo explícito evita inferência recursiva de propriedade referenciada por callbacks internos.
+    private val poll: Runnable = object : Runnable {
         override fun run() {
             if (!active || !fetching.compareAndSet(false, true)) return
             val visit = visitGeneration
@@ -469,7 +470,7 @@ class RemoteScreenActivity : Activity() {
                     fetching.set(false)
                     if (!active || isFinishing || isDestroyed || visit != visitGeneration) {
                         nextBitmap?.recycle()
-                        if (active && visit != visitGeneration && !isFinishing && !isDestroyed) main.post(poll)
+                        if (active && visit != visitGeneration && !isFinishing && !isDestroyed) main.post(this)
                         return@post
                     }
                     screenChannelAuthenticated = authenticatedThisPoll

@@ -1,3 +1,11 @@
+## Alpha.71 · correção da compilação #66 (15/10/2026)
+
+- [x] Examinado o log original do workflow #66: `:app:compileDebugKotlin` falhou em `RemoteScreenActivity.kt:472:107`, analisador Kotlin não resolve inferência recursiva.
+- [x] Tipo `private val poll: Runnable` explícito e `main.post(this)` no callback obsoleto, preservando uso de executor único e proteção da visita.
+- [x] Versão `0.1.0-alpha.71` / `versionCode 71` e documentação sincronizadas; teste de regressão acrescentado ao verificador.
+- [ ] Reexecutar `:app:testDebugUnitTest :app:assembleDebug` em CI e confirmar APK; não alegar compilação Android completa a partir do verificador estático.
+- [ ] Testar tela JPEG/H.264 e ciclo `onPause/onResume` em dois telefones reais.
+
 ## Alpha.69 — correção de compilação da interface (15/10/2026)
 
 - [x] GitHub Actions execução #64 (`38734079523`) analisada: `:app:compileDebugKotlin` falhou com **oito erros** em `AppDialogUi.kt`/`UiComponents.kt` (`lineSpacingExtra` read-only, `darkTheme` privado).

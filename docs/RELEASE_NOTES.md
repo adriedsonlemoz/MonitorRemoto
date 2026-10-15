@@ -1,3 +1,11 @@
+# Monitor Remoto v0.1.0-alpha.71
+
+**Correção de compilação no visualizador:** workflow #66 falhou em `:app:compileDebugKotlin` na linha 472 de `RemoteScreenActivity.kt` por análise recursiva de tipos do Kotlin, causada por `poll` referenciar a si mesmo no inicializador. O polling agora declara `Runnable` explicitamente e o callback que recebe um resultado de visita anterior reagenda `this` em vez de referenciar a propriedade `poll`. Preservadas autenticação, consentimento, câmera visível, Configurações, executor único e os demais recursos.
+
+**Validação:** análise estática de regressão e verificações locais; a compilação Android e o APK precisam ser comprovados por nova execução da CI.
+
+---
+
 # Monitor Remoto v0.1.0-alpha.70
 
 **Estabilidade e fidelidade dos estados:** Configurações exibem `ATIVADO`, `DESATIVADO`, `ABRIR` ou `REVOGAR` a partir do estado real das permissões e preferências, não de palavras nos textos. A câmera compartilhada encerra apenas sua sessão de captura, protegendo uma nova sessão contra callbacks atrasados. O visualizador reutiliza uma thread para consultar quadros, descartando resultados obsoletos ao retornar ao app. Acrescentados testes Kotlin/JVM e verificações estruturais.

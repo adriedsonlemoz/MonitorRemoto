@@ -1,3 +1,9 @@
+## 0.1.0-alpha.71 (versionCode 71) | 15/10/2026
+
+- Corrigida a falha real de compilação Kotlin do workflow **Gerar APK e Release #66**, `RemoteScreenActivity.kt:472:107`: inferência de tipo recursiva na propriedade `poll` ao referenciar `poll` no próprio inicializador (dentro do callback `main.post`).
+- Declarado `private val poll: Runnable` explicitamente e alterado o reagendamento da resposta de uma visita antiga para `main.post(this)`, referenciando a instância `Runnable` atual, sem autorreferência da propriedade. A regra de uma consulta por vez e o descarte de frames obsoletos continuam.
+- Incluída verificação estrutural de regressão. Nenhum ajuste em permissões, criptografia, protocolo, serviços, comandos remotos ou políticas de câmera. Build Android/Gradle e dispositivos reais aguardam validação na CI.
+
 ## 0.1.0-alpha.70 (versionCode 70) | 15/10/2026
 
 - Configurações: selos de estado deixam de analisar frases dos subtítulos. `SettingsBadgeKind.forEnabled` recebe booleanos reais para 24 toggles/permissões, além de status contextual de pasta revogável e tema selecionado; ações comuns ficam com `ABRIR`, revogação destrutiva conserva `REVOGAR`.

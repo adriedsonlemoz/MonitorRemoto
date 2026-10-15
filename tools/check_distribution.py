@@ -16,7 +16,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.70" and code.group(1) == "70", "Versões incompatíveis"
+assert version == "0.1.0-alpha.71" and code.group(1) == "71", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -1010,3 +1010,12 @@ assert "Executors.newSingleThreadExecutor" in _viewer and "pollExecutor.shutdown
 assert '"MonitorRemoto-screen-poll").start()' not in _viewer
 assert "encerramentoDeSessaoAntigaNaoRevogaCameraNova" in (root / "app/src/test/java/br/dev/monitorremoto/core/CameraFrameStoreGenerationTest.kt").read_text()
 print("PASSOU: alpha.70, selos explícitos, limpeza por sessão e executor de polling único")
+
+# Alpha.71: workflow #66 falhou em :app:compileDebugKotlin na linha 472.
+# A referência a `poll` dentro do inicializador da própria propriedade disparava
+# inferência de tipo recursiva. Fixar o tipo e reagendar a instância Runnable.
+assert 'private val poll: Runnable = object : Runnable' in _viewer, "Polling deve declarar Runnable explicitamente"
+assert 'main.post(this)' in _viewer, "Callback de visita antiga deve reagendar o próprio Runnable"
+assert 'main.post(poll)' not in _viewer.split('private val poll: Runnable = object : Runnable', 1)[1].split('override fun onCreate(', 1)[0], "Autorreferência ao poll durante inicialização pode causar inferência recursiva"
+assert 'main.postDelayed(this, retryDelay)' in _viewer, "Cadência após a resposta foi alterada"
+print("PASSOU: alpha.71, regressão de inferência recursiva no polling #66")
