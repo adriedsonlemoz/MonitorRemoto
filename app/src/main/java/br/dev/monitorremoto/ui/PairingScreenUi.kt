@@ -157,26 +157,26 @@ internal fun MainActivity.showManualConnectionDialog() {
         inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
         if (hasSaved) hint = "Chave já salva. Deixe vazio para manter"
     }
-    val networkPanel = panel(14)
+    val networkPanel = panel(12)
     networkPanel.addView(iconSectionHeader(R.drawable.ic_wifi, "Endereço do aparelho"))
-    networkPanel.addView(label("Digite o IP local completo ou o nome da VPN privada.", 12f, muted = true))
+    networkPanel.addView(label("Digite o IP local completo ou o nome da VPN privada.", 11.5f, muted = true))
     networkPanel.addView(host)
-    networkPanel.addView(label("Sugestão da rede Wi-Fi atual, editável.", 11.5f, muted = true))
+    networkPanel.addView(label("Sugestão da rede Wi-Fi atual, editável.", 10.8f, muted = true))
     layout.addView(networkPanel)
-    sectionGap(layout, 12)
+    sectionGap(layout, 10)
 
-    val keyPanel = panel(14)
+    val keyPanel = panel(12)
     keyPanel.addView(iconSectionHeader(R.drawable.ic_shield, "Chave de pareamento"))
-    keyPanel.addView(label("Cole a chave ou deixe vazio para usar a chave salva deste IP.", 12f, muted = true))
+    keyPanel.addView(label("Cole a chave ou deixe vazio para usar a chave salva deste IP.", 11.5f, muted = true))
     keyPanel.addView(key)
     val keyActions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
     keyActions.addView(actionButton("Colar", emphasis = true) {
         val clip = (getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).primaryClip
         val pasted = clip?.getItemAt(0)?.coerceToText(this)?.toString().orEmpty().trim()
         if (pasted.isNotBlank()) key.setText(pasted) else key.error = "Área de transferência vazia."
-    }, LinearLayout.LayoutParams(0, dp(46), 1f))
-    keyActions.addView(View(this), LinearLayout.LayoutParams(dp(8), 1))
-    keyActions.addView(actionButton("Limpar") { key.text.clear() }, LinearLayout.LayoutParams(0, dp(46), 1f))
+    }, LinearLayout.LayoutParams(0, dp(40), 1f))
+    keyActions.addView(View(this), LinearLayout.LayoutParams(dp(6), 1))
+    keyActions.addView(actionButton("Limpar") { key.text.clear() }, LinearLayout.LayoutParams(0, dp(40), 1f))
     keyPanel.addView(keyActions)
     layout.addView(keyPanel)
     val inputError = label("", 11.5f).apply {

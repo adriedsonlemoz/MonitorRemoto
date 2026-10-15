@@ -15,7 +15,7 @@ import java.net.Inet4Address
 
 internal fun MainActivity.renderController() {
     val host = SettingsStore.getRemoteHost(this)
-    val card = panel(17).apply { background = shape(surface, 24, true) }
+    val card = panel(15).apply { background = shape(surface, 22, true) }
     val saved = RecentDevices.list(this).firstOrNull { it.host == host }
     val remoteName = remoteConnection.cached?.optJSONObject("battery")?.optString("device")
         ?.takeIf { remoteConnection.cachedHost == host && it.isNotBlank() }
@@ -43,7 +43,7 @@ internal fun MainActivity.renderController() {
                 ?: showAppNotice("Renomear", "Pareie ou salve este aparelho primeiro.")
         }
     }
-    renameRow.addView(editName, LinearLayout.LayoutParams(dp(36), dp(36)))
+    renameRow.addView(editName, LinearLayout.LayoutParams(dp(34), dp(34)))
     headingNames.addView(renameRow)
     if (remoteName != null && saved?.customName == true) {
         headingNames.addView(label(remoteName, 10f, muted = true).apply {
@@ -56,37 +56,37 @@ internal fun MainActivity.renderController() {
     val refresh = android.widget.ImageView(this).apply {
         setImageResource(br.dev.monitorremoto.R.drawable.ic_refresh)
         imageTintList = android.content.res.ColorStateList.valueOf(ink)
-        setPadding(dp(10), dp(10), dp(10), dp(10))
+        setPadding(dp(9), dp(9), dp(9), dp(9))
         background = shape(fieldColor, 13, true)
         isClickable = true; isFocusable = true
         contentDescription = "Atualizar dados do aparelho"
         setOnClickListener { refreshRemote(silent = false) }
     }
-    heading.addView(refresh, LinearLayout.LayoutParams(dp(42), dp(42)))
-    heading.addView(View(this), LinearLayout.LayoutParams(dp(7), 1))
+    heading.addView(refresh, LinearLayout.LayoutParams(dp(38), dp(38)))
+    heading.addView(View(this), LinearLayout.LayoutParams(dp(6), 1))
     currentConnectButton = actionButton("Desconectar") {
         when (effectiveConnectionState()) {
             "connected", "loading" -> disconnectCurrent()
             else -> showConnectionChooser()
         }
-    }.apply { textSize = 10.5f; minWidth = 0; setPadding(dp(3), 0, dp(3), 0) }
-    heading.addView(currentConnectButton, LinearLayout.LayoutParams(dp(98), dp(42)))
+    }.apply { textSize = 10.5f; minWidth = 0; setPadding(dp(2), 0, dp(2), 0) }
+    heading.addView(currentConnectButton, LinearLayout.LayoutParams(dp(92), dp(38)))
     card.addView(heading)
-    sectionGap(card, 8)
+    sectionGap(card, 6)
     val statusRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-    currentStatus = label("", 11.5f, strong = true).apply {
+    currentStatus = label("", 11f, strong = true).apply {
         setPadding(0, 0, 0, 0); maxLines = 1
     }
     statusRow.addView(currentStatus)
     statusRow.addView(View(this), LinearLayout.LayoutParams(0, 1, 1f))
-    currentUpdated = label("", 10f, muted = true).apply {
+    currentUpdated = label("", 9.5f, muted = true).apply {
         setPadding(0, 0, 0, 0); maxLines = 1
         ellipsize = android.text.TextUtils.TruncateAt.END
         gravity = Gravity.END
     }
-    statusRow.addView(currentUpdated, LinearLayout.LayoutParams(0, -2, 1.6f))
+    statusRow.addView(currentUpdated, LinearLayout.LayoutParams(0, -2, 1.45f))
     card.addView(statusRow)
-    sectionGap(card, 13)
+    sectionGap(card, 10)
 
     resultBox = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
     card.addView(resultBox)

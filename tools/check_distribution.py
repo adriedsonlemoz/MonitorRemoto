@@ -16,7 +16,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.73" and code.group(1) == "73", "Versões incompatíveis"
+assert version == "0.1.0-alpha.74" and code.group(1) == "74", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -1038,7 +1038,7 @@ assert 'matches.size == 1' in shared and 'isHash' in shared and 'isMulti' in sha
 assert 'dataChunks(' in client and 'dataHash(' in client
 assert 'copyRemoteFolder' in files and 'collectRemoteFolder' in files and 'fetchChunksWithRetry' in files
 assert (root / 'app/src/test/java/br/dev/monitorremoto/core/BatteryTemperaturePolicyTest.kt').exists()
-print('PASSOU: alpha.73, snapshot, telemetria, arquivos SAF com SHA integral e cópia recursiva.')
+print('PASSOU: alpha.74, versão, snapshot, telemetria e UI compacta.')
 
 # alpha.73: regressão nas novidades, nos alertas e nas permissões.
 news = (ui_root / 'VersionNewsUi.kt').read_text()
@@ -1055,4 +1055,4 @@ assert 'RemoteHealthJobService' in manifest and 'BIND_JOB_SERVICE' in manifest
 assert '"healthAlerts"' in server and 'runCatching' in (root / 'app/src/main/java/br/dev/monitorremoto/service/MonitorService.kt').read_text()
 assert '"Desconectar"' in (ui_root / 'ConnectionScreenUi.kt').read_text()
 assert 'ic_edit' in (ui_root / 'ConnectionScreenUi.kt').read_text()
-print('PASSOU: novidades únicas, botão renomear, notificações e proteção térmica alpha.73.')
+print('PASSOU: novidades únicas, renomeação, notificações, proteção térmica e compactação visual alpha.74.')

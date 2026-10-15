@@ -40,12 +40,16 @@ internal fun MainActivity.button(title: String, emphasis: Boolean = false, onCli
     Button(this).apply {
         text = title
         isAllCaps = false
-        textSize = 14f
+        textSize = 13.5f
         setTextColor(if (emphasis) highlightText else ink)
-        background = shape(if (emphasis) highlight else surface)
-        setPadding(dp(8), dp(8), dp(8), dp(8))
-        val params = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(52))
-        params.bottomMargin = dp(8)
+        background = shape(if (emphasis) highlight else fieldColor, 14, !emphasis)
+        elevation = 0f
+        stateListAnimator = null
+        minimumHeight = dp(46)
+        minHeight = dp(46)
+        setPadding(dp(8), dp(6), dp(8), dp(6))
+        val params = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(48))
+        params.bottomMargin = dp(6)
         layoutParams = params
         setOnClickListener { onClick() }
     }
@@ -53,31 +57,37 @@ internal fun MainActivity.button(title: String, emphasis: Boolean = false, onCli
 internal fun MainActivity.field(hintText: String, initial: String = ""): EditText = EditText(this).apply {
     hint = hintText
     setText(initial)
-    textSize = 16f
+    textSize = 15.5f
     setTextColor(ink)
     setHintTextColor(dim)
     background = shape(fieldColor, 14, true)
     setSingleLine(true)
-    minHeight = dp(56)
+    minHeight = dp(52)
     gravity = Gravity.CENTER_VERTICAL
-    setPadding(dp(16), dp(14), dp(16), dp(14))
+    setPadding(dp(14), dp(12), dp(14), dp(12))
     inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
-    val params = LinearLayout.LayoutParams(-1, dp(56))
-    params.bottomMargin = dp(10)
+    val params = LinearLayout.LayoutParams(-1, dp(52))
+    params.bottomMargin = dp(8)
     layoutParams = params
 }
 
 internal fun MainActivity.actionButton(title: String, emphasis: Boolean = false, onClick: () -> Unit): Button =
     Button(this).apply {
-        text = title; isAllCaps = false; textSize = 13f
+        text = title
+        isAllCaps = false
+        textSize = 12.5f
         setTextColor(if (emphasis) highlightText else ink)
-        background = shape(if (emphasis) highlight else surface, 12, !emphasis)
-        setPadding(dp(9), 0, dp(9), 0)
-        minHeight = dp(42)
+        background = shape(if (emphasis) highlight else fieldColor, 12, !emphasis)
+        elevation = 0f
+        stateListAnimator = null
+        minimumHeight = dp(40)
+        minHeight = dp(40)
+        minWidth = 0
+        setPadding(dp(8), 0, dp(8), 0)
         setOnClickListener { onClick() }
     }
 
-internal fun MainActivity.panel(pad: Int = 16): LinearLayout = LinearLayout(this).apply {
+internal fun MainActivity.panel(pad: Int = 14): LinearLayout = LinearLayout(this).apply {
     orientation = LinearLayout.VERTICAL
     background = shape(surface, 18, true)
     setPadding(dp(pad), dp(pad), dp(pad), dp(pad))
@@ -99,7 +109,7 @@ internal fun MainActivity.dialogWrapper(): Pair<ScrollView, LinearLayout> {
     val wrapper = ScrollView(this)
     val layout = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
-        setPadding(dp(18), dp(10), dp(18), dp(10))
+        setPadding(dp(16), dp(8), dp(16), dp(8))
     }
     wrapper.addView(layout)
     return wrapper to layout
@@ -123,7 +133,7 @@ internal fun MainActivity.dialogCardRow(
     orientation = LinearLayout.HORIZONTAL
     gravity = Gravity.CENTER_VERTICAL
     background = shape(fieldColor, 16, true)
-    setPadding(dp(14), dp(13), dp(14), dp(13))
+    setPadding(dp(12), dp(11), dp(12), dp(11))
     val textBlock = LinearLayout(this@dialogCardRow).apply { orientation = LinearLayout.VERTICAL }
     textBlock.addView(label(title, 15f, strong = true).apply {
         setTextColor(if (accent) highlight else ink)
@@ -142,9 +152,9 @@ internal fun MainActivity.dialogCardRow(
 internal fun MainActivity.dialogMetricRow(name: String, value: String): LinearLayout = LinearLayout(this).apply {
     orientation = LinearLayout.HORIZONTAL
     gravity = Gravity.CENTER_VERTICAL
-    setPadding(0, dp(5), 0, dp(5))
-    addView(label(name, 12f, muted = true), LinearLayout.LayoutParams(0, -2, 1f))
-    addView(label(value, 14f, strong = true))
+    setPadding(0, dp(4), 0, dp(4))
+    addView(label(name, 11.5f, muted = true), LinearLayout.LayoutParams(0, -2, 1f))
+    addView(label(value, 13.5f, strong = true))
 }
 
 
@@ -205,7 +215,7 @@ private fun MainActivity.statusBadge(model: SettingsBadgeKind): TextView {
     }
     return TextView(this).apply {
         text = model.label
-        textSize = 11.5f
+        textSize = 10.5f
         setTypeface(null, Typeface.BOLD)
         gravity = Gravity.CENTER
         setTextColor(textColor)
@@ -214,8 +224,8 @@ private fun MainActivity.statusBadge(model: SettingsBadgeKind): TextView {
             cornerRadius = dp(999).toFloat()
             setStroke(dp(1), stroke)
         }
-        setPadding(dp(12), dp(8), dp(12), dp(8))
-        minWidth = dp(112)
+        setPadding(dp(10), dp(6), dp(10), dp(6))
+        minWidth = dp(88)
     }
 }
 
@@ -225,43 +235,47 @@ internal fun MainActivity.iconMenuRow(
     subtitle: String = "",
     dangerous: Boolean = false,
     badge: SettingsBadgeKind = SettingsBadgeKind.ACTION,
+    actionLabel: String? = null,
     onClick: () -> Unit
 ): LinearLayout = LinearLayout(this).apply {
     // Ação perigosa sempre prevalece; demais estados vêm da configuração real.
     val resolvedBadge = if (dangerous) SettingsBadgeKind.DANGER else badge
+    val trailingLabel = actionLabel ?: resolvedBadge.label
     orientation = LinearLayout.HORIZONTAL
     gravity = Gravity.CENTER_VERTICAL
-    background = shape(fieldColor, 20, true)
-    setPadding(dp(14), dp(14), dp(14), dp(14))
-    minimumHeight = dp(82)
+    background = shape(fieldColor, 18, true)
+    setPadding(dp(12), dp(12), dp(12), dp(12))
+    minimumHeight = dp(72)
     isClickable = true
     isFocusable = true
     contentDescription = listOf(title, subtitle, resolvedBadge.label).filter { it.isNotBlank() }.joinToString(". ")
     setOnClickListener { onClick() }
 
     val symbol = LinearLayout(this@iconMenuRow).apply {
-        background = shape(surface, 16, true)
+        background = shape(surface, 14, true)
         gravity = Gravity.CENTER
-        addView(vectorIcon(iconRes, 24, if (dangerous) Color.rgb(186, 67, 58) else highlight))
+        addView(vectorIcon(iconRes, 22, if (dangerous) Color.rgb(186, 67, 58) else highlight))
     }
-    addView(symbol, LinearLayout.LayoutParams(dp(50), dp(50)))
-    addView(View(this@iconMenuRow), LinearLayout.LayoutParams(dp(12), 1))
+    addView(symbol, LinearLayout.LayoutParams(dp(44), dp(44)))
+    addView(View(this@iconMenuRow), LinearLayout.LayoutParams(dp(10), 1))
 
     val words = LinearLayout(this@iconMenuRow).apply { orientation = LinearLayout.VERTICAL }
-    words.addView(label(title, 16f, strong = true).apply {
+    words.addView(label(title, 15f, strong = true).apply {
         if (dangerous) setTextColor(Color.rgb(186, 67, 58))
         setPadding(0, 0, 0, 0)
+        maxLines = 2
     })
     if (subtitle.isNotBlank()) {
-        words.addView(label(subtitle, 12.6f, muted = true).apply {
-            maxLines = 3
-            setPadding(0, dp(4), 0, 0)
+        words.addView(label(subtitle, 11.5f, muted = true).apply {
+            maxLines = 2
+            ellipsize = android.text.TextUtils.TruncateAt.END
+            setPadding(0, dp(2), 0, 0)
             setLineSpacing(dp(1).toFloat(), 1f)
         })
     }
     addView(words, LinearLayout.LayoutParams(0, -2, 1f))
-    addView(View(this@iconMenuRow), LinearLayout.LayoutParams(dp(12), 1))
-    addView(statusBadge(resolvedBadge), LinearLayout.LayoutParams(-2, -2))
+    addView(View(this@iconMenuRow), LinearLayout.LayoutParams(dp(8), 1))
+    addView(statusBadge(resolvedBadge).apply { text = trailingLabel }, LinearLayout.LayoutParams(-2, -2))
 }
 
 internal fun MainActivity.iconSectionHeader(iconRes: Int, title: String, subtitle: String = ""): LinearLayout =

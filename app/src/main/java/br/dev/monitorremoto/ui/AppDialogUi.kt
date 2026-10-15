@@ -25,15 +25,15 @@ internal fun MainActivity.showAppNotice(
 ) {
     val (wrapper, layout) = dialogWrapper()
     layout.addView(iconSectionHeader(icon, title))
-    sectionGap(layout, 12)
-    layout.addView(panel(15).apply {
+    sectionGap(layout, 10)
+    layout.addView(panel(13).apply {
         background = shape(fieldColor, 18, true)
         addView(label(description, 14.2f).apply {
             setPadding(0, 0, 0, 0)
             setLineSpacing(dp(2).toFloat(), 1f)
         })
     })
-    sectionGap(layout, 14)
+    sectionGap(layout, 10)
     lateinit var dialog: AlertDialog
     layout.addView(button(buttonText, emphasis = true) { dialog.dismiss() })
     dialog = AlertDialog.Builder(this).setView(wrapper).create()
@@ -49,8 +49,8 @@ internal fun MainActivity.showAppConfirm(
 ) {
     val (wrapper, layout) = dialogWrapper()
     layout.addView(iconSectionHeader(icon, title))
-    sectionGap(layout, 12)
-    layout.addView(panel(15).apply {
+    sectionGap(layout, 10)
+    layout.addView(panel(13).apply {
         background = shape(fieldColor, 18, true)
         addView(label(description, 14.2f).apply {
             setPadding(0, 0, 0, 0)

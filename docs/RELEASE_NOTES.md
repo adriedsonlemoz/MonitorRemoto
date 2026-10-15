@@ -1,13 +1,12 @@
-# Monitor Remoto v0.1.0-alpha.73
+# Monitor Remoto v0.1.0-alpha.74
 
-## Painel, novidades e alertas
+## Destaques
 
-- Renomeie o dispositivo no lápis do cabeçalho; conexão e última leitura na mesma linha, com ações compactas de atualizar/desconectar.
-- Cartões e indicadores de tela, bloqueio, câmera, rede, bateria e aplicativo observado com detalhes ao toque. A ocupação da câmera não prova que o Minha Câmera está gravando.
-- Novidades aparecem uma vez por versão, com acesso em Configurações.
-- Configurações > Alertas e proteção: avisos locais, proteção térmica opcional e alerta remoto por tarefa de segundo plano de melhor esforço (~15 min; Android pode adiar). Conceda notificação Android para aparecer na barra.
-- Proteção interrompe apenas capturas do próprio Monitor Remoto em aquecimento severo; não pausa Minha Câmera, não desliga o hardware ou o carregador.
-- Requer mesmo APK alpha.73 em ambos aparelhos; compilação e testes de hardware ainda pendentes.
+- Visual mais compacto nas telas de conexão manual, erro por versões incompatíveis e copiar diagnóstico.
+- Botões de ação sem sombra inconsistente, incluindo o botão Limpar.
+- Componentes-base de diálogo, campos e badges compactados para manter a mesma linguagem visual da alpha.73 com menos altura e melhor aproveitamento do espaço.
+- Requer o mesmo APK alpha.74 em ambos aparelhos; compilação Android completa e testes em hardware continuam pendentes.
+
 
 
 **Diagnóstico do Minha Câmera e telemetria compacta:** painel Controle mostra o estado real do display (ligada, desligada ou ambiente, conforme o Android), bloqueio, indício de indisponibilidade da câmera e o último pacote em primeiro plano após acesso ao uso concedido localmente. A indicação de câmera ocupada **não confirma gravação**, pois o Monitor Remoto não tem integração de telemetria com Minha Câmera. Cartões de Bateria/Temperatura/Rede mais baixos; temperatura usa faixas orientativas coloridas e Wi-Fi apresenta SSID/RSSI quando o Android permite a leitura por permissão explícita de localização.

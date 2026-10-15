@@ -1,3 +1,11 @@
+## 0.1.0-alpha.74 (versionCode 74) | 15/10/2026
+
+- Interface: refinamento visual das telas de conexão e erro, com menor altura geral, paddings reduzidos e ações compactas no cabeçalho do aparelho remoto.
+- Conexão manual: campos e painéis mais enxutos; botões Colar e Limpar padronizados sem sombra/elevation inconsistente.
+- Diagnóstico: cartão “Copiar diagnóstico” ficou mais compacto, com rótulo de ação explícito `COPIAR` e sem quebrar o erro técnico no layout.
+- Componentes compartilhados: botões, campos, cards de diálogo, badges e linhas com ícone foram compactados para melhorar consistência visual sem alterar permissões, criptografia ou protocolo.
+- Sem build Android completo neste ambiente; validação local permanece estrutural/sintática, aguardando CI e teste visual em aparelho.
+
 ## 0.1.0-alpha.73 (versionCode 73) | 15/10/2026
 
 - Interface: cabeçalho compacto, ação Renomear aproveitando RecentDevices, botão Desconectar, resumo de conectividade em uma linha; ícones de estado e cartão Aplicativo observado. Cartões de telemetria clicáveis dão detalhes e instruções para autorizar no monitorado.

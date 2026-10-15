@@ -17,14 +17,14 @@ internal fun MainActivity.connectionIssueCard(host: String): LinearLayout {
     return LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         val activity = this@connectionIssueCard
-        background = shape(fieldColor, 20, true)
-        setPadding(dp(14), dp(16), dp(14), dp(14))
+        background = shape(fieldColor, 18, true)
+        setPadding(dp(12), dp(13), dp(12), dp(12))
         addView(iconSectionHeader(
             if (issue.code == ConnectionIssue.Code.VERSION) R.drawable.ic_shield else R.drawable.ic_activity,
             issue.title,
             issue.explanation,
         ))
-        sectionGap(this, 10)
+        sectionGap(this, 8)
         if (issue.code == ConnectionIssue.Code.VERSION) {
             addView(dialogMetricRow("Este celular", AppVersion.NAME))
             addView(dialogMetricRow("Outro celular", issue.remoteVersion ?: "Não identificada"))
@@ -32,25 +32,25 @@ internal fun MainActivity.connectionIssueCard(host: String): LinearLayout {
         addView(dialogMetricRow("Endereço", host.ifBlank { "Não configurado" }))
         addView(dialogMetricRow("Última tentativa", if (remoteConnection.lastAttemptMs > 0)
             formatDate(remoteConnection.lastAttemptMs) else "Não informada"))
-        sectionGap(this, 8)
-        addView(label("O que verificar", 12f, strong = true))
+        sectionGap(this, 6)
+        addView(label("O que verificar", 11.5f, strong = true))
         issue.checks.forEach { check ->
-            addView(label("• $check", 11.5f, muted = true).apply {
-                setPadding(0, dp(2), 0, dp(2))
+            addView(label("• $check", 11f, muted = true).apply {
+                setPadding(0, dp(1), 0, dp(1))
             })
         }
-        sectionGap(this, 8)
+        sectionGap(this, 7)
         val buttons = LinearLayout(activity).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
         buttons.addView(actionButton("Tentar novamente", emphasis = true) { refreshRemote(silent = false) }.apply {
             textSize = 11f; minWidth = 0; setPadding(dp(3), 0, dp(3), 0)
-        }, LinearLayout.LayoutParams(0, dp(44), 1.15f))
+        }, LinearLayout.LayoutParams(0, dp(40), 1.15f))
         buttons.addView(View(activity), LinearLayout.LayoutParams(dp(7), 1))
         buttons.addView(actionButton("Editar conexão") { showManualConnectionDialog() }.apply {
             textSize = 11f; minWidth = 0; setPadding(dp(2), 0, dp(2), 0)
-        }, LinearLayout.LayoutParams(0, dp(44), 1f))
+        }, LinearLayout.LayoutParams(0, dp(40), 1f))
         addView(buttons)
-        sectionGap(this, 8)
-        addView(iconMenuRow(R.drawable.ic_info, "Copiar diagnóstico", "Erro técnico: ${issue.technical.take(70)}") {
+        sectionGap(this, 7)
+        addView(iconMenuRow(R.drawable.ic_info, "Copiar diagnóstico", "Relatório técnico sem a chave de pareamento.", actionLabel = "COPIAR") {
             val report = buildString {
                 append("Monitor Remoto - diagnóstico de conexão\n")
                 append("Versão local: ").append(AppVersion.NAME).append('\n')
