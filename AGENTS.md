@@ -1,4 +1,4 @@
-# Monitor Remoto 0.1.0-alpha.55
+# Monitor Remoto 0.1.0-alpha.56
 # Convenções permanentes do projeto Monitor Remoto
 
 - Toda alteração de código incrementa sequencialmente `versionCode` e `versionName` (ex.: `0.1.0-alpha.8` -> `0.1.0-alpha.9`). Sincronizar tela, README, CHANGELOG, RELEASE_NOTES e documentação.
@@ -21,7 +21,7 @@
 - Alpha.10: manter tema **claro padrão**, as opções da engrenagem, janela Conectar, botão de atualização compacto, lista de até 5 aparelhos recentes e os dados do Controle no topo. Não reintroduzir formulário longo na tela principal.
 - Credenciais por dispositivo usam `RecentDevices` + `SecretVault.profileKeyName`, com migração única da alpha.9. Não reaproveitar `CONTROLLER_KEY` antigo para IPs novos nem gravar segredo em preferências sem criptografia. Esquecer apaga o segredo correspondente.
 - Respostas HTTP/TCP não são conexão persistente. Exibir "Conectado" apenas após consulta autenticada bem-sucedida e "Sem resposta" após erro. Não inventar tempos de atualização.
-- Próxima versão sequencial: `0.1.0-alpha.56`, `versionCode 56`.
+- Próxima versão sequencial: `0.1.0-alpha.57`, `versionCode 57`.
 
 - Alpha.15: preservar a seleção Conectar → QR/Manual/Salvos, confirmação do QR antes de parear, cartões salvos com três ações e o scanner em Activity com tema Dialog.
 
@@ -109,3 +109,5 @@
 - Alpha.54: o workflow 52 falhou em `:app:compileDebugKotlin`, `MainActivity.kt:192:9 Unresolved reference lastRecoveryAttemptMs`. Manter uma única declaração `private var lastRecoveryAttemptMs = 0L` junto ao estado da Activity, com `SystemClock.elapsedRealtime()` para limitar retomadas do serviço previamente autorizado. O verificador estrutural deve exigir esta declaração para evitar regressão. Preservar demais funcionalidades da alpha.53.
 
 - Alpha.55: `AdbPolicyTest.commandAllowlist` deve validar a enumeração e os comandos shell exatos dos 7 membros atuais de `AdbPolicy.Command`, em vez de confiar na contagem antiga de 4; preservar proibição de `tcpip`, `screencap`, `poweroff`, `shutdown`, `reboot` via shell e outras operações não previstas. Reinício normal continua disponível apenas pelo serviço ADB `reboot:` com confirmação explícita e sem repetição. Workflow 53 chegou aos testes e falhou nesse teste unitário; novo build é necessário para validar a correção.
+
+- Alpha.56: manter espaçamento mínimo vertical de 9dp e horizontal de 10dp em pares de ações ADB e diálogos. Não duplicar o celular conectado no histórico; renomear o ativo diretamente e preservar apelido quando diagnóstico não trouxer modelo legível. Reconstruir cartões apenas ao mudar os dados, não no polling de 2s. Visualizador oferece seletor segmentado JPEG (padrão) / H.264 (experimental); mensagens de toque diferenciam captura encerrada, tela apagada, bloqueio e Acessibilidade. ADB não remove PIN/biometria nem substitui consentimento MediaProjection. Não afirmar que ajustes de interface resolvem quedas de Wi-Fi sem testes físicos.

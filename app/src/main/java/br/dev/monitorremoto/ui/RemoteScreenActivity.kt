@@ -27,6 +27,7 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
+import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
 import br.dev.monitorremoto.R
@@ -108,7 +109,10 @@ class RemoteScreenActivity : Activity() {
     private var videoSize: Pair<Int, Int>? = null
     private var videoFailUntil = 0L
     @Volatile private var preferJpeg = true
-    private lateinit var streamModeButton: TextView
+    private lateinit var jpegModeButton: Button
+    private lateinit var h264ModeButton: Button
+    @Volatile private var remoteDeviceLocked = false
+    @Volatile private var remoteScreenInteractive = true
     private var videoMode = false
     private var videoWaitingSince = 0L
     private var videoFirstPictureAt = 0L
@@ -189,11 +193,44 @@ class RemoteScreenActivity : Activity() {
 
     private fun toggleRemoteTouch() {
         if (!touchReady) {
-            toast("Ative Acessibilidade e mantenha a captura autorizada")
+            toast(touchUnavailableExplanation())
             return
         }
         touchMode = !touchMode
         updateControls()
+    }
+
+    private fun touchUnavailableExplanation(): String = when {
+        !screenChannelAuthenticated -> "Não foi possível verificar a tela remota. Confira a conexão e tente novamente."
+        remoteDeviceLocked -> "Tela remota bloqueada. Desbloqueie no aparelho; o ADB não remove PIN ou biometria."
+        !remoteScreenInteractive -> "Tela remota apagada. Toque em Acender tela; talvez seja necessária nova autorização de captura."
+        !sharingReady -> "Compartilhamento encerrado. Autorize novamente a captura no telefone monitorado."
+        else -> "Para tocar, habilite Acessibilidade no monitorado e autorize o controle remoto."
+    }
+
+    private fun selectStreamMode(jpeg: Boolean) {
+        if (preferJpeg == jpeg) return
+        preferJpeg = jpeg
+        videoFailUntil = 0L
+        videoWaitingSince = 0L
+        closeVideo()
+        clearFrame()
+        updateStreamButtons()
+        status.text = if (jpeg) "JPEG selecionado · aguardando quadro novo" else
+            "H.264 experimental selecionado · pode aumentar o atraso"
+    }
+
+    private fun updateStreamButtons() {
+        if (!::jpegModeButton.isInitialized || !::h264ModeButton.isInitialized) return
+        listOf(jpegModeButton to true, h264ModeButton to false).forEach { (view, jpeg) ->
+            val selected = preferJpeg == jpeg
+            val selectedFill = if (dark) Color.rgb(24, 110, 98) else Color.rgb(7, 112, 101)
+            view.background = shape(if (selected) selectedFill else surface, 14, !selected)
+            view.setTextColor(if (selected) Color.WHITE else ink)
+            view.alpha = if (selected) 1f else 0.9f
+            view.contentDescription = (if (jpeg) "JPEG: menor atraso" else "H.264 experimental") +
+                if (selected) ", selecionado" else ", selecionar"
+        }
     }
 
     private fun rowAction(image: Int, label: String, action: () -> Unit): Triple<LinearLayout, ImageView, TextView> {
@@ -248,7 +285,7 @@ class RemoteScreenActivity : Activity() {
             return
         }
         val global = RemoteGesturePolicy.isGlobalAction(action)
-        if (!touchReady) { toast("Controle indisponível: confira captura, desbloqueio e Acessibilidade"); return }
+        if (!touchReady) { toast(touchUnavailableExplanation()); return }
         if (!global && !touchMode) { toast("Ative Toque para interagir com a imagem"); return }
         Thread({
             val result = runCatching {
@@ -304,6 +341,8 @@ class RemoteScreenActivity : Activity() {
                 var nextJpeg: ByteArray? = null
                 var nextSequence = -1L
                 var clear = false
+                var deviceLocked = false
+                var screenInteractive = true
                 var canTouch = false
                 var canAudio = false
                 var sharing = false
@@ -321,6 +360,8 @@ class RemoteScreenActivity : Activity() {
                     authenticatedThisPoll = true
                     val locked = result.optBoolean("deviceLocked")
                     val interactive = result.optBoolean("screenInteractive", true)
+                    deviceLocked = locked
+                    screenInteractive = interactive
                     val frameAge = result.optLong("frameAgeMs", -1L)
                     sharing = result.optBoolean("sharing")
                     canTouch = result.optBoolean("touchReady")
@@ -422,7 +463,9 @@ class RemoteScreenActivity : Activity() {
                     if (!active || isFinishing || isDestroyed) { nextBitmap?.recycle(); return@post }
                     screenChannelAuthenticated = authenticatedThisPoll
                     sharingReady = sharing
-                    touchReady = canTouch && sharing
+                    remoteDeviceLocked = deviceLocked
+                    remoteScreenInteractive = screenInteractive
+                    touchReady = canTouch && sharing && !deviceLocked && screenInteractive
                     audioReady = canAudio && sharing
                     if (!touchReady) touchMode = false
                     if (!audioReady && audioWanted) stopAudio()
@@ -510,22 +553,33 @@ class RemoteScreenActivity : Activity() {
         }
         normal.addView(channelBadge, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(6); bottomMargin = dp(6) })
         updateChannelBadge()
-        streamModeButton = text("Transmissão: JPEG (menor atraso) · tocar para testar H.264", 12.5f, accent, true).apply {
-            contentDescription = "Alternar JPEG e H.264 experimental"
-            setPadding(dp(6), dp(7), dp(6), dp(10))
-            isClickable = true; isFocusable = true
-            setOnClickListener {
-                preferJpeg = !preferJpeg
-                videoFailUntil = 0L
-                closeVideo()
-                clearFrame()
-                text = if (preferJpeg) "Transmissão: JPEG (menor atraso) · tocar para testar H.264"
-                    else "Transmissão: H.264 experimental · tocar para voltar ao JPEG"
-                status.text = if (preferJpeg) "Alterado para JPEG; aguardando quadro novo."
-                    else "Testando H.264. Se ficar lento, volte ao JPEG."
-            }
+        normal.addView(text("TRANSMISSÃO DA TELA", 12f, muted, true).apply {
+            setPadding(dp(4), dp(7), 0, dp(8))
+        })
+        val streamRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
         }
-        normal.addView(streamModeButton)
+        jpegModeButton = Button(this).apply {
+            text = "JPEG · rápido"
+            isAllCaps = false
+            minHeight = dp(46)
+            elevation = 0f
+            textSize = 13f
+            setOnClickListener { selectStreamMode(true) }
+        }
+        h264ModeButton = Button(this).apply {
+            text = "H.264 · teste"
+            isAllCaps = false
+            minHeight = dp(46)
+            elevation = 0f
+            textSize = 13f
+            setOnClickListener { selectStreamMode(false) }
+        }
+        streamRow.addView(jpegModeButton, LinearLayout.LayoutParams(0, dp(48), 1f).apply { marginEnd = dp(5) })
+        streamRow.addView(h264ModeButton, LinearLayout.LayoutParams(0, dp(48), 1f).apply { marginStart = dp(5) })
+        normal.addView(streamRow, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) })
+        updateStreamButtons()
 
         stageSlot = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         stage = FrameLayout(this).apply {
@@ -960,6 +1014,7 @@ class RemoteScreenActivity : Activity() {
     }
     override fun onPause() {
         active = false; sharingReady = false; touchMode = false; touchReady = false; audioReady = false
+        remoteDeviceLocked = false; remoteScreenInteractive = true
         screenChannelAuthenticated = false
         if (fromAdbHandoff) AdbScreenBridge.close(host)
         stopAudio()

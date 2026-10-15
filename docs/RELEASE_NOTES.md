@@ -1,3 +1,17 @@
+# Monitor Remoto v0.1.0-alpha.56
+
+## Ajustes de interface e diagnóstico ADB
+
+- Ações ADB com margens consistentes, pares compactos, sem duplicar o dispositivo ativo na lista de históricos.
+- Renomear aparelho na área conectada e no pop-up de controles; modelo anterior e apelido são preservados quando o diagnóstico de propriedades não traz um nome legível.
+- Lista de aparelhos salvos só é reconstruída quando há mudanças, não a cada verificação periódica.
+- Heartbeat e comandos ADB serializados; janela de timeout menos agressiva para evitar quedas falsas.
+- Ver tela com seletor estilizado de JPEG e H.264 e avisos específicos para tela bloqueada/apagada, projeção encerrada e Acessibilidade.
+- Nenhum bypass de bloqueio, novo comando ADB arbitrário ou tentativa de reativar depuração desabilitada.
+- Build Android/CI e testes de duas telas reais ainda pendentes.
+
+---
+
 # Monitor Remoto v0.1.0-alpha.55
 
 ## Correção dos testes ADB do workflow 53 (alpha.55)

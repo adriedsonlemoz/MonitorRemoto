@@ -509,3 +509,12 @@ As seções abaixo são registros históricos de versões anteriores, não o sta
 
 - O indicador de FPS calcula (N-1)/(t_último - t_primeiro) dos últimos até 12 quadros exibidos nos últimos 2 segundos, e zera após 2,5 s sem quadro. O dado não é latência de ponta a ponta.
 - Em desenvolvimento: 87 arquivos Kotlin passaram no verificador PSI sem erros sintáticos, XML e YAML válidos, verificador estrutural do projeto passou e 10 verificações JVM do cálculo de FPS passaram com `kotlinc` 1.9. A compilação Android completa e os testes visuais permanecem pendentes.
+
+## alpha.56 (14/10/2026)
+
+- `python3 tools/check_distribution.py`: aprovado, incluindo a regressão nova para margens, lista ADB sem duplicação, seletor JPEG/H.264 e aviso de bloqueio.
+- Parser PSI Kotlin local: 107 fontes `.kt` em `app/src`, sem `PsiErrorElement`.
+- Kotlin/JVM isolado: 8 métodos das políticas `AdbPolicyTest` e `AdbReconnectPolicyTest` com asserções JUnit compatíveis, aprovados.
+- 41 arquivos XML lidos com ElementTree e workflow YAML válido com PyYAML.
+- Verificar integridade/CRC do ZIP de código-fonte após empacotar.
+- PENDENTE: `:app:testDebugUnitTest :app:assembleDebug` no GitHub Actions; este ambiente não possui wrapper Gradle nem build Android completo. Não foram realizados testes físicos do heartbeat, nomes do fabricante, toque com tela bloqueada nem da latência JPEG/H.264.

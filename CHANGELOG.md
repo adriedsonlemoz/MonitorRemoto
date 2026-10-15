@@ -1,3 +1,13 @@
+## 0.1.0-alpha.56 (14/10/2026)
+
+- No **Modo avançado ADB**, botões agora têm espaçamento consistente; ações principais ficam organizadas em pares compactos (Controles / Manutenção e Renomear / Desconectar). O pop-up de Controles ADB possui grade com espaçamento e inclui Renomear.
+- O cartão do celular atualmente conectado não aparece novamente em **Outros celulares salvos**. A lista só é reconstruída quando os dados efetivamente mudam, evitando atualização visual desnecessária a cada 2 segundos.
+- Identificação do aparelho preserva apelido e último modelo conhecido quando o diagnóstico ADB volta sem modelo legível; fallback visual sugere renomear em vez de exibir só o IP. Não atribui modelo comercial sem evidência.
+- Em **Ver tela**, substituído o texto longo de alternância de codec por seletor de dois botões estilizados, **JPEG · rápido** e **H.264 · teste**, com estado de seleção visível e explicação de modo experimental.
+- Avisos de toque/captura passaram a distinguir tela bloqueada, tela apagada, captura encerrada e Acessibilidade indisponível a partir dos estados retornados pelo monitorado. Sem desbloquear PIN, biometria ou burlar MediaProjection.
+- ADB: heartbeat e comandos serializados no mesmo executor; tolerância ampliada de 8 para 12 s e intervalo de 30 para 45 s para evitar interferência no transporte, sem garantia de estabilidade.
+- Versão, metadados de distribuição, documentação e verificador sincronizados. Build Android completo e testes reais de reconexão/codec ainda pendentes.
+
 ## 0.1.0-alpha.55 (14/10/2026)
 
 - Corrigido o teste `AdbPolicyTest.commandAllowlist` que falhou no workflow 53 (`:app:testDebugUnitTest`): a asserção antiga esperava 4 comandos, mas a política atual possui 7 comandos explicitamente permitidos (diagnóstico, heartbeat, navegação e volume).

@@ -16,7 +16,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.55" and code.group(1) == "55", "Versões incompatíveis"
+assert version == "0.1.0-alpha.56" and code.group(1) == "56", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -664,7 +664,7 @@ print('PASSOU: alpha.46, TextView/Button usam ColorInt da Activity e não Drawab
 
 # Alpha.50: interface modal compacta, QR/pareamento seguido de descoberta TLS no MESMO host.
 ui50 = (ui_root / "AdbActivity.kt").read_text(encoding="utf-8")
-for value in ["Conectados anteriormente", "Reconectar", "+ Adicionar outro celular",
+for value in ["Outros celulares salvos", "Reconectar", "+ Adicionar outro celular",
     "Configurações avançadas", "Novo dispositivo", "Como deseja parear?", "Parear com QR Code",
     "Parear por código", 'beginDiscovery("connect", host)', "afterPair(endpoint.host)",
     "AdbAutoConnectPolicy.connectionServices", "manualConnect", "Controles ADB",
@@ -687,8 +687,8 @@ for required in ['private var desiredTarget: AdbKnownDevice?', 'planRetry(',
                  'onConnectionLost(', 'startHeartbeat(', 'cancelHeartbeat()',
                  'AdbReconnectPolicy.delayMs', 'beginDiscovery("recover", expected.host)',
                  'if (mode == "recover")', 'Cancelar reconexão automática',
-                 'stopReconnect(null)', 'heartbeatWorker.shutdownNow()', 'override fun onStop()',
-                 'client?.connected() == true', 'Comandos ADB']:
+                 'stopReconnect(null)', 'worker.shutdownNow()', 'override fun onStop()',
+                 'client?.connected() == true', 'Controles ADB']:
     assert required in reconnect_ui, f'alpha.51: missing {required}'
 assert 'HEARTBEAT("echo monitor_remoto_alive")' in adb_policy51
 adb_discovery51 = (root / 'app/src/main/java/br/dev/monitorremoto/adb/AdbDiscovery.kt').read_text(encoding='utf-8')
@@ -696,7 +696,7 @@ assert 'fun start(connectOnly: Boolean = false)' in adb_discovery51
 assert 'it.start(connectOnly = mode == "connect" || mode == "reconnect" || mode == "recover")' in reconnect_ui
 assert 'VOLUME_UP("input keyevent 24")' in adb_policy51
 assert 'VOLUME_DOWN("input keyevent 25")' in adb_policy51
-assert '30_000L' in reconnect_policy and '8_000L' in reconnect_policy
+assert '45_000L' in reconnect_policy and '12_000L' in reconnect_policy
 assert 'context.startForegroundService' not in reconnect_ui
 assert (root / 'app/src/test/java/br/dev/monitorremoto/adb/AdbReconnectPolicyTest.kt').exists()
 print('PASSOU: alpha.51, heartbeat, retry conservador, cancelamento, foreground e comandos limitados')
@@ -767,3 +767,19 @@ assert 'assertEquals(expected.keys, AdbPolicy.Command.entries.toSet())' in allow
 assert 'poweroff' in allowlist_test55 and 'shutdown' in allowlist_test55
 assert 'active.open("reboot:")' in (root / 'app/src/main/java/br/dev/monitorremoto/adb/AdbClient.kt').read_text(encoding='utf-8')
 print('PASSOU: alpha.55, allowlist de sete comandos ADB testada sem ampliar permissões')
+
+# Alpha.56: margens, sem duplicação do ativo e codec selecionável; sem bypass de bloqueio.
+ui56 = (ui_root / 'AdbActivity.kt').read_text(encoding='utf-8')
+viewer56 = (ui_root / 'RemoteScreenActivity.kt').read_text(encoding='utf-8')
+for value in ['activeActionsRow', 'activeSettingsRow', 'marginStart = dp(10)',
+              'otherKnown = known.filterNot', 'if (signature == savedListSignature) return',
+              'Renomear celular', 'private fun renameActiveDevice()']:
+    assert value in ui56, f'alpha.56: ADB não contém {value}'
+for value in ['jpegModeButton', 'h264ModeButton', 'selectStreamMode(jpeg: Boolean)',
+              'touchUnavailableExplanation()', 'remoteDeviceLocked', 'remoteScreenInteractive']:
+    assert value in viewer56, f'alpha.56: visualizador sem {value}'
+assert 'streamModeButton' not in viewer56
+assert 'heartbeatWorker.execute' not in ui56 and 'worker.execute {' in ui56
+assert 'cancelHeartbeat()' in ui56
+assert 'input text ' not in (root / 'app/src/main/java/br/dev/monitorremoto/adb/AdbPolicy.kt').read_text()
+print('PASSOU: alpha.56, botões espaçados, histórico sem repetição e codec/bloqueio explícitos')

@@ -51,7 +51,6 @@ class AdbActivity : Activity() {
     private var rebootRequested = false
     private val handler = Handler(Looper.getMainLooper())
     private val worker = Executors.newSingleThreadExecutor()
-    private val heartbeatWorker = Executors.newSingleThreadExecutor()
     private var client: AdbClient? = null
     private var discovery: AdbDiscovery? = null
     private var qr: AdbPolicy.QrSession? = null
@@ -81,6 +80,8 @@ class AdbActivity : Activity() {
     private lateinit var openControlsButton: Button
     private lateinit var maintenanceActionButton: Button
     private lateinit var openViewerButton: Button
+    private lateinit var activeActionsRow: LinearLayout
+    private lateinit var activeSettingsRow: LinearLayout
     private val endpoints = linkedMapOf<String, AdbDiscovery.Endpoint>()
     private lateinit var root: LinearLayout
     private lateinit var chip: TextView
@@ -90,6 +91,7 @@ class AdbActivity : Activity() {
     private lateinit var savedContainer: LinearLayout
     private lateinit var advancedContainer: LinearLayout
     private lateinit var advancedToggle: Button
+    private var savedListSignature = ""
 
     private val dark get() = when (SettingsStore.theme(this)) {
         "dark" -> true
@@ -127,9 +129,15 @@ class AdbActivity : Activity() {
             elevation = 0f
             background = shape(if (primary) Color.rgb(19, 21, 25) else if (outline) surface else soft, 17, outline)
             setTextColor(if (primary) Color.WHITE else fg)
+            // Distância mínima uniforme, inclusive nos pop-ups e cartões.
+            layoutParams = LinearLayout.LayoutParams(-1, dp(50)).apply { bottomMargin = dp(9) }
             setOnClickListener { if (!busy || allowBusy) act() }
         }
     private fun column() = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+    private fun separatedText(value: String, size: Float = 15f, secondary: Boolean = false) =
+        text(value, size, secondary).apply {
+            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(7) }
+        }
     private fun card(container: LinearLayout, fill: Int = surface) = column().apply {
         setPadding(dp(18), dp(18), dp(18), dp(18))
         background = shape(fill, 22, fill == surface)
@@ -204,19 +212,34 @@ class AdbActivity : Activity() {
         detail = text("Adicione um aparelho ou reconecte um salvo.", 13f, secondary = true)
         summaryCard.addView(summary)
         summaryCard.addView(detail)
-        openViewerButton = button("Ver tela remota • controle ADB", primary = true) { openViewerWithAdb() }
+        openViewerButton = button("Ver tela remota", primary = true) { openViewerWithAdb() }
         openViewerButton.visibility = View.GONE
         summaryCard.addView(openViewerButton)
-        openControlsButton = button("Comandos ADB") { showControls() }
-        openControlsButton.visibility = View.GONE
-        summaryCard.addView(openControlsButton)
-        val maintenanceButton = button("Manutenção · Reiniciar") { showMaintenance() }
-        // No ADB, a manutenção só é utilizável após confirmar uma sessão ativa.
-        summaryCard.addView(maintenanceButton)
-        maintenanceButton.visibility = View.GONE
+        activeActionsRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        openControlsButton = button("Controles") { showControls() }
+        val maintenanceButton = button("Manutenção") { showMaintenance() }
         maintenanceActionButton = maintenanceButton
+        activeActionsRow.addView(openControlsButton, LinearLayout.LayoutParams(0, dp(50), 1f).apply {
+            marginEnd = dp(5)
+            bottomMargin = dp(10)
+        })
+        activeActionsRow.addView(maintenanceButton, LinearLayout.LayoutParams(0, dp(50), 1f).apply {
+            marginStart = dp(5)
+            bottomMargin = dp(10)
+        })
+        summaryCard.addView(activeActionsRow)
+        activeSettingsRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        val rename = button("Renomear", outline = true) { renameActiveDevice() }.apply {
+            tag = "rename_active_adb"
+        }
+        val disconnectButton = button("Desconectar", outline = true) { disconnect() }
+        activeSettingsRow.addView(rename, LinearLayout.LayoutParams(0, dp(50), 1f).apply { marginEnd = dp(5) })
+        activeSettingsRow.addView(disconnectButton, LinearLayout.LayoutParams(0, dp(50), 1f).apply { marginStart = dp(5) })
+        summaryCard.addView(activeSettingsRow)
+        activeActionsRow.visibility = View.GONE
+        activeSettingsRow.visibility = View.GONE
 
-        root.addView(text("Conectados anteriormente", 20f, bold = true))
+        root.addView(text("Outros celulares salvos", 20f, bold = true))
         savedContainer = column()
         root.addView(savedContainer)
         root.addView(button("+ Adicionar outro celular", outline = true) { chooseRole() })
@@ -256,24 +279,32 @@ class AdbActivity : Activity() {
             else "Escolha um dispositivo salvo para reconectar."
         if (this::stopRetryButton.isInitialized) stopRetryButton.visibility = if (waiting) View.VISIBLE else View.GONE
         if (this::openViewerButton.isInitialized) openViewerButton.visibility = if (connected) View.VISIBLE else View.GONE
-        if (this::openControlsButton.isInitialized) openControlsButton.visibility = if (connected) View.VISIBLE else View.GONE
-        if (this::maintenanceActionButton.isInitialized) maintenanceActionButton.visibility = if (connected) View.VISIBLE else View.GONE
-        savedContainer.removeAllViews()
+        if (this::activeActionsRow.isInitialized) activeActionsRow.visibility = if (connected) View.VISIBLE else View.GONE
+        if (this::activeSettingsRow.isInitialized) activeSettingsRow.visibility = if (connected) View.VISIBLE else View.GONE
         val known = AdbKnownDevices.load(this)
-        if (known.isEmpty()) {
-            val empty = card(savedContainer, soft)
-            empty.addView(text("Nenhum celular salvo", 17f, bold = true))
-            empty.addView(text("Após a primeira conexão ADB confirmada, o aparelho aparecerá aqui.", 13f, secondary = true))
+        val currentEndpoint = if (connected) client?.endpoint else null
+        val signature = known.joinToString("|") { "${it.host}:${it.port}:${it.name}:${it.lastConnectedAt}" } +
+            ":$currentEndpoint"
+        if (signature == savedListSignature) return
+        savedListSignature = signature
+        savedContainer.removeAllViews()
+        val otherKnown = known.filterNot { currentEndpoint == "${it.host}:${it.port}" }
+        if (otherKnown.isEmpty()) {
+            // Quando conectado, o cartão ativo acima já contém o aparelho. Não repetir.
+            if (!connected) {
+                val empty = card(savedContainer, soft)
+                empty.addView(text("Nenhum outro celular salvo", 16f, bold = true))
+                empty.addView(text("Após a primeira conexão confirmada, o aparelho aparecerá aqui.", 13f, secondary = true))
+            } else {
+                savedContainer.addView(separatedText("Nenhum outro celular salvo.", 13f, secondary = true))
+            }
         }
-        known.forEach { device ->
+        otherKnown.forEach { device ->
             val tile = card(savedContainer, soft)
             tile.addView(text(device.name, 21f, bold = true))
             tile.addView(text("Última conexão: ${lastSeen(device.lastConnectedAt)}", 13f, secondary = true))
-            val active = connected && client?.endpoint == "${device.host}:${device.port}"
-            tile.addView(text(if (active) "● Conectado agora" else "⌁ Aguardando reconexão", 13f, secondary = true))
-            tile.addView(button(if (active) "Desconectar" else "Reconectar", primary = true) {
-                if (active) disconnect() else reconnect(device)
-            })
+            tile.addView(text("● Desconectado", 13f, secondary = true))
+            tile.addView(button("Reconectar", primary = true) { reconnect(device) })
             tile.addView(button("Opções do aparelho") { deviceOptions(device) })
         }
     }
@@ -527,11 +558,13 @@ class AdbActivity : Activity() {
                 .firstOrNull { !it.isNullOrBlank() }?.trim().orEmpty()
             val displayModel = commercial.ifBlank { model }
             val android = lines.getOrNull(1).orEmpty()
-            val expectedModel = expected?.model?.ifBlank { expected.name }.orEmpty()
-            if (expected != null && expectedModel.isNotBlank() &&
-                !expectedModel.equals(model, ignoreCase = true) &&
-                !expectedModel.equals(displayModel, ignoreCase = true) &&
-                !expectedModel.startsWith("Aparelho em ")) {
+            // Só comparar modelos se AMBAS as consultas têm identificações legíveis.
+            // Apelido manual não é identificador de hardware; falha em getprop também não.
+            val expectedModel = expected?.model.orEmpty().takeUnless { it.startsWith("Aparelho em ") }
+            val receivedModel = model.takeUnless { it.startsWith("Aparelho em ") }
+            if (expected != null && !expectedModel.isNullOrBlank() && !receivedModel.isNullOrBlank() &&
+                !expectedModel.equals(receivedModel, ignoreCase = true) &&
+                !expectedModel.equals(displayModel, ignoreCase = true)) {
                 AlertDialog.Builder(this).setTitle("Confirmar aparelho")
                     .setMessage("O aparelho respondeu como $displayModel, mas o salvo é ${expected.name}. Confirme no telefone antes de substituir os dados salvos.")
                     .setNegativeButton("Desconectar") { _, _ -> disconnect() }
@@ -558,13 +591,23 @@ class AdbActivity : Activity() {
     }
     private fun finishConnected(model: String, android: String, host: String, port: Int, expected: AdbKnownDevice? = null) {
         if (client?.connected() != true) return
-        reportedPhone = model
-        val label = if (expected != null && expected.name.isNotBlank() &&
-            expected.model.isNotBlank() && expected.name != expected.model) expected.name else model
+        val previous = expected ?: AdbKnownDevices.load(this).firstOrNull { it.host == host && it.port == port }
+        val receivedModel = model.takeUnless { it.startsWith("Aparelho em ") }
+        val meaningfulModel = receivedModel ?: previous?.model?.takeUnless { it.startsWith("Aparelho em ") }
+        // Preserve apelidos, sem perpetuar labels antigos baseados só em IP.
+        val savedAlias = previous?.name?.takeIf {
+            it.isNotBlank() && !it.startsWith("Aparelho em ") && !it.endsWith(" · renomeie")
+        }
+        val label = when {
+            savedAlias != null && (savedAlias != previous.model || meaningfulModel == null) -> savedAlias
+            meaningfulModel != null -> meaningfulModel
+            else -> "Celular ${host.substringAfterLast('.')} · renomeie"
+        }
+        reportedPhone = label
         if (expected != null && (expected.host != host || expected.port != port)) {
             AdbKnownDevices.forget(this, expected)
         }
-        val saved = AdbKnownDevice(label, host, port, System.currentTimeMillis(), android, model)
+        val saved = AdbKnownDevice(label, host, port, System.currentTimeMillis(), android, meaningfulModel ?: "")
         AdbKnownDevices.remember(this, saved)
         desiredTarget = saved
         recovering = false
@@ -573,7 +616,9 @@ class AdbActivity : Activity() {
         lastHeartbeatMs = SystemClock.elapsedRealtime()
         clearQr(); stopDiscovery(); closeDialog()
         render()
-        setFeedback("Conectado a $model. A identificação foi informada pelo Android do aparelho.")
+        setFeedback(if (receivedModel != null)
+            "Conectado a $label. Modelo informado pelo Android." else
+            "Conexão ADB confirmada, mas a consulta do modelo falhou. O nome pode ser um apelido ou dado salvo.")
         val requested = pendingMaintenanceHost
         if (requested == host) {
             pendingMaintenanceHost = null
@@ -690,35 +735,68 @@ class AdbActivity : Activity() {
     }
 
     private fun showControls() {
-        if (client?.connected() != true) { setFeedback("Conecte um aparelho antes de usar os comandos ADB."); return }
+        if (client?.connected() != true) {
+            setFeedback("Conecte um aparelho antes de abrir os controles ADB.")
+            return
+        }
         val body = modalBody()
-        body.addView(text("${reportedPhone.ifBlank { "Aparelho conectado" }} • ${client?.endpoint.orEmpty()}", 14f, secondary = true))
-        listOf("Voltar" to AdbPolicy.Command.BACK, "Início" to AdbPolicy.Command.HOME,
+        body.addView(separatedText(reportedPhone.ifBlank { "Celular conectado" }, 16f))
+        body.addView(separatedText("Navegação e volume do telefone remoto", 13f, secondary = true))
+        val commands = listOf(
+            "Voltar" to AdbPolicy.Command.BACK, "Início" to AdbPolicy.Command.HOME,
             "Recentes" to AdbPolicy.Command.RECENTS,
             "Volume +" to AdbPolicy.Command.VOLUME_UP, "Volume −" to AdbPolicy.Command.VOLUME_DOWN
-        ).forEach { (label, command) ->
-            body.addView(button(label) {
-                runOperation("Enviando $label…", { it.execute(command); "Comando enviado. Confira o resultado no aparelho." })
-            })
+        )
+        commands.chunked(2).forEach { pair ->
+            val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+            pair.forEachIndexed { index, item ->
+                val commandButton = button(item.first) {
+                    runOperation("Enviando ${item.first}…", operation = { adb ->
+                        adb.execute(item.second)
+                        "Comando enviado. Confira o resultado no aparelho."
+                    })
+                }
+                row.addView(commandButton, LinearLayout.LayoutParams(0, dp(52), 1f).apply {
+                    if (index > 0) marginStart = dp(10)
+                    bottomMargin = dp(10)
+                })
+            }
+            body.addView(row)
         }
+        body.addView(button("Renomear celular", outline = true) { renameActiveDevice() })
         body.addView(button("Desconectar", outline = true) { disconnect(); closeDialog() })
         modal("Controles ADB", body)
+    }
+    private fun renameActiveDevice() {
+        val endpoint = client?.endpoint ?: return
+        val device = AdbKnownDevices.load(this).firstOrNull { "${it.host}:${it.port}" == endpoint }
+        if (device == null) {
+            setFeedback("Não foi possível identificar o registro salvo deste aparelho.")
+            return
+        }
+        renameDevice(device)
+    }
+    private fun renameDevice(device: AdbKnownDevice) {
+        val field = formField("Nome do celular").apply { setText(device.name) }
+        val body = modalBody()
+        body.addView(separatedText("Escolha um apelido para identificar este celular, sem depender do IP.", 13f, secondary = true))
+        body.addView(field)
+        AlertDialog.Builder(this).setTitle("Renomear celular").setView(body)
+            .setNegativeButton("Cancelar", null).setPositiveButton("Salvar") { _, _ ->
+                val name = field.text.toString().trim().take(60)
+                if (name.isNotBlank()) {
+                    AdbKnownDevices.forget(this, device)
+                    AdbKnownDevices.remember(this, device.copy(name = name))
+                    if (client?.endpoint == "${device.host}:${device.port}") reportedPhone = name
+                    closeDialog()
+                    render()
+                }
+            }.show()
     }
     private fun deviceOptions(device: AdbKnownDevice) {
         val body = modalBody()
         body.addView(text("${device.host}:${device.port} • última conexão ${lastSeen(device.lastConnectedAt)}", 13f, secondary = true))
-        body.addView(button("Renomear") {
-            val field = formField("Nome do aparelho").apply { setText(device.name) }
-            AlertDialog.Builder(this).setTitle("Renomear aparelho").setView(field)
-                .setNegativeButton("Cancelar", null).setPositiveButton("Salvar") { _, _ ->
-                    val name = field.text.toString().trim().take(60)
-                    if (name.isNotBlank()) {
-                        AdbKnownDevices.forget(this, device)
-                        AdbKnownDevices.remember(this, device.copy(name = name))
-                        render()
-                    }
-                }.show()
-        })
+        body.addView(button("Renomear celular") { renameDevice(device) })
         body.addView(button("Esquecer da lista", outline = true) {
             AlertDialog.Builder(this).setTitle("Esquecer ${device.name}?")
                 .setMessage("Isso remove o histórico local, mas não revoga a autorização ADB no outro celular.")
@@ -750,6 +828,9 @@ class AdbActivity : Activity() {
         onFailure: ((String) -> Unit)? = null
     ) {
         if (busy || !visible) return
+        // Nunca executar heartbeat e comando de usuário simultaneamente na sessão ADB.
+        // O heartbeat pendente perde validade; comandos seguem pelo mesmo executor serial.
+        cancelHeartbeat()
         busy = true
         setFeedback(label)
         val token = ++generation
@@ -776,6 +857,7 @@ class AdbActivity : Activity() {
                     setFeedback(message)
                     // Feche primeiro o cliente de pareamento antes de iniciar a próxima sessão.
                     if (!active.connected() && client === active) { active.close(); client = null }
+                    if (succeeded && active.connected()) lastHeartbeatMs = SystemClock.elapsedRealtime()
                     if (succeeded) onSuccess?.invoke(message) else onFailure?.invoke(message)
                     render()
                 } else active.close()
@@ -861,7 +943,7 @@ class AdbActivity : Activity() {
             }
         }
         handler.postDelayed(timeout, AdbReconnectPolicy.HEARTBEAT_TIMEOUT_MS)
-        heartbeatWorker.execute {
+        worker.execute {
             val healthy = runCatching {
                 active.execute(AdbPolicy.Command.HEARTBEAT).contains("monitor_remoto_alive")
             }.getOrDefault(false)
@@ -931,7 +1013,6 @@ class AdbActivity : Activity() {
     override fun onDestroy() {
         handler.removeCallbacksAndMessages(null)
         worker.shutdownNow()
-        heartbeatWorker.shutdownNow()
         super.onDestroy()
     }
 }
