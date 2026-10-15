@@ -21,16 +21,23 @@ internal fun MainActivity.showAppNotice(
     title: String,
     description: String,
     icon: Int = R.drawable.ic_info,
-    button: String = "Entendi",
+    buttonText: String = "Entendi",
 ) {
     val (wrapper, layout) = dialogWrapper()
     layout.addView(iconSectionHeader(icon, title))
     sectionGap(layout, 12)
-    layout.addView(panel(13).apply {
-        background = shape(fieldColor, 17, true)
-        addView(label(description, 13.5f).apply { setPadding(0, 0, 0, 0) })
+    layout.addView(panel(15).apply {
+        background = shape(fieldColor, 18, true)
+        addView(label(description, 14.2f).apply {
+            setPadding(0, 0, 0, 0)
+            lineSpacingExtra = dp(2).toFloat()
+        })
     })
-    showManagedDialog(AlertDialog.Builder(this).setView(wrapper).setPositiveButton(button, null))
+    sectionGap(layout, 14)
+    lateinit var dialog: AlertDialog
+    layout.addView(button(buttonText, emphasis = true) { dialog.dismiss() })
+    dialog = AlertDialog.Builder(this).setView(wrapper).create()
+    showManagedDialog(dialog)
 }
 
 internal fun MainActivity.showAppConfirm(
@@ -43,11 +50,22 @@ internal fun MainActivity.showAppConfirm(
     val (wrapper, layout) = dialogWrapper()
     layout.addView(iconSectionHeader(icon, title))
     sectionGap(layout, 12)
-    layout.addView(panel(13).apply {
-        background = shape(fieldColor, 17, true)
-        addView(label(description, 13.5f).apply { setPadding(0, 0, 0, 0) })
+    layout.addView(panel(15).apply {
+        background = shape(fieldColor, 18, true)
+        addView(label(description, 14.2f).apply {
+            setPadding(0, 0, 0, 0)
+            lineSpacingExtra = dp(2).toFloat()
+        })
     })
-    showManagedDialog(AlertDialog.Builder(this)
-        .setView(wrapper).setNegativeButton("Cancelar", null)
-        .setPositiveButton(confirmText) { _, _ -> onConfirm() })
+    sectionGap(layout, 10)
+    layout.addView(label("Confirme a ação abaixo. Você poderá voltar e mudar depois quando houver suporte.", 12.5f, muted = true))
+    sectionGap(layout, 12)
+    lateinit var dialog: AlertDialog
+    layout.addView(button(confirmText, emphasis = true) {
+        dialog.dismiss()
+        onConfirm()
+    })
+    layout.addView(button("Cancelar") { dialog.dismiss() })
+    dialog = AlertDialog.Builder(this).setView(wrapper).create()
+    showManagedDialog(dialog)
 }

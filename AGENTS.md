@@ -1,4 +1,4 @@
-# Monitor Remoto 0.1.0-alpha.67
+# Monitor Remoto 0.1.0-alpha.68
 # Convenções permanentes do projeto Monitor Remoto
 
 - Toda alteração de código incrementa sequencialmente `versionCode` e `versionName` (ex.: `0.1.0-alpha.8` -> `0.1.0-alpha.9`). Sincronizar tela, README, CHANGELOG, RELEASE_NOTES e documentação.
@@ -21,7 +21,7 @@
 - Alpha.10: manter tema **claro padrão**, as opções da engrenagem, janela Conectar, botão de atualização compacto, lista de até 5 aparelhos recentes e os dados do Controle no topo. Não reintroduzir formulário longo na tela principal.
 - Credenciais por dispositivo usam `RecentDevices` + `SecretVault.profileKeyName`, com migração única da alpha.9. Não reaproveitar `CONTROLLER_KEY` antigo para IPs novos nem gravar segredo em preferências sem criptografia. Esquecer apaga o segredo correspondente.
 - Respostas HTTP/TCP não são conexão persistente. Exibir "Conectado" apenas após consulta autenticada bem-sucedida e "Sem resposta" após erro. Não inventar tempos de atualização.
-- Próxima versão sequencial: `0.1.0-alpha.68`, `versionCode 68`.
+- Próxima versão sequencial: `0.1.0-alpha.69`, `versionCode 69`.
 
 - Alpha.15: preservar a seleção Conectar → QR/Manual/Salvos, confirmação do QR antes de parear, cartões salvos com três ações e o scanner em Activity com tema Dialog.
 
@@ -134,3 +134,6 @@
 - Alpha.66: GitHub Actions run 61 (tentativa 2, 15/10/2026) falhou em `:app:compileDebugKotlin`, `CameraShareActivity.kt:83:70 Assignment type mismatch`: `TextureView(this).apply { surfaceTextureListener = this }` resolve `this` ao próprio TextureView, não ao `TextureView.SurfaceTextureListener`. Corrigido para `this@CameraShareActivity`, seguindo o padrão de `QrScanActivity`. `tools/check_distribution.py` agora verifica o receiver explícito. Sem novas permissões/protocolo. Antes de declarar build bem-sucedido, reexecutar CI com alpha.66.
 
 - Alpha.67: execução 62 do workflow `Gerar APK e Release` compilou `:app:compileDebugKotlin` (corrigindo o erro alpha.66), mas falhou em `:app:testDebugUnitTest` com 105 testes e 5 falhas em `CameraFrameStoreGenerationTest`: chamadas a `android.os.SystemClock.elapsedRealtime()` em JVM sem API Android executável. `CameraFrameStore` usa agora relógio monotônico relativo ao processo com `System.nanoTime()` e sentinela positivo, preservando expiração, tokens, autenticação e bloqueio de troca de câmera sem opt-in. Os testes JUnit reais via Gradle devem ser reexecutados na alpha.67 antes de afirmar aprovação CI.
+
+
+- Alpha.68: a experiência de Configurações deve manter textos mais legíveis, cartões altos e selos de estado/ação visíveis (`ATIVADO`, `DESATIVADO`, `ABRIR`, `REVOGAR`). Confirmações locais devem usar diálogos próprios do app com botões grandes; evitar depender somente de subtítulos pequenos ou pares “(ativar)/(desativar)” para explicar o estado.

@@ -1,6 +1,8 @@
 # Monitor Remoto
 
-**v0.1.0-alpha.67 / versionCode 67** · Android 8.0+ · Kotlin 2.2.21 · AGP 8.13.2 · Gradle 8.13
+**v0.1.0-alpha.68 / versionCode 68** · Android 8.0+ · Kotlin 2.2.21 · AGP 8.13.2 · Gradle 8.13
+
+**Novidade da alpha.68:** a área de Configurações recebeu uma revisão de interação para reduzir confusão ao ativar, desativar, escolher e confirmar ações. Os cartões agora usam tipografia maior, cartões mais altos, estados visuais em formato de botão (`ATIVADO`, `DESATIVADO`, `ABRIR`, `REVOGAR`) e diálogos próprios com botões grandes do app para confirmação. Nenhuma permissão nova foi adicionada.
 
 
 **Correção alpha.67:** no workflow GitHub Actions #62, a compilação Kotlin passou, mas os testes unitários falharam em 5 cenários de `CameraFrameStoreGenerationTest` por usarem `android.os.SystemClock` no ambiente JVM local. O armazenamento volátil da câmera agora utiliza relógio monotônico do processo, compatível com Android e JVM, sem modificar permissões/protocolo. O build completo da alpha.67 ainda exige validação pela CI.
@@ -283,7 +285,7 @@ A Home, o Modo Monitorado, a escolha de conexão, os submenus de Configurações
 
 ## Como utilizar
 
-1. Execute GitHub Actions > **Gerar APK e Release** > Run workflow. Para baixar **APK sem ZIP**, use Releases > `v0.1.0-alpha.67` > Assets > **`MonitorRemoto-v0.1.0-alpha.67.apk`**. Em Actions > Artifacts, um APK de contingência (quando presente) continua vindo em ZIP por comportamento padrão do GitHub. Instale o mesmo APK nos dois aparelhos.
+1. Execute GitHub Actions > **Gerar APK e Release** > Run workflow. Para baixar **APK sem ZIP**, use Releases > `v0.1.0-alpha.68` > Assets > **`MonitorRemoto-v0.1.0-alpha.68.apk`**. Em Actions > Artifacts, um APK de contingência (quando presente) continua vindo em ZIP por comportamento padrão do GitHub. Instale o mesmo APK nos dois aparelhos.
 2. No telefone secundário: na nova **Home**, toque em **Monitorar este aparelho**; autorize a notificação de serviço e ative o monitoramento. Em Configurações, conceda apenas as permissões necessárias e selecione os aplicativos cujas notificações deseja compartilhar.
 3. Na página Monitorado, toque no cartão **Gerar QR**. Escolha o IP privado acessível. O QR expira em 2 minutos e é válido para um único pareamento.
 4. No telefone principal: na **Home**, toque em **Conectar novo aparelho > QR Code**, aponte a câmera na janela compacta e confirme os dados do aparelho antes do pareamento. Para um aparelho salvo, use **Aparelhos anteriores > Conectar**. A digitação manual de IP e chave continua disponível.
@@ -310,7 +312,7 @@ Requer Android SDK API 36, Java 17, Gradle 8.13. O repositório ainda não inclu
 gradle :app:testDebugUnitTest :app:assembleDebug
 ```
 
-APK local de teste: `app/build/outputs/apk/debug/app-debug.apk`. O workflow copia esse arquivo ou o Release assinado como **`MonitorRemoto-v0.1.0-alpha.67.apk`**. Baixe diretamente na aba GitHub **Releases**. **O APK não está incluído neste ZIP de código-fonte.** Veja `docs/PAIRING_QR.md` para segurança do QR.
+APK local de teste: `app/build/outputs/apk/debug/app-debug.apk`. O workflow copia esse arquivo ou o Release assinado como **`MonitorRemoto-v0.1.0-alpha.68.apk`**. Baixe diretamente na aba GitHub **Releases**. **O APK não está incluído neste ZIP de código-fonte.** Veja `docs/PAIRING_QR.md` para segurança do QR.
 
 Opcional: configure os quatro Secrets de assinatura para gerar APK Release assinado e AAB. Ver `docs/APK_DOWNLOAD.md`. Preservar a mesma keystore entre builds é essencial para atualizações sem reinstalação.
 

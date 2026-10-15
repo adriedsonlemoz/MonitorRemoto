@@ -1,3 +1,11 @@
+## 0.1.0-alpha.68 (versionCode 68)
+
+- Configurações redesenhadas para deixar a seleção e a confirmação das ações mais claras. Os cartões ficaram maiores, com textos ampliados e um selo visual em formato de botão mostrando o estado principal: `ATIVADO`, `DESATIVADO`, `ABRIR`, `VOLTAR` ou `REVOGAR`.
+- `iconMenuRow` agora destaca melhor cada opção com ícone maior, espaçamento reforçado e leitura mais rápida do estado, reduzindo a dependência de subtítulos pequenos e frases como “(ativar)/(desativar)”.
+- `showAppNotice` e `showAppConfirm` foram convertidos para diálogos do próprio app com botões grandes e mais legíveis, em vez dos botões pequenos padrão do AlertDialog.
+- Vários subtítulos das telas de Configurações foram reescritos para descrever o efeito real de cada opção, em vez de exibir textos ambíguos.
+- Sem novas permissões, sem alteração do protocolo AES-GCM, sem mudança nos módulos remotos além da interface. Build Android completo e teste manual em aparelhos ainda permanecem pendentes.
+
 ## 0.1.0-alpha.67 (versionCode 67)
 
 - **Correção de testes reais do GitHub Actions #62:** `:app:compileDebugKotlin` completou, mas `:app:testDebugUnitTest` terminou com 105 testes executados e cinco `CameraFrameStoreGenerationTest` falhando por `RuntimeException` ao chamar `SystemClock.elapsedRealtime()` (stub Android em JUnit local).

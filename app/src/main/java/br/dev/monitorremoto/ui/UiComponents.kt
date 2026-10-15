@@ -2,6 +2,7 @@ package br.dev.monitorremoto.ui
 
 import android.graphics.Typeface
 import android.content.res.ColorStateList
+import android.graphics.Color
 import android.widget.ImageView
 import android.graphics.drawable.GradientDrawable
 import android.text.InputType
@@ -12,6 +13,7 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import java.util.Locale
 
 /** Alpha.22: módulo de interface extraído de MainActivity. Sem estado de conexão próprio. */
 
@@ -106,7 +108,10 @@ internal fun MainActivity.dialogWrapper(): Pair<ScrollView, LinearLayout> {
 
 internal fun MainActivity.dialogIntro(parent: LinearLayout, text: String) {
     if (text.isBlank()) return
-    parent.addView(label(text, 12.5f, muted = true).apply { setPadding(0, 0, 0, dp(6)) })
+    parent.addView(label(text, 13.5f, muted = true).apply {
+        setPadding(0, 0, 0, dp(8))
+        lineSpacingExtra = dp(2).toFloat()
+    })
 }
 
 internal fun MainActivity.dialogCardRow(
@@ -190,6 +195,57 @@ internal fun MainActivity.iconTile(
     })
 }
 
+private enum class SettingsBadgeTone { ACTIVE, INACTIVE, ACTION, WARNING, DANGER, NEUTRAL }
+
+private data class SettingsBadgeModel(val text: String, val tone: SettingsBadgeTone)
+
+private fun MainActivity.settingsBadgeModel(title: String, subtitle: String, dangerous: Boolean): SettingsBadgeModel {
+    if (dangerous) return SettingsBadgeModel("REVOGAR", SettingsBadgeTone.DANGER)
+    val probe = listOf(title, subtitle).joinToString(" ").lowercase(Locale.ROOT)
+    return when {
+        title.contains("voltar", ignoreCase = true) -> SettingsBadgeModel("VOLTAR", SettingsBadgeTone.NEUTRAL)
+        probe.contains("desativ") || probe.contains("inativo") || probe.contains("sem permissão") ||
+            probe.contains("sem acesso") || probe.contains("ausente") || probe.contains("parado") ||
+            probe.contains("não conced") || probe.contains("não suportado") || probe.contains("bloqueado") ->
+            SettingsBadgeModel("DESATIVADO", SettingsBadgeTone.INACTIVE)
+        probe.contains("revogar") || probe.contains("retirar") -> SettingsBadgeModel("REVOGAR", SettingsBadgeTone.WARNING)
+        probe.contains("diagnóstico") || probe.contains("consultar") || probe.contains("mostrar") ||
+            probe.contains("abrir") || probe.contains("configur") || probe.contains("ajustar") ||
+            probe.contains("escolher") || probe.contains("copiar") || probe.contains("substituir") ->
+            SettingsBadgeModel("ABRIR", SettingsBadgeTone.ACTION)
+        probe.contains("autoriz") || probe.contains("habilit") || probe.contains("concedid") ||
+            probe.contains("ativo") || probe.contains("selecionado") || probe.contains("escutando") ||
+            probe.contains("ligada") || probe.contains("ligado") || probe.contains("pasta autorizada") ->
+            SettingsBadgeModel("ATIVADO", SettingsBadgeTone.ACTIVE)
+        else -> SettingsBadgeModel("ABRIR", SettingsBadgeTone.ACTION)
+    }
+}
+
+private fun MainActivity.statusBadge(model: SettingsBadgeModel): TextView {
+    val (fill, stroke, textColor) = when (model.tone) {
+        SettingsBadgeTone.ACTIVE -> Triple(highlight, highlight, highlightText)
+        SettingsBadgeTone.ACTION -> Triple(if (darkTheme()) Color.rgb(33, 53, 78) else Color.rgb(231, 239, 248), highlight, ink)
+        SettingsBadgeTone.WARNING -> Triple(if (darkTheme()) Color.rgb(74, 54, 15) else Color.rgb(255, 244, 210), Color.rgb(191, 145, 0), ink)
+        SettingsBadgeTone.DANGER -> Triple(if (darkTheme()) Color.rgb(71, 34, 35) else Color.rgb(255, 235, 234), Color.rgb(186, 67, 58), Color.rgb(186, 67, 58))
+        SettingsBadgeTone.INACTIVE -> Triple(if (darkTheme()) Color.rgb(28, 42, 58) else Color.rgb(235, 240, 245), lineColor, dim)
+        SettingsBadgeTone.NEUTRAL -> Triple(surface, lineColor, ink)
+    }
+    return TextView(this).apply {
+        text = model.text
+        textSize = 11.5f
+        setTypeface(null, Typeface.BOLD)
+        gravity = Gravity.CENTER
+        setTextColor(textColor)
+        background = GradientDrawable().apply {
+            setColor(fill)
+            cornerRadius = dp(999).toFloat()
+            setStroke(dp(1), stroke)
+        }
+        setPadding(dp(12), dp(8), dp(12), dp(8))
+        minWidth = dp(112)
+    }
+}
+
 internal fun MainActivity.iconMenuRow(
     iconRes: Int,
     title: String,
@@ -197,36 +253,40 @@ internal fun MainActivity.iconMenuRow(
     dangerous: Boolean = false,
     onClick: () -> Unit
 ): LinearLayout = LinearLayout(this).apply {
+    val badge = settingsBadgeModel(title, subtitle, dangerous)
     orientation = LinearLayout.HORIZONTAL
     gravity = Gravity.CENTER_VERTICAL
-    background = shape(fieldColor, 18, true)
-    setPadding(dp(12), dp(12), dp(12), dp(12))
-    minimumHeight = dp(64)
+    background = shape(fieldColor, 20, true)
+    setPadding(dp(14), dp(14), dp(14), dp(14))
+    minimumHeight = dp(82)
     isClickable = true
     isFocusable = true
-    contentDescription = "$title. $subtitle"
+    contentDescription = listOf(title, subtitle, badge.text).filter { it.isNotBlank() }.joinToString(". ")
     setOnClickListener { onClick() }
+
     val symbol = LinearLayout(this@iconMenuRow).apply {
-        background = shape(surface, 14, true)
+        background = shape(surface, 16, true)
         gravity = Gravity.CENTER
-        addView(vectorIcon(iconRes, 23, if (dangerous) android.graphics.Color.rgb(186, 67, 58) else highlight))
+        addView(vectorIcon(iconRes, 24, if (dangerous) Color.rgb(186, 67, 58) else highlight))
     }
-    addView(symbol, LinearLayout.LayoutParams(dp(44), dp(44)))
-    addView(View(this@iconMenuRow), LinearLayout.LayoutParams(dp(10), 1))
+    addView(symbol, LinearLayout.LayoutParams(dp(50), dp(50)))
+    addView(View(this@iconMenuRow), LinearLayout.LayoutParams(dp(12), 1))
+
     val words = LinearLayout(this@iconMenuRow).apply { orientation = LinearLayout.VERTICAL }
-    words.addView(label(title, 14f, strong = true).apply {
-        if (dangerous) setTextColor(android.graphics.Color.rgb(186, 67, 58))
+    words.addView(label(title, 16f, strong = true).apply {
+        if (dangerous) setTextColor(Color.rgb(186, 67, 58))
         setPadding(0, 0, 0, 0)
     })
-    if (subtitle.isNotBlank()) words.addView(label(subtitle, 11.5f, muted = true).apply {
-        maxLines = 2
-        setPadding(0, dp(3), 0, 0)
-    })
+    if (subtitle.isNotBlank()) {
+        words.addView(label(subtitle, 12.6f, muted = true).apply {
+            maxLines = 3
+            setPadding(0, dp(4), 0, 0)
+            lineSpacingExtra = dp(1).toFloat()
+        })
+    }
     addView(words, LinearLayout.LayoutParams(0, -2, 1f))
-    addView(label("›", 20f, muted = true).apply {
-        gravity = Gravity.CENTER
-        setPadding(dp(6), 0, 0, 0)
-    })
+    addView(View(this@iconMenuRow), LinearLayout.LayoutParams(dp(12), 1))
+    addView(statusBadge(badge), LinearLayout.LayoutParams(-2, -2))
 }
 
 internal fun MainActivity.iconSectionHeader(iconRes: Int, title: String, subtitle: String = ""): LinearLayout =

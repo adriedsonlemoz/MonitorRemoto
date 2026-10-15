@@ -1,3 +1,14 @@
+## Alpha.68 — usabilidade das Configurações (15/10/2026)
+
+- [x] Base alpha.67 analisada antes das alterações; foco restrito à experiência de Configurações, sem mexer no protocolo remoto.
+- [x] `UiComponents.kt`: cartões `iconMenuRow` ampliados com selo de estado/ação (`ATIVADO`, `DESATIVADO`, `ABRIR`, `VOLTAR`, `REVOGAR`) e tipografia maior.
+- [x] `AppDialogUi.kt`: confirmações e avisos migrados para layout próprio com botões grandes, evitando os botões pequenos padrão do `AlertDialog`.
+- [x] `SettingsScreenUi.kt`: subtítulos de várias opções reescritos para refletir o efeito real de cada ação, reduzindo ambiguidades de “ativar/desativar”.
+- [x] Versionamento sequencial 0.1.0-alpha.68 / versionCode 68 sincronizado em Gradle, AppVersion, README, CHANGELOG, AGENTS, notas, arquitetura e verificador.
+- [x] `python3 tools/check_distribution.py` deve continuar sendo executado antes do empacotamento.
+- [ ] Compilação Android/Gradle completa não executada neste ambiente.
+- [ ] Validação manual visual em aparelho real ainda pendente, incluindo telas adicionais de Configurações além das mostradas nos prints.
+
 ## Alpha.67 — correção da suíte JUnit do workflow 62 (15/10/2026)
 
 - [x] ZIP de logs da execução 62 analisado (105 testes, 5 falhas em `CameraFrameStoreGenerationTest`), `:app:compileDebugKotlin` passou com avisos não fatais.
