@@ -162,6 +162,7 @@ internal class RemoteConnectionManager(context: Context) {
                 response.onSuccess { snapshot ->
                     lastSuccessMs = System.currentTimeMillis()
                     cached = snapshot
+                    br.dev.monitorremoto.core.ControllerHealthAlerts.onSnapshot(appContext, host, snapshot)
                     cachedHost = host
                     state = "connected"
                     issue = null

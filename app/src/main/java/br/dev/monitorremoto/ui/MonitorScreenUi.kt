@@ -79,6 +79,16 @@ internal fun MainActivity.renderMonitor() {
     }
     card.addView(actions)
     content.addView(card)
+    gap(9)
+    val localState = br.dev.monitorremoto.core.DeviceStateReader.snapshot(this)
+    val hasUsage = localState.optBoolean("usagePermission")
+    val hasWifi = checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED
+    val diagCard = panel(12)
+    diagCard.addView(iconMenuRow(br.dev.monitorremoto.R.drawable.ic_activity,
+        "Estado e permissões do aparelho", "Tela: ${localState.optString("screenState")} · Acesso ao uso: ${if (hasUsage) "ok" else "autorizar"} · Wi-Fi: ${if (hasWifi) "permitido" else "autorizar"}") {
+        openSettingsModule(); openSettingsSection("diagnostics")
+    })
+    content.addView(diagCard)
     if (enabled && running) {
         gap(9)
         val shareCard = panel(12)

@@ -23,48 +23,70 @@ internal fun MainActivity.renderController() {
         else remoteName ?: saved?.name ?: "Nenhum aparelho selecionado"
 
     val heading = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-    val infoColumn = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-    currentDeviceTitle = label(titleText, 20f, strong = true).apply {
-        maxLines = 2; ellipsize = android.text.TextUtils.TruncateAt.END
-        setPadding(0, 0, 0, dp(5))
+    val headingNames = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+    currentDeviceTitle = label(titleText, 16.5f, strong = true).apply {
+        maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
+        setPadding(0, 0, 0, 0)
     }
-    infoColumn.addView(currentDeviceTitle)
-    currentStatus = label("", 13f, strong = true).apply { setPadding(0, 0, 0, 0) }
-    infoColumn.addView(currentStatus)
-    currentUpdated = label("", 10.5f, muted = true).apply {
-        setPadding(0, dp(6), 0, 0)
-        maxLines = 2
+    val renameRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+    renameRow.addView(currentDeviceTitle, LinearLayout.LayoutParams(0, -2, 1f))
+    val editName = android.widget.ImageView(this).apply {
+        setImageResource(br.dev.monitorremoto.R.drawable.ic_edit)
+        imageTintList = android.content.res.ColorStateList.valueOf(dim)
+        setPadding(dp(7), dp(7), dp(7), dp(7))
+        background = shape(fieldColor, 11, true)
+        contentDescription = "Renomear aparelho salvo"
+        isFocusable = true; isClickable = true
+        setOnClickListener {
+            RecentDevices.list(this@renderController).firstOrNull { it.host == host }
+                ?.let { renameSavedDevice(it, returnToChooser = false) }
+                ?: showAppNotice("Renomear", "Pareie ou salve este aparelho primeiro.")
+        }
     }
-    infoColumn.addView(currentUpdated)
-    heading.addView(infoColumn, LinearLayout.LayoutParams(0, -2, 1f))
-    heading.addView(View(this), LinearLayout.LayoutParams(dp(10), 1))
-
-    val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+    renameRow.addView(editName, LinearLayout.LayoutParams(dp(36), dp(36)))
+    headingNames.addView(renameRow)
+    if (remoteName != null && saved?.customName == true) {
+        headingNames.addView(label(remoteName, 10f, muted = true).apply {
+            maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
+            setPadding(0, 0, 0, 0)
+        })
+    }
+    heading.addView(headingNames, LinearLayout.LayoutParams(0, -2, 1f))
+    heading.addView(View(this), LinearLayout.LayoutParams(dp(7), 1))
     val refresh = android.widget.ImageView(this).apply {
         setImageResource(br.dev.monitorremoto.R.drawable.ic_refresh)
         imageTintList = android.content.res.ColorStateList.valueOf(ink)
-        setPadding(dp(11), dp(11), dp(11), dp(11))
-        background = shape(fieldColor, 14, true)
+        setPadding(dp(10), dp(10), dp(10), dp(10))
+        background = shape(fieldColor, 13, true)
         isClickable = true; isFocusable = true
         contentDescription = "Atualizar dados do aparelho"
         setOnClickListener { refreshRemote(silent = false) }
     }
-    actions.addView(refresh, LinearLayout.LayoutParams(dp(44), dp(44)))
-    actions.addView(View(this), LinearLayout.LayoutParams(dp(7), 1))
-    currentConnectButton = actionButton("Sair") {
+    heading.addView(refresh, LinearLayout.LayoutParams(dp(42), dp(42)))
+    heading.addView(View(this), LinearLayout.LayoutParams(dp(7), 1))
+    currentConnectButton = actionButton("Desconectar") {
         when (effectiveConnectionState()) {
             "connected", "loading" -> disconnectCurrent()
             else -> showConnectionChooser()
         }
-    }.apply {
-        textSize = 11.5f
-        minWidth = 0
-        setPadding(dp(4), 0, dp(4), 0)
-    }
-    actions.addView(currentConnectButton, LinearLayout.LayoutParams(dp(59), dp(44)))
-    heading.addView(actions)
+    }.apply { textSize = 10.5f; minWidth = 0; setPadding(dp(3), 0, dp(3), 0) }
+    heading.addView(currentConnectButton, LinearLayout.LayoutParams(dp(98), dp(42)))
     card.addView(heading)
-    sectionGap(card, 18)
+    sectionGap(card, 8)
+    val statusRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+    currentStatus = label("", 11.5f, strong = true).apply {
+        setPadding(0, 0, 0, 0); maxLines = 1
+    }
+    statusRow.addView(currentStatus)
+    statusRow.addView(View(this), LinearLayout.LayoutParams(0, 1, 1f))
+    currentUpdated = label("", 10f, muted = true).apply {
+        setPadding(0, 0, 0, 0); maxLines = 1
+        ellipsize = android.text.TextUtils.TruncateAt.END
+        gravity = Gravity.END
+    }
+    statusRow.addView(currentUpdated, LinearLayout.LayoutParams(0, -2, 1.6f))
+    card.addView(statusRow)
+    sectionGap(card, 13)
 
     resultBox = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
     card.addView(resultBox)
@@ -99,7 +121,7 @@ internal fun MainActivity.updateConnectionLabels() {
     currentConnectButton?.contentDescription = if (actualState == "connected" || actualState == "loading")
         "Desconectar e voltar à Home" else "Conectar ou escolher aparelho"
     currentConnectButton?.text = when (actualState) {
-        "connected", "loading" -> "Sair"
+        "connected", "loading" -> "Desconectar"
         "offline" -> "Opções"
         else -> "Conectar"
     }
@@ -109,7 +131,7 @@ internal fun MainActivity.updateConnectionLabels() {
             if (remoteConnection.cachedHost == host && remoteConnection.lastSuccessMs > 0L)
                 " · última leitura: ${formatDate(remoteConnection.lastSuccessMs)}" else ""
         remoteConnection.lastSuccessMs > 0 && remoteConnection.cachedHost == host ->
-            "Atualizado: ${formatDate(remoteConnection.lastSuccessMs)}"
+            "Leitura: ${formatDate(remoteConnection.lastSuccessMs)}"
         else -> remoteConnection.message ?: "Aguardando resposta de $host"
     }
 }

@@ -1,6 +1,8 @@
 # Monitor Remoto
 
-**v0.1.0-alpha.72 / versionCode 72** · Android 8.0+ · Kotlin 2.2.21 · AGP 8.13.2 · Gradle 8.13
+**v0.1.0-alpha.73 / versionCode 73** · Android 8.0+ · Kotlin 2.2.21 · AGP 8.13.2 · Gradle 8.13
+
+**Alterações alpha.73:** cabeçalho compacto com renomeação local do dispositivo, Desconectar e conexão/leitura na mesma linha; ícones compactos de tela, bloqueio e câmera com explicações; cartão clicável de aplicativo observado com último app/horário válido, sem afirmar gravação. Cartões Bateria, Temperatura e Wi-Fi abrem diagnósticos; permissões especiais precisam ser liberadas **no monitorado**. Novidades uma vez por versão com reabertura por Configurações. Alertas locais de bateria/temperatura com notificação opcional Android, limiares orientativos e histerese; controlador recebe eventos autenticados quando consulta e pode habilitar JobScheduler periódico de melhor esforço a cada ~15 min. Proteção térmica opcional OFF por padrão: em aquecimento severo para SOMENTE capturas do Monitor Remoto, nunca o Minha Câmera. Não há integração entre os dois apps nem garantia de entrega instantânea em segundo plano. **Build Android/ensaios físicos pendentes.**
 
 **Mudanças alpha.72:** cartões de Bateria, Temperatura e Rede mais compactos; estado da tela e bloqueio, disponibilidade aproximada da câmera e aplicativo em primeiro plano (acesso ao uso opcional), SSID/RSSI de Wi-Fi após autorização Android e cores orientativas por temperatura da bateria. Recuperar dados: cópia limitada de pastas, limite correto de 12 níveis, rejeição de nomes duplicados, dois blocos criptografados por requisição, repetição curta em erros transitórios e SHA-256 integral após copiar. **Sem retomada persistente após reinicialização, nem worker foreground para cópia**. Ainda exige CI/Android e testes físicos.
 
@@ -291,7 +293,7 @@ A Home, o Modo Monitorado, a escolha de conexão, os submenus de Configurações
 
 ## Como utilizar
 
-1. Execute GitHub Actions > **Gerar APK e Release** > Run workflow. Para baixar **APK sem ZIP**, use Releases > `v0.1.0-alpha.72` > Assets > **`MonitorRemoto-v0.1.0-alpha.72.apk`**. Em Actions > Artifacts, um APK de contingência (quando presente) continua vindo em ZIP por comportamento padrão do GitHub. Instale o mesmo APK nos dois aparelhos.
+1. Execute GitHub Actions > **Gerar APK e Release** > Run workflow. Para baixar **APK sem ZIP**, use Releases > `v0.1.0-alpha.73` > Assets > **`MonitorRemoto-v0.1.0-alpha.73.apk`**. Em Actions > Artifacts, um APK de contingência (quando presente) continua vindo em ZIP por comportamento padrão do GitHub. Instale o mesmo APK nos dois aparelhos.
 2. No telefone secundário: na nova **Home**, toque em **Monitorar este aparelho**; autorize a notificação de serviço e ative o monitoramento. Em Configurações, conceda apenas as permissões necessárias e selecione os aplicativos cujas notificações deseja compartilhar.
 3. Na página Monitorado, toque no cartão **Gerar QR**. Escolha o IP privado acessível. O QR expira em 2 minutos e é válido para um único pareamento.
 4. No telefone principal: na **Home**, toque em **Conectar novo aparelho > QR Code**, aponte a câmera na janela compacta e confirme os dados do aparelho antes do pareamento. Para um aparelho salvo, use **Aparelhos anteriores > Conectar**. A digitação manual de IP e chave continua disponível.
@@ -318,7 +320,7 @@ Requer Android SDK API 36, Java 17, Gradle 8.13. O repositório ainda não inclu
 gradle :app:testDebugUnitTest :app:assembleDebug
 ```
 
-APK local de teste: `app/build/outputs/apk/debug/app-debug.apk`. O workflow copia esse arquivo ou o Release assinado como **`MonitorRemoto-v0.1.0-alpha.72.apk`**. Baixe diretamente na aba GitHub **Releases**. **O APK não está incluído neste ZIP de código-fonte.** Veja `docs/PAIRING_QR.md` para segurança do QR.
+APK local de teste: `app/build/outputs/apk/debug/app-debug.apk`. O workflow copia esse arquivo ou o Release assinado como **`MonitorRemoto-v0.1.0-alpha.73.apk`**. Baixe diretamente na aba GitHub **Releases**. **O APK não está incluído neste ZIP de código-fonte.** Veja `docs/PAIRING_QR.md` para segurança do QR.
 
 Opcional: configure os quatro Secrets de assinatura para gerar APK Release assinado e AAB. Ver `docs/APK_DOWNLOAD.md`. Preservar a mesma keystore entre builds é essencial para atualizações sem reinstalação.
 

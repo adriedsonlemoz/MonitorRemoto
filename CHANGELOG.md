@@ -1,3 +1,12 @@
+## 0.1.0-alpha.73 (versionCode 73) | 15/10/2026
+
+- Interface: cabeçalho compacto, ação Renomear aproveitando RecentDevices, botão Desconectar, resumo de conectividade em uma linha; ícones de estado e cartão Aplicativo observado. Cartões de telemetria clicáveis dão detalhes e instruções para autorizar no monitorado.
+- DeviceStateReader guarda último pacote observado e horário no processo para distinguir do estado atual com tela apagada; não confirma gravação do Minha Câmera.
+- Tela Novidades apresentada uma vez após atualizar (ou primeira instalação), reabrível em Configurações.
+- HealthAlertMonitor: notificações locais e resumo de evento autenticado com contador, baterias/temperatura/estado térmico, limiares indicativos com histerese. Protetor térmico somente para captura própria, OFF por padrão.
+- ControllerHealthAlerts e RemoteHealthJobService: aviso remoto por consulta autenticada, deduplicação e JobScheduler opcional de 15 min, sem promessa de latência/entrega se rede ou Android suspender. Permissão POST_NOTIFICATIONS mantida e solicitada com ação explícita.
+- Sem root, abrir apps remotamente, iniciar câmera oculta, mudar chaves de pareamento nem controlar o Minha Câmera; compilação Android e testes reais pendentes.
+
 ## 0.1.0-alpha.72 (versionCode 72) | 15/10/2026
 - Cartões de telemetria compactos (~96 dp de altura mínima) e gradiente semântico por faixa de temperatura da bateria; faixas orientativas, não diagnósticos de segurança.
 - Estado da tela e bloqueio, disponibilidade provável da câmera (sem alegar gravação) e último aplicativo em primeiro plano após autorização especial de acesso ao uso no próprio monitorado.

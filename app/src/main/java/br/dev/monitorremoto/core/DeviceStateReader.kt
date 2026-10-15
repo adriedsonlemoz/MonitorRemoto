@@ -23,6 +23,8 @@ object DeviceStateReader {
     private var cameraManager: CameraManager? = null
     private var lastAppCheck = 0L
     private var cachedApp: String? = null
+    private var lastVisibleApp: String? = null
+    private var lastVisibleAt = 0L
     private val callback = object : CameraManager.AvailabilityCallback() {
         override fun onCameraAvailable(cameraId: String) = synchronized(lock) {
             known.add(cameraId); unavailable.remove(cameraId); initialized = true
@@ -43,7 +45,7 @@ object DeviceStateReader {
         if (registered) runCatching { cameraManager?.unregisterAvailabilityCallback(callback) }
         registered = false; initialized = false; cameraManager = null
         known.clear(); unavailable.clear()
-        cachedApp = null; lastAppCheck = 0L
+        cachedApp = null; lastAppCheck = 0L; lastVisibleApp = null; lastVisibleAt = 0L
     }
 
     private fun usageAccess(context: Context): Boolean = runCatching {
@@ -74,7 +76,13 @@ object DeviceStateReader {
             }
             last
         }.getOrNull()
-        synchronized(lock) { cachedApp = result }
+        synchronized(lock) {
+            cachedApp = result
+            if (!result.isNullOrBlank()) {
+                lastVisibleApp = result
+                lastVisibleAt = System.currentTimeMillis()
+            }
+        }
         return result
     }
 
@@ -93,6 +101,7 @@ object DeviceStateReader {
         val camera = synchronized(lock) { if (!registered || !initialized || known.isEmpty()) null else unavailable.isNotEmpty() }
         val permission = usageAccess(context)
         val app = if (permission && interactive == true && locked == false) foregroundPackage(context) else null
+        val remembered = synchronized(lock) { lastVisibleApp to lastVisibleAt }
         return JSONObject().apply {
             put("screenInteractive", interactive ?: JSONObject.NULL)
             put("screenState", screenState)
@@ -101,6 +110,8 @@ object DeviceStateReader {
             put("cameraEvidence", "Indisponibilidade da câmera não comprova gravação nem identifica aplicativo")
             put("usagePermission", permission)
             put("foregroundPackage", app ?: JSONObject.NULL)
+            put("lastForegroundPackage", if (permission) remembered.first ?: JSONObject.NULL else JSONObject.NULL)
+            put("lastForegroundAt", if (permission && remembered.second > 0) remembered.second else JSONObject.NULL)
             put("updatedMs", System.currentTimeMillis())
         }
     }

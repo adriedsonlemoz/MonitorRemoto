@@ -123,6 +123,7 @@ class MainActivity : Activity() {
         setTheme(if (darkTheme()) android.R.style.Theme_Material_NoActionBar else android.R.style.Theme_Material_Light_NoActionBar)
         super.onCreate(savedInstanceState)
         RecentDevices.migrateLegacy(this)
+        br.dev.monitorremoto.service.RemoteHealthScheduler.refresh(this)
         mode = if (intent.getBooleanExtra(EXTRA_OPEN_MONITOR, false)) 0
             else savedInstanceState?.getInt("active_mode", 2)?.takeIf { it in 0..4 } ?: 2
         settingsSection = savedInstanceState?.getString("settings_section", "home") ?: "home"
@@ -155,6 +156,9 @@ class MainActivity : Activity() {
             )
         }
         render()
+        if (savedInstanceState == null) handler.post {
+            if (!isFinishing && !isDestroyed) showVersionNewsIfNeeded()
+        }
     }
 
     override fun onDestroy() {
@@ -319,6 +323,9 @@ class MainActivity : Activity() {
             notificationPermissionRequest -> {
                 if (granted) startServiceExplicitly()
                 else message("Autorize notificações para exibir o monitoramento ativo.")
+            }
+            9268 -> {
+                message(if (granted) "Notificações de saúde autorizadas." else "Permissão de notificações negada; consulte alertas no painel.")
             }
             smsReadPermissionRequest -> {
                 SettingsStore.setShareSmsInbox(this, granted)

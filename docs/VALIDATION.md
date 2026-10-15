@@ -1,3 +1,13 @@
+## Alpha.73 · painel, novidades e proteção térmica (15/10/2026)
+
+- [x] Partiu da alpha.72 preservando criptografia, emparelhamento e cópia de arquivos.
+- [x] Novo painel, permissão acessível em Diagnóstico local, cabeçalho com nome editável.
+- [x] Políticas de alertas e notificação local, resumo cifrado e verificação remota opcional por JobScheduler de melhor esforço.
+- [x] Novidades persistentes por versão e opt-in independente para proteção térmica, câmera própria fecha ao sinal térmico severo.
+- [ ] Android Gradle compileDebugKotlin, testDebugUnitTest e assembleDebug: ainda não confirmados.
+- [ ] Ensaios físicos de permissão de uso/SSID, alternância da tela com Minha Câmera, aquecimento, bloqueio de tela, Doze, alertas e reconexão.
+- [ ] Integração real com Minha Câmera e entrega imediata de push em segundo plano: não implementadas.
+
 ## Alpha.72 · telemetria e cópias SAF (15/10/2026)
 
 - [x] Base 0.1.0-alpha.71 preservada, versão Gradle/AppVersion, AGENTS, README, CHANGELOG e RELEASE_NOTES atualizados para 0.1.0-alpha.72+72.
@@ -6,7 +16,7 @@
 - [x] Duplicatas SAF rejeitadas em vez de selecionar o primeiro documento, profundidade de caminho corrigida, limite de pasta recursiva e verificação SHA-256 da origem implementados.
 - [ ] **Build Android não realizado**: falta Android SDK e Gradle operacional no ambiente. Só o GitHub Actions confirmará compileDebugKotlin, testDebugUnitTest e assembleDebug.
 - [ ] Testes físicos: tela desligada com Minha Câmera, comportamento de permissão SSID, disponibilidade CameraManager, cópia de pasta completa, cancelamento, provedor SAF e consumo.
-- [ ] Retomada persistente após encerramento da Activity/processo e transferência desacoplada da Activity (futuro alpha.73; ainda não implementadas).
+- [ ] Retomada persistente após encerramento da Activity/processo e transferência desacoplada da Activity (futuro; ainda não implementadas).
 
 ## Alpha.71 · correção da compilação #66 (15/10/2026)
 

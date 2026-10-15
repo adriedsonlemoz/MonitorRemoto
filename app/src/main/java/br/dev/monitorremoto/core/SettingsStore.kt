@@ -8,6 +8,18 @@ object SettingsStore {
     private const val FILE = "monitor_remoto_settings"
     private fun prefs(context: Context) = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
 
+    fun seenNewsVersion(context: Context) = prefs(context).getString("seen_news_version", "").orEmpty()
+    fun markNewsSeen(context: Context, version: String) = prefs(context).edit().putString("seen_news_version", version).apply()
+    fun localHealthAlerts(context: Context) = prefs(context).getBoolean("health_alerts_local", true)
+    fun setLocalHealthAlerts(context: Context, enabled: Boolean) = prefs(context).edit().putBoolean("health_alerts_local", enabled).apply()
+    fun thermalProtection(context: Context) = prefs(context).getBoolean("thermal_protection", false)
+    fun setThermalProtection(context: Context, enabled: Boolean) = prefs(context).edit().putBoolean("thermal_protection", enabled).apply()
+    fun controllerHealthAlerts(context: Context) = prefs(context).getBoolean("health_alerts_controller", false)
+    fun setControllerHealthAlerts(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean("health_alerts_controller", enabled).apply()
+        br.dev.monitorremoto.service.RemoteHealthScheduler.refresh(context)
+    }
+
     fun isMonitorEnabled(context: Context) = prefs(context).getBoolean("monitor_enabled", false)
     fun setMonitorEnabled(context: Context, enabled: Boolean) {
         val preferences = prefs(context)

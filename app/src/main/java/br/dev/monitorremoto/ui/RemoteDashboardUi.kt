@@ -40,34 +40,72 @@ internal fun MainActivity.displayResult(root: JSONObject, fromCache: Boolean = f
     val tempZone = BatteryTemperaturePolicy.zone(tempC)
     val items = listOf(
         compactMetricCard(if (chargingIndicator) R.drawable.ic_battery_charging else R.drawable.ic_battery, "Bateria",
-            if (chargingIndicator) "$percentage ⚡" else percentage, statusLine),
-        compactMetricCard(R.drawable.ic_thermometer, "Temperatura", temperature, BatteryTemperaturePolicy.label(tempZone), tempZone),
-        compactMetricCard(R.drawable.ic_wifi, "Rede", networkType, wifiNote),
+            if (chargingIndicator) "$percentage ⚡" else percentage, statusLine, onClick = {
+                showAppNotice("Bateria remota", "Nível: $percentage\nEstado: $statusLine\nOs alertas podem ser ativados em Configurações → Alertas e proteção.")
+            }),
+        compactMetricCard(R.drawable.ic_thermometer, "Temperatura", temperature, BatteryTemperaturePolicy.label(tempZone), tempZone, onClick = {
+            showAppNotice("Temperatura da bateria", "Leitura: $temperature\nFaixa orientativa: ${BatteryTemperaturePolicy.label(tempZone)}.\nA temperatura da bateria não é a da CPU. Configure avisos no aparelho monitorado.")
+        }),
+        compactMetricCard(R.drawable.ic_wifi, "Rede", networkType, wifiNote, onClick = {
+            showAppNotice("Rede do monitorado", if (ssid == null && network?.optBoolean("wifiPermission") == false)
+                "No celular monitorado, abra Monitor Remoto → Configurações → Diagnóstico → Nome e sinal do Wi-Fi. Autorize Localização precisa e ative a localização do Android. Não é possível liberar essa permissão remotamente."
+                else "Tipo: $networkType\n${ssid ?: "SSID indisponível"}\n${signal ?: "RSSI indisponível"}")
+        }),
     )
     addMetricGrid(container, items)
     sectionGap(container, 8)
     if (deviceState != null) {
-        val screen = deviceState.optString("screenState").takeIf {
-            it in setOf("Ligada", "Desligada", "Ambiente")
-        } ?: if (deviceState.optBoolean("screenInteractive")) "Interativa" else "Desconhecida"
-        val locked = when {
-            deviceState.isNull("deviceLocked") -> "Bloqueio desconhecido"
-            deviceState.optBoolean("deviceLocked") -> "Bloqueado"
-            else -> "Desbloqueado"
+        val screen = deviceState.optString("screenState").takeIf { it in setOf("Ligada", "Desligada", "Ambiente") } ?: "Desconhecida"
+        val locked = when { deviceState.isNull("deviceLocked") -> "? Bloqueio"; deviceState.optBoolean("deviceLocked") -> "Bloqueado"; else -> "Desbloqueado" }
+        val camera = when { deviceState.isNull("cameraPossiblyBusy") -> "Câmera ?"; deviceState.optBoolean("cameraPossiblyBusy") -> "Em uso?"; else -> "Disponível" }
+        val stateRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+        val statuses = listOf(
+            Triple(R.drawable.ic_monitor, "Tela $screen", screen == "Desligada"),
+            Triple(R.drawable.ic_shield, locked, locked == "Bloqueado"),
+            Triple(R.drawable.ic_remote_camera, camera, false)
+        )
+        statuses.forEachIndexed { i, status ->
+            val (icon, caption, accent) = status
+            val cell = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
+                background = shape(fieldColor, 11)
+                setPadding(dp(4), dp(4), dp(4), dp(4))
+                addView(vectorIcon(icon, 16, if (accent) highlight else ink))
+                addView(label(caption, 9.5f, muted = true).apply { maxLines = 1; setPadding(dp(3), 0, 0, 0) })
+                contentDescription = caption
+                isClickable = true; isFocusable = true
+                setOnClickListener {
+                    showAppNotice("Diagnóstico remoto", "Tela: $screen\n$locked\nCâmera: $camera. Ocupação não comprova gravação do Minha Câmera.")
+                }
+            }
+            stateRow.addView(cell, LinearLayout.LayoutParams(0, -2, 1f).apply { if (i < 2) rightMargin = dp(5) })
         }
-        val cameraState = when {
-            deviceState.isNull("cameraPossiblyBusy") -> "Câmera: desconhecida"
-            deviceState.optBoolean("cameraPossiblyBusy") -> "Câmera: possivelmente em uso"
-            else -> "Câmera: disponível"
+        container.addView(stateRow)
+        sectionGap(container, 8)
+        val current = deviceState.optString("foregroundPackage").takeIf { it.isNotBlank() && it != "null" }
+        val last = deviceState.optString("lastForegroundPackage").takeIf { it.isNotBlank() && it != "null" }
+        val lastAt = if (!deviceState.isNull("lastForegroundAt")) deviceState.optLong("lastForegroundAt") else 0L
+        val permitted = deviceState.optBoolean("usagePermission")
+        val appCaption = when {
+            !permitted -> "Acesso ao uso pendente no monitorado"
+            current != null -> "Em primeiro plano: $current"
+            last != null -> "Último visto: $last" + if (lastAt > 0L) " · ${formatDate(lastAt)}" else ""
+            else -> "Aplicativo não identificado"
         }
-        val pkg = deviceState.optString("foregroundPackage").takeIf { it.isNotBlank() && it != "null" }
-        val appState = when {
-            !deviceState.optBoolean("usagePermission") -> "App: acesso ao uso não autorizado"
-            pkg != null && screen in setOf("Ligada", "Interativa") -> "App: $pkg"
-            else -> "App: não identificado"
+        container.addView(dialogCardRow("Aplicativo observado", appCaption, "›") {
+            showAppNotice("Aplicativo observado", if (!permitted)
+                "No aparelho monitorado: Monitor Remoto → Configurações → Diagnóstico → Aplicativo visível → Acesso ao uso. Não é possível conceder essa permissão pelo controlador."
+                else "${current?.let { "Agora: $it" } ?: "Nenhum aplicativo atual identificado"}\n${last?.let { "Último visto: $it" } ?: "Sem histórico observado"}\nIsso não comprova que o Minha Câmera esteja gravando.")
+        })
+    }
+    root.optJSONObject("healthAlerts")?.let { health ->
+        val level = health.optString("level")
+        if (level == "WARNING" || level == "CRITICAL") {
+            sectionGap(container, 7)
+            container.addView(dialogCardRow("Alerta de saúde", health.optString("reason", "Condição desconhecida"), "!", accent = true) {
+                showAppNotice("Saúde do monitorado", "${health.optString("reason")}\nNotificações remotas: Configurações → Alertas e proteção. Interrupção automática do Minha Câmera não está disponível.")
+            })
         }
-        container.addView(label("Tela: $screen · $locked   |   $cameraState", 12f, muted = true))
-        container.addView(label(appState, 11.5f, muted = true))
     }
     sectionGap(container, 12)
 
@@ -174,7 +212,8 @@ private fun MainActivity.showRemoteMaintenance() {
 }
 
 private fun MainActivity.compactMetricCard(icon: Int, title: String, value: String,
-    subtitle: String? = null, temperatureZone: BatteryTemperaturePolicy.Zone? = null): LinearLayout =
+    subtitle: String? = null, temperatureZone: BatteryTemperaturePolicy.Zone? = null,
+    onClick: (() -> Unit)? = null): LinearLayout =
     LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         gravity = Gravity.CENTER
@@ -205,6 +244,10 @@ private fun MainActivity.compactMetricCard(icon: Int, title: String, value: Stri
             setPadding(dp(2), dp(3), dp(2), 0)
         })
         contentDescription = listOfNotNull(title, value, subtitle).joinToString(". ")
+        if (onClick != null) {
+            isClickable = true; isFocusable = true
+            setOnClickListener { onClick() }
+        }
     }
 
 private fun MainActivity.addMetricGrid(parent: LinearLayout, cards: List<LinearLayout>) {

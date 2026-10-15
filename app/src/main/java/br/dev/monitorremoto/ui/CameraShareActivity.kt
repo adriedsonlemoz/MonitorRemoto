@@ -34,6 +34,16 @@ import br.dev.monitorremoto.service.MonitorService
 /** Captura remota só existe enquanto esta Activity estiver realmente visível no monitorado. */
 class CameraShareActivity : Activity(), TextureView.SurfaceTextureListener {
     private val permissionRequest = 6210
+    private val thermalHandler = Handler(android.os.Looper.getMainLooper())
+    private val thermalGuard = object : Runnable {
+        override fun run() {
+            if (!resumed) return
+            if (br.dev.monitorremoto.core.HealthAlertMonitor.protectionTriggered(this@CameraShareActivity)) {
+                status.text = "Proteção térmica ativada. Encerrando câmera do Monitor Remoto."
+                finish()
+            } else thermalHandler.postDelayed(this, 5_000L)
+        }
+    }
     private var resumed = false
     private var opening = false
     private var front = false
@@ -118,10 +128,18 @@ class CameraShareActivity : Activity(), TextureView.SurfaceTextureListener {
         allowSwitchThisSession = false
         worker = HandlerThread("MR-CameraShare").also { it.start() }
         workerHandler = Handler(requireNotNull(worker).looper)
-        if (preview.isAvailable) ensurePermissionAndOpen()
+        thermalHandler.removeCallbacks(thermalGuard)
+        if (br.dev.monitorremoto.core.HealthAlertMonitor.protectionTriggered(this)) {
+            status.text = "Proteção térmica ativada: câmera encerrada"
+            finish()
+        } else {
+            thermalHandler.postDelayed(thermalGuard, 5_000L)
+            if (preview.isAvailable) ensurePermissionAndOpen()
+        }
     }
 
     override fun onPause() {
+        thermalHandler.removeCallbacks(thermalGuard)
         resumed = false
         remoteSwitchConsent.isChecked = false
         allowSwitchThisSession = false

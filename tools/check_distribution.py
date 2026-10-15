@@ -16,7 +16,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.72" and code.group(1) == "72", "Versões incompatíveis"
+assert version == "0.1.0-alpha.73" and code.group(1) == "73", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -1038,4 +1038,21 @@ assert 'matches.size == 1' in shared and 'isHash' in shared and 'isMulti' in sha
 assert 'dataChunks(' in client and 'dataHash(' in client
 assert 'copyRemoteFolder' in files and 'collectRemoteFolder' in files and 'fetchChunksWithRetry' in files
 assert (root / 'app/src/test/java/br/dev/monitorremoto/core/BatteryTemperaturePolicyTest.kt').exists()
-print('PASSOU: alpha.72, snapshot, telemetria, arquivos SAF com SHA integral e cópia recursiva.')
+print('PASSOU: alpha.73, snapshot, telemetria, arquivos SAF com SHA integral e cópia recursiva.')
+
+# alpha.73: regressão nas novidades, nos alertas e nas permissões.
+news = (ui_root / 'VersionNewsUi.kt').read_text()
+health = (root / 'app/src/main/java/br/dev/monitorremoto/core/HealthAlertPolicy.kt').read_text()
+monitor = (root / 'app/src/main/java/br/dev/monitorremoto/core/HealthAlertMonitor.kt').read_text()
+controller = (root / 'app/src/main/java/br/dev/monitorremoto/core/ControllerHealthAlerts.kt').read_text()
+job = (root / 'app/src/main/java/br/dev/monitorremoto/service/RemoteHealthJobService.kt').read_text()
+assert 'markNewsSeen' in news and 'seenNewsVersion' in news and 'setCancelable(false)' in news
+assert 'thermalProtection' in settings and 'controllerHealthAlerts' in settings
+assert 'HealthAlertPolicy.shouldProtect' in monitor and 'ScreenShareService.stop(context)' in monitor
+assert 'CameraFrameStore.stop()' in monitor and 'REMOTE' not in health
+assert 'eventSequence' in monitor and 'eventSequence' in controller and 'onSnapshot' in job
+assert 'RemoteHealthJobService' in manifest and 'BIND_JOB_SERVICE' in manifest
+assert '"healthAlerts"' in server and 'runCatching' in (root / 'app/src/main/java/br/dev/monitorremoto/service/MonitorService.kt').read_text()
+assert '"Desconectar"' in (ui_root / 'ConnectionScreenUi.kt').read_text()
+assert 'ic_edit' in (ui_root / 'ConnectionScreenUi.kt').read_text()
+print('PASSOU: novidades únicas, botão renomear, notificações e proteção térmica alpha.73.')

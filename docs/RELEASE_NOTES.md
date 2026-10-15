@@ -1,4 +1,14 @@
-# Monitor Remoto v0.1.0-alpha.72
+# Monitor Remoto v0.1.0-alpha.73
+
+## Painel, novidades e alertas
+
+- Renomeie o dispositivo no lápis do cabeçalho; conexão e última leitura na mesma linha, com ações compactas de atualizar/desconectar.
+- Cartões e indicadores de tela, bloqueio, câmera, rede, bateria e aplicativo observado com detalhes ao toque. A ocupação da câmera não prova que o Minha Câmera está gravando.
+- Novidades aparecem uma vez por versão, com acesso em Configurações.
+- Configurações > Alertas e proteção: avisos locais, proteção térmica opcional e alerta remoto por tarefa de segundo plano de melhor esforço (~15 min; Android pode adiar). Conceda notificação Android para aparecer na barra.
+- Proteção interrompe apenas capturas do próprio Monitor Remoto em aquecimento severo; não pausa Minha Câmera, não desliga o hardware ou o carregador.
+- Requer mesmo APK alpha.73 em ambos aparelhos; compilação e testes de hardware ainda pendentes.
+
 
 **Diagnóstico do Minha Câmera e telemetria compacta:** painel Controle mostra o estado real do display (ligada, desligada ou ambiente, conforme o Android), bloqueio, indício de indisponibilidade da câmera e o último pacote em primeiro plano após acesso ao uso concedido localmente. A indicação de câmera ocupada **não confirma gravação**, pois o Monitor Remoto não tem integração de telemetria com Minha Câmera. Cartões de Bateria/Temperatura/Rede mais baixos; temperatura usa faixas orientativas coloridas e Wi-Fi apresenta SSID/RSSI quando o Android permite a leitura por permissão explícita de localização.
 

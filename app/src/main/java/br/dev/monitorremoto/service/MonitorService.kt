@@ -68,6 +68,14 @@ class MonitorService : Service() {
             mainHandler.postDelayed(this, 15_000L)
         }
     }
+    private val healthWatchdog = object : Runnable {
+        override fun run() {
+            if (!serviceActive || !SettingsStore.isMonitorEnabled(this@MonitorService)) return
+            runCatching { br.dev.monitorremoto.core.HealthAlertMonitor.check(this@MonitorService) }
+                .onFailure { Log.w("MonitorRemotoHealth", "Leitura de saúde indisponível", it) }
+            mainHandler.postDelayed(this, 30_000L)
+        }
+    }
     private val accessAlerts = mutableSetOf<String>()
     private val mainHandler = Handler(Looper.getMainLooper())
     private val accessListener: () -> Unit = {
@@ -133,6 +141,8 @@ class MonitorService : Service() {
         ensureServerReady()
         mainHandler.removeCallbacks(serverWatchdog)
         mainHandler.postDelayed(serverWatchdog, 15_000L)
+        mainHandler.removeCallbacks(healthWatchdog)
+        mainHandler.post(healthWatchdog)
         AuthenticatedAccess.unsubscribe(accessListener)
         AuthenticatedAccess.subscribe(accessListener)
         mainHandler.removeCallbacks(alertCleanup)
@@ -230,6 +240,7 @@ class MonitorService : Service() {
         br.dev.monitorremoto.capture.CameraFrameStore.stop()
         br.dev.monitorremoto.core.RemotePhysicalControls.shutdown()
         mainHandler.removeCallbacks(serverWatchdog)
+        mainHandler.removeCallbacks(healthWatchdog)
         if (networkCallbackRegistered) {
             runCatching { networkManager.unregisterNetworkCallback(networkCallback) }
             networkCallbackRegistered = false

@@ -40,6 +40,8 @@ internal fun MainActivity.renderSettingsModule() {
         "appearance" to "Aparência",
         "security" to "Segurança",
         "diagnostics" to "Diagnóstico",
+        "health" to "Alertas e proteção",
+        "news" to "Novidades",
         "about" to "Sobre"
     )
     val section = settingsSection
@@ -77,6 +79,8 @@ internal fun MainActivity.renderSettingsModule() {
             "Permissão Android e autorização local", "lock")
         settingsEntry(groupB, R.drawable.ic_power, "Serviço e recuperação",
             "Inicialização, retomada e funcionamento", "service")
+        settingsEntry(groupB, R.drawable.ic_thermometer, "Alertas e proteção",
+            "Bateria, temperatura e proteção térmica", "health")
         settingsEntry(groupB, R.drawable.ic_activity, "Diagnóstico",
             "Conexão, permissões e estado do servidor", "diagnostics")
         groupB.addView(iconMenuRow(R.drawable.ic_shield, "Modo avançado ADB", "Reconexão rápida e configuração guiada ADB") {
@@ -89,6 +93,7 @@ internal fun MainActivity.renderSettingsModule() {
         sectionGap(groupC, 10)
         settingsEntry(groupC, R.drawable.ic_shield, "Segurança e pareamento", "Credenciais e revogação", "security")
         settingsEntry(groupC, R.drawable.ic_palette, "Aparência", "Tema claro, escuro ou sistema", "appearance")
+        settingsEntry(groupC, R.drawable.ic_info, "Novidades da versão", "Ver mudanças desta atualização", "news")
         settingsEntry(groupC, R.drawable.ic_info, "Sobre", "Versão e privacidade", "about", false)
         content.addView(groupC)
     } else {
@@ -105,6 +110,8 @@ internal fun MainActivity.renderSettingsModule() {
             "security" -> fillSecuritySettings(page)
             "appearance" -> fillAppearanceSettings(page)
             "diagnostics" -> fillDiagnosticsSettings(page)
+            "health" -> fillHealthSettings(page)
+            "news" -> fillVersionNewsSettings(page)
             "about" -> fillAboutSettings(page)
             else -> page.addView(label("Categoria não encontrada", 13f))
         }
@@ -754,4 +761,64 @@ internal fun MainActivity.handleRecoveryPickerResult(resultCode: Int, data: Inte
         message(outcome.fold({ "Pasta compartilhada: leitura para aparelhos pareados." },
             { "Não foi possível autorizar a pasta: ${it.message ?: "permissão recusada"}" }))
     } else message("Seleção cancelada: nenhuma pasta nova foi autorizada.")
+}
+
+private fun MainActivity.fillVersionNewsSettings(layout: LinearLayout) {
+    dialogIntro(layout, "Veja novamente as melhorias desta versão.")
+    layout.addView(iconMenuRow(R.drawable.ic_info, "Abrir novidades", "Versão ${AppVersion.NAME}") { showVersionNews() })
+}
+
+private fun MainActivity.fillHealthSettings(layout: LinearLayout) {
+    dialogIntro(layout, "Opções locais deste aparelho. Monitorado e controlador podem ter configurações diferentes.")
+    val local = SettingsStore.localHealthAlerts(this)
+    layout.addView(iconMenuRow(R.drawable.ic_bell, "Alertas Android neste aparelho",
+        if (local) "Avisos de bateria/temperatura habilitados" else "Avisos locais desativados",
+        badge = SettingsBadgeKind.forEnabled(local)) {
+        SettingsStore.setLocalHealthAlerts(this, !local)
+        openSettingsSection("health")
+        if (!local) requestHealthNotificationPermission()
+    })
+    sectionGap(layout, 9)
+    val protect = SettingsStore.thermalProtection(this)
+    layout.addView(iconMenuRow(R.drawable.ic_shield, "Proteger contra aquecimento severo",
+        if (protect) "Pode encerrar tela e câmera do Monitor Remoto" else "Desligada · não controla aplicativos externos",
+        badge = SettingsBadgeKind.forEnabled(protect)) {
+        if (protect) {
+            SettingsStore.setThermalProtection(this, false)
+            openSettingsSection("health")
+        } else showAppConfirm("Ativar proteção térmica?",
+            "Se o Android informar estado térmico severo ou a bateria atingir temperatura crítica, o Monitor Remoto interromperá suas próprias capturas de tela e câmera. Não interrompe gravação do Minha Câmera nem altera carregamento físico. A proteção do fabricante continua independente.",
+            R.drawable.ic_shield, "Ativar proteção") {
+            SettingsStore.setThermalProtection(this, true)
+            openSettingsSection("health")
+        }
+    })
+    sectionGap(layout, 9)
+    val remote = SettingsStore.controllerHealthAlerts(this)
+    layout.addView(iconMenuRow(R.drawable.ic_phone, "Receber alertas de aparelho remoto",
+        if (remote) "Avisos durante consulta e tarefa periódica (mínimo 15 min)" else "Desativado · ative neste celular controlador",
+        badge = SettingsBadgeKind.forEnabled(remote)) {
+        if (remote) {
+            SettingsStore.setControllerHealthAlerts(this, false)
+            openSettingsSection("health")
+        } else showAppConfirm("Ativar alertas remotos?",
+            "Este celular consultará periodicamente o aparelho salvo usando a chave de pareamento. No segundo plano, o Android pode adiar ou bloquear a tarefa e o Wi-Fi deve alcançar o monitorado. A consulta tem custo de bateria. Não garante aviso instantâneo.",
+            R.drawable.ic_bell, "Ativar alertas") {
+            SettingsStore.setControllerHealthAlerts(this, true)
+            openSettingsSection("health")
+            requestHealthNotificationPermission()
+        }
+    })
+    sectionGap(layout, 12)
+    val health = br.dev.monitorremoto.core.HealthAlertMonitor.snapshot(this)
+    layout.addView(dialogMetricRow("Estado local", health.optString("level", "Sem avaliação")))
+    layout.addView(dialogMetricRow("Motivo", health.optString("reason", "Sem leitura")))
+    layout.addView(label("Faixas sugeridas: bateria ≤20% ou ≥38 °C para atenção; ≤10% ou ≥43 °C para alerta crítico. O Android pode sinalizar severidade térmica independentemente. Esses limites são orientativos e têm histerese.", 12f, muted = true))
+}
+
+private fun MainActivity.requestHealthNotificationPermission() {
+    if (Build.VERSION.SDK_INT >= 33 &&
+        checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+        requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 9268)
+    }
 }

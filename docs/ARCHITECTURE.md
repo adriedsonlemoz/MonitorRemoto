@@ -1,4 +1,4 @@
-# Arquitetura (0.1.0-alpha.72)
+# Arquitetura (0.1.0-alpha.73)
 
 ```text
 MONITORADO                                      CONTROLE
@@ -31,9 +31,9 @@ A captura usa `ImageReader` RGBA, `Bitmap` JPEG com largura máxima 540 px, taxa
 
 ## Distribuição e assinatura
 
-O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.72` e `versionCode=72`.
+O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.73` e `versionCode=73`.
 
-- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.72.apk`.
+- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.73.apk`.
 - `upload-artifact` sempre distribui um ZIP; GitHub Releases recebe o **arquivo APK direto**.
 - Com quatro Secrets, Gradle gera APK Release assinado e AAB. Sem Secrets, o arquivo é Debug de teste e não preserva necessariamente a assinatura entre execuções.
 - Releases são prévias, não substituem a futura revisão da Google Play e nem os ensaios reais.
@@ -271,3 +271,11 @@ O `RemotePhysicalControls`, propriedade lógica do `MonitorService`, mantém o a
 `DeviceStateReader` fornece leitura local de estado do display, bloqueio, disponibilidade indicativa das câmeras (callback associado ao serviço monitorado) e o último evento de atividade quando `PACKAGE_USAGE_STATS` foi liberado manualmente. Sem inspeção do conteúdo da tela. `NetworkReader` lê SSID e RSSI apenas com localização Android autorizada, devolvendo nulos quando indisponível. `BatteryTemperaturePolicy` define cores de interface, não uma garantia de segurança térmica.
 
 `SharedDataFolder` continua restrito à árvore SAF e agora responde `dataHash` (hash do arquivo integral) e `dataChunks` (até dois blocos autenticados por pedido). A cópia recursiva é pré-enumerada pelo controlador e limitada a 20 arquivos, 128 MiB e 200 itens, sem sobrescrever os existentes. Não há fluxo persistente/resumível caso Activity ou processo termine.
+
+## Alpha.73: alertas e proteção local
+
+- `HealthAlertMonitor` é consultado pelo serviço local aproximadamente a cada 30 segundos enquanto o monitoramento autorizado estiver ativo. Classifica bateria e temperatura com histerese; o status térmico do Android 10+ tem precedência. Registra apenas o último evento com sequência, motivo e horário. A API de snapshot já cifrada inclui `healthAlerts`, sem criar novo endpoint público.
+- `ControllerHealthAlerts` apresenta notificação somente após receber um snapshot AES-GCM válido, desde que o usuário tenha ativado os alertas nesse controlador e permitido notificações. Eventos antigos são identificados pelo horário; o app marca sequências para evitar avisos repetidos.
+- `RemoteHealthJobService` usa `JobScheduler.setPeriodic(15 min)` apenas com opt-in, aparelho salvo e conectividade disponível. Não há push nem conexão permanente; o Android pode adiar a execução por Doze/restrições OEM, e o trabalho não sobrevive a interrupção explícita do app.
+- Proteção térmica OFF por padrão: ao identificar status térmico severo/temperatura crítica, encerra `ScreenShareService`, revoga os quadros de câmera e a Activity local de câmera encerra sua captura. Não força encerramento de app externo, não reduz carregamento físico, não prova que Minha Câmera grava.
+- `VersionNewsUi` exibe as mudanças uma vez por versão na abertura, e a opção Configurações > Novidades permite rever manualmente.

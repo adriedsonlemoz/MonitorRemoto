@@ -437,6 +437,7 @@ class MonitorServer(private val context: Context) {
                         put("battery", BatteryReader.snapshot(context))
                         put("network", NetworkReader.snapshot(context))
                         put("deviceState", br.dev.monitorremoto.core.DeviceStateReader.snapshot(context))
+                        put("healthAlerts", br.dev.monitorremoto.core.HealthAlertMonitor.snapshot(context))
                         put("deviceInfo", DeviceInfoReader.snapshot(context))
                         put("telephony", TelephonyReader.snapshot(context))
                         put("events", if (SettingsStore.isMonitorEnabled(context))
