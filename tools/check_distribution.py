@@ -16,7 +16,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.56" and code.group(1) == "56", "Versões incompatíveis"
+assert version == "0.1.0-alpha.57" and code.group(1) == "57", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -659,7 +659,7 @@ assert remote_ui46.count('setTextColor(this@RemoteFilesActivity.foreground)') ==
 assert not re.search(r'(?<![\w.])setTextColor\(foreground\)', remote_ui46), (
     "alpha.46: foreground implícito dentro de View.apply é Drawable, não ColorInt"
 )
-assert 'private val foreground get() = if (dark) Color.WHITE else Color.rgb(21, 38, 55)' in remote_ui46
+assert 'private val foreground get() = if (dark) Color.WHITE else Color.rgb(24, 34, 46)' in remote_ui46
 print('PASSOU: alpha.46, TextView/Button usam ColorInt da Activity e não Drawable da View')
 
 # Alpha.50: interface modal compacta, QR/pareamento seguido de descoberta TLS no MESMO host.
@@ -734,15 +734,15 @@ assert 'showIncomingAccessIfNeeded' not in main53
 assert 'AuthenticatedAccess.subscribe(incomingListener)' in main53
 assert 'ACCESS_CHANNEL' in monitor_service and 'IncomingAccessActivity::class.java' in monitor_service
 assert 'onBackToMonitor' in access53 and 'Voltar ao aplicativo' in access53
-assert 'Manutenção' in dash53 and 'Reiniciar aparelho · ADB' in dash53
+assert 'Manutenção' in dash53 and 'Reiniciar normalmente' in dash53
 assert 'EXTRA_MAINTENANCE_HOST' in dash53 and 'putExtra(AdbActivity.EXTRA_MAINTENANCE_HOST, selectedHost)' in dash53
 assert 'requestNormalReboot' in adb53 and 'requestNormalReboot' in client53
 assert 'active.open("reboot:")' in client53
 assert '"REINICIAR"' in adb53 and 'yes.isEnabled = false' in adb53
 assert 'active.open("poweroff' not in client53 and 'active.open("reboot:recovery' not in client53
 assert 'desiredTarget = null' in adb53
-assert 'showListingError' in files53 and 'Tentar novamente' in files53 and 'Voltar ao painel' in files53
-assert '‹ Voltar ' in files53 and 'private fun goBack()' in files53
+assert 'showListingError' in files53 and 'Tentar novamente' in files53 and 'Voltar ao aparelho' in files53
+assert 'private fun goBack()' in files53 and 'button("‹"' in files53
 print('PASSOU: alpha.53, reboot ADB de sistema, consentimento reforçado, aviso não invasivo e arquivos com Voltar')
 
 # Alpha.54: o workflow 52 falhou por referência inexistente em MainActivity.
@@ -783,3 +783,20 @@ assert 'heartbeatWorker.execute' not in ui56 and 'worker.execute {' in ui56
 assert 'cancelHeartbeat()' in ui56
 assert 'input text ' not in (root / 'app/src/main/java/br/dev/monitorremoto/adb/AdbPolicy.kt').read_text()
 print('PASSOU: alpha.56, botões espaçados, histórico sem repetição e codec/bloqueio explícitos')
+
+# Alpha.57: a recuperação segue somente leitura SAF e manutenção mantém confirmação.
+files57 = (ui_root / 'RemoteFilesActivity.kt').read_text(encoding='utf-8')
+dashboard57 = (ui_root / 'RemoteDashboardUi.kt').read_text(encoding='utf-8')
+for token in ['ACTION_OPEN_DOCUMENT_TREE', 'ACTION_CREATE_DOCUMENT', 'MAX_BATCH_ITEMS = 20',
+              'MAX_BATCH_BYTES = 128L * 1024L * 1024L', 'safeNewDocumentName',
+              'DocumentsContract.createDocument', 'DocumentsContract.deleteDocument',
+              'RemoteClient.dataChunk(', 'RemoteClient.dataList(', 'Selecionar', 'Copiar selecionados',
+              'Ordenar', 'Buscar nesta pasta', 'Grade', 'entryDate', 'entrySize', 'showHelp']:
+    assert token in files57, f'alpha.57: função ausente: {token}'
+assert 'SharedDataFolder.handle' not in files57
+assert 'MANAGE_EXTERNAL_STORAGE' not in (root / 'app/src/main/AndroidManifest.xml').read_text()
+assert 'Reiniciar normalmente' in dashboard57 and 'iconSectionHeader' in dashboard57
+assert 'val deviceCard = card(body, fill = soft)' in ui56
+assert 's?.toString()?.trim() == "REINICIAR"' in ui56
+assert 'adb.requestNormalReboot()' in ui56
+print('PASSOU: alpha.57, cópia múltipla SAF somente leitura, manutenção protegida e interface aprimorada')

@@ -67,23 +67,39 @@ internal fun MainActivity.displayResult(root: JSONObject, fromCache: Boolean = f
 /** A conexão normal AES-GCM não confere privilégio de reinicialização. */
 private fun MainActivity.showRemoteMaintenance() {
     val selectedHost = br.dev.monitorremoto.core.SettingsStore.getRemoteHost(this)
+    val name = currentDeviceTitle?.text?.toString().orEmpty().ifBlank { "Aparelho remoto" }
     val (wrapper, layout) = dialogWrapper()
-    dialogIntro(layout, "Manutenção do aparelho remoto. Nesta versão, apenas reinicialização normal por ADB autorizado.")
-    layout.addView(label("Atenção: em um aparelho sem botão Power, um reinício com falha pode deixá-lo inacessível. Após reiniciar, a Depuração sem fios pode não voltar automaticamente.", 12f, muted = true))
+    layout.addView(iconSectionHeader(R.drawable.ic_settings, "Manutenção", "Ações autorizadas no aparelho remoto"))
+    sectionGap(layout, 14)
+    layout.addView(panel(14).apply {
+        background = shape(fieldColor, 17)
+        addView(label(name, 16f, strong = true))
+        addView(label(selectedHost, 12f, muted = true))
+        addView(infoChip("Requer ADB conectado"))
+    })
     sectionGap(layout, 12)
-    layout.addView(actionButton("Reiniciar aparelho · ADB") {
-        // A reconexão ADB é independente da conexão normal e exige confirmação adicional.
+    layout.addView(label("Disponível", 12f, muted = true))
+    layout.addView(dialogCardRow(
+        title = "Reiniciar normalmente",
+        subtitle = "Reinicia o Android, sem desligar",
+        trailing = "›",
+        accent = true
+    ) {
+        activeUiDialog?.dismiss()
         startActivity(Intent(this, AdbActivity::class.java).apply {
             putExtra(AdbActivity.EXTRA_MAINTENANCE_HOST, selectedHost)
         })
-        activeUiDialog?.dismiss()
     })
-    val dialog = AlertDialog.Builder(this)
-        .setTitle("Manutenção")
+    sectionGap(layout, 12)
+    layout.addView(panel(14).apply {
+        background = shape(fieldColor, 16)
+        addView(iconSectionHeader(R.drawable.ic_info, "Antes de reiniciar"))
+        addView(label("Se o celular não voltar a iniciar, ele poderá ficar inacessível sem o botão Power. A Depuração sem fios pode não voltar sozinha.", 12.5f, muted = true))
+        addView(label("Nenhum comando é enviado ao abrir este menu. A confirmação final é feita no ADB.", 12f, muted = true))
+    })
+    showManagedDialog(AlertDialog.Builder(this)
         .setView(wrapper)
-        .setNegativeButton("Cancelar", null)
-        .create()
-    showManagedDialog(dialog)
+        .setNegativeButton("Cancelar", null))
 }
 
 private fun MainActivity.compactMetricCard(icon: Int, title: String, value: String): LinearLayout =

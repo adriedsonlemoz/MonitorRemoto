@@ -1,3 +1,15 @@
+# Monitor Remoto v0.1.0-alpha.57
+
+## Gerenciador remoto SAF e manutenção
+
+- Novo layout de Recuperar dados: topo compacto, Atualizar/Ajuda, navegação em pastas, ícones, tamanho e data, alternância lista/grade, busca, ordenação e informações.
+- Seleção múltipla com cópia de até 20 arquivos (128 MiB total, 32 MiB por arquivo) para pasta autorizada pelo controlador. Origem permanece somente leitura; blocos autenticados com integridade e tentativa de limpeza de parcial em erro.
+- Manutenção reorganizada com visual consistente e alerta de risco. Reinicialização normal ADB continua exigindo confirmação digitada; sem desligamento remoto.
+- Mensagens ADB não configurado mais orientativas.
+- Build Android completo e teste físico SAF/ADB continuam pendentes.
+
+---
+
 # Monitor Remoto v0.1.0-alpha.56
 
 ## Ajustes de interface e diagnóstico ADB

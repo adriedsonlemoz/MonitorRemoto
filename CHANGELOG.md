@@ -1,3 +1,13 @@
+## 0.1.0-alpha.57 (14/10/2026)
+
+- **Manutenção** redesenhada com ícone, cartão do aparelho, aviso breve sobre ausência de botão Power, opção única para reiniciar normalmente e confirmação final ADB com digitação `REINICIAR`. A reinicialização continua usando apenas `reboot:`, sem desligamento, recovery ou repetição automática.
+- Mensagem de **ADB não configurado** atualizada para diálogo no estilo do aplicativo, com botão para iniciar o pareamento em vez de alerta Android sem formatação.
+- **Recuperar dados** agora abre em um gerenciador remoto mais compacto: botão Voltar, título e aparelho, Ajuda (?) contextual e **Atualizar** no topo; caminho/pasta atual e contador de itens.
+- Navegação em pastas, lista/grade, busca por nome, ordenação por nome/data/tamanho/tipo, ícones e detalhes de metadados (nome, MIME, tamanho, data, caminho), sem novas permissões.
+- Seleção múltipla (até 20 arquivos por lote / 128 MiB agregados) com cópia sequencial para pasta escolhida pelo seletor SAF Android no controlador. O limite de 32 MiB por arquivo, blocos AES-GCM + SHA-256 e a origem somente leitura permanecem. Nomes já existentes no destino recebem sufixo em vez de sobrescrita; cancelar interrompe o lote e uma saída com erro tenta apagar o arquivo parcialmente criado.
+- Não incluídas exclusão, renomeação ou escrita remotas, recuperação de apagados, acesso irrestrito ao armazenamento ou prévia de conteúdo sem cópia. Teste físico de SAF, compileDebugKotlin e testes Android completos ainda pendentes.
+- Versão, AppVersion, documentação, notas e verificador estrutural atualizados.
+
 ## 0.1.0-alpha.56 (14/10/2026)
 
 - No **Modo avançado ADB**, botões agora têm espaçamento consistente; ações principais ficam organizadas em pares compactos (Controles / Manutenção e Renomear / Desconectar). O pop-up de Controles ADB possui grade com espaçamento e inclui Renomear.

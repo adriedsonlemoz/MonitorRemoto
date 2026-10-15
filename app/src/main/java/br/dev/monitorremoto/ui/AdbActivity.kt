@@ -682,14 +682,19 @@ class AdbActivity : Activity() {
             return
         }
         val body = modalBody()
-        body.addView(text("Aparelho: ${reportedPhone.ifBlank { host }}", 16f, bold = true))
-        body.addView(text("Opção disponível: reiniciar normalmente o Android. Não existe comando para desligar.", 14f))
-        body.addView(text("ATENÇÃO: se o telefone não voltar a iniciar, ou se a Depuração sem fios não reativar, você pode perder o acesso. Isso é especialmente sério sem botão Power. Não é possível garantir a reconexão após reiniciar.", 14f, secondary = true))
-        body.addView(text("Para confirmar, digite REINICIAR:", 14f, bold = true))
+        val deviceCard = card(body, fill = soft)
+        deviceCard.addView(text("REINICIALIZAÇÃO NORMAL", 12f, secondary = true, bold = true))
+        deviceCard.addView(text(reportedPhone.ifBlank { host }, 19f, bold = true))
+        deviceCard.addView(text("ADB conectado · $host", 12f, secondary = true))
+        body.addView(separatedText("O Android será reiniciado. Não será enviado comando para desligar ou entrar em recovery.", 14f))
+        val warning = card(body, fill = soft)
+        warning.addView(text("⚠ Atenção", 15f, bold = true))
+        warning.addView(text("Sem botão Power, uma falha na inicialização pode impedir o uso do aparelho. A Depuração sem fios pode não voltar automaticamente.", 13f, secondary = true))
+        body.addView(text("Digite REINICIAR para confirmar", 14f, bold = true))
         val verify = formField("REINICIAR")
         body.addView(verify)
         val check = AlertDialog.Builder(this)
-            .setTitle("Reiniciar o celular remoto?")
+            .setTitle("Confirmar reinicialização")
             .setView(body)
             .setNegativeButton("Cancelar", null)
             .setPositiveButton("Reiniciar", null)
@@ -992,10 +997,13 @@ class AdbActivity : Activity() {
                     reconnect(saved)
                 } else {
                     pendingMaintenanceHost = null
-                    AlertDialog.Builder(this)
-                        .setTitle("ADB ainda não configurado")
-                        .setMessage("O aparelho selecionado não está salvo no módulo ADB. Primeiro autorize e conecte-o por esta tela. Depois abra Manutenção. Nenhum comando de reinicialização foi enviado.")
-                        .setPositiveButton("Entendi", null).show()
+                    val body = modalBody()
+                    val notice = card(body, fill = soft)
+                    notice.addView(text("🔗 Conexão ADB necessária", 18f, bold = true))
+                    notice.addView(text("Este aparelho ainda não foi conectado por ADB neste aplicativo. A conexão normal do Monitor Remoto não autoriza reinicialização.", 14f, secondary = true))
+                    body.addView(button("Adicionar aparelho ADB", primary = true) { chooseRole() })
+                    body.addView(button("Agora não") { closeDialog() })
+                    modal("Antes de reiniciar", body)
                 }
             }
         }

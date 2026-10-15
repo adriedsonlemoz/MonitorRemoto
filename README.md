@@ -1,6 +1,16 @@
 # Monitor Remoto
 
-**v0.1.0-alpha.56 / versionCode 56** · Android 8.0+ · Kotlin 2.2.21 · AGP 8.13.2 · Gradle 8.13
+**v0.1.0-alpha.57 / versionCode 57** · Android 8.0+ · Kotlin 2.2.21 · AGP 8.13.2 · Gradle 8.13
+
+## Recuperar dados e manutenção (alpha.57)
+
+- **Recuperar dados**: tela de gerenciador SAF remoto com topo compacto (Voltar/Ajuda/Atualizar), pasta e caminho, lista ou grade, busca local, ordenação por nome/data/tamanho/tipo e informações de arquivos.
+- **Copiar individual**: toque em um arquivo → Copiar e escolha o destino pelo seletor de documentos do Android.
+- **Copiar múltiplos**: toque em Selecionar, marque até 20 arquivos, toque Copiar selecionados e escolha uma pasta no controlador. Arquivos são copiados sequencialmente, com limite agregado de 128 MiB e individual de 32 MiB, sem sobrescrever nomes existentes quando o provedor SAF os informa. A pasta remota permanece SOMENTE LEITURA.
+- **Ajuda (?)** explica a autorização obrigatória no celular monitorado; não há acesso a arquivos excluídos, privados ou protegidos por outros apps.
+- **Manutenção** tem pop-up padronizado, cartão com identificação do alvo, alerta para celulares sem botão Power e reinício somente via ADB do mesmo host, com confirmação digitada REINICIAR. A depuração pode não voltar após o reinício.
+- Ainda sem prévia local de imagem/PDF/vídeo, compartilhamento automático de cópias, escrita, exclusão ou renomeação no aparelho remoto. Validar no GitHub Actions e com dois celulares.
+
 
 ## Melhorias alpha.56: painel ADB e tela remota
 
@@ -222,7 +232,7 @@ A Home, o Modo Monitorado, a escolha de conexão, os submenus de Configurações
 
 ## Como utilizar
 
-1. Execute GitHub Actions > **Gerar APK e Release** > Run workflow. Para baixar **APK sem ZIP**, use Releases > `v0.1.0-alpha.56` > Assets > **`MonitorRemoto-v0.1.0-alpha.56.apk`**. Em Actions > Artifacts, um APK de contingência (quando presente) continua vindo em ZIP por comportamento padrão do GitHub. Instale o mesmo APK nos dois aparelhos.
+1. Execute GitHub Actions > **Gerar APK e Release** > Run workflow. Para baixar **APK sem ZIP**, use Releases > `v0.1.0-alpha.57` > Assets > **`MonitorRemoto-v0.1.0-alpha.57.apk`**. Em Actions > Artifacts, um APK de contingência (quando presente) continua vindo em ZIP por comportamento padrão do GitHub. Instale o mesmo APK nos dois aparelhos.
 2. No telefone secundário: na nova **Home**, toque em **Monitorar este aparelho**; autorize a notificação de serviço e ative o monitoramento. Em Configurações, conceda apenas as permissões necessárias e selecione os aplicativos cujas notificações deseja compartilhar.
 3. Na página Monitorado, toque no cartão **Gerar QR**. Escolha o IP privado acessível. O QR expira em 2 minutos e é válido para um único pareamento.
 4. No telefone principal: na **Home**, toque em **Conectar novo aparelho > QR Code**, aponte a câmera na janela compacta e confirme os dados do aparelho antes do pareamento. Para um aparelho salvo, use **Aparelhos anteriores > Conectar**. A digitação manual de IP e chave continua disponível.
@@ -249,7 +259,7 @@ Requer Android SDK API 36, Java 17, Gradle 8.13. O repositório ainda não inclu
 gradle :app:testDebugUnitTest :app:assembleDebug
 ```
 
-APK local de teste: `app/build/outputs/apk/debug/app-debug.apk`. O workflow copia esse arquivo ou o Release assinado como **`MonitorRemoto-v0.1.0-alpha.56.apk`**. Baixe diretamente na aba GitHub **Releases**. **O APK não está incluído neste ZIP de código-fonte.** Veja `docs/PAIRING_QR.md` para segurança do QR.
+APK local de teste: `app/build/outputs/apk/debug/app-debug.apk`. O workflow copia esse arquivo ou o Release assinado como **`MonitorRemoto-v0.1.0-alpha.57.apk`**. Baixe diretamente na aba GitHub **Releases**. **O APK não está incluído neste ZIP de código-fonte.** Veja `docs/PAIRING_QR.md` para segurança do QR.
 
 Opcional: configure os quatro Secrets de assinatura para gerar APK Release assinado e AAB. Ver `docs/APK_DOWNLOAD.md`. Preservar a mesma keystore entre builds é essencial para atualizações sem reinstalação.
 

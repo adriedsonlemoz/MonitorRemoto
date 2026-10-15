@@ -98,3 +98,7 @@ Fontes consultadas em 14/10/2026. Licenças da biblioteca-base em `adb-core/LICE
 Botões de controle e manutenção receberam espaçamento; o aparelho ativo não é repetido na lista de salvos. Renomear está disponível no painel ADB e em Controles ADB. Quando a consulta shell não informa modelo legível, o rótulo preserva apelido ou modelo anterior, sem declarar identificação certificada. A reconexão da sessão permanece limitada ao tempo em primeiro plano, com intervalos crescentes. A interface do visualizador diferencia tela bloqueada, apagada e MediaProjection encerrada; não tenta desbloquear a tela segura.
 
 A alpha.56 passou a executar heartbeat e comandos ADB no mesmo executor serial, reduzindo concorrência de streams numa única sessão. Heartbeat: intervalo de 45s e tolerância de 12s; perda de conexão real ainda exige diagnóstico físico. O monitor remoto não reativa depuração desabilitada.
+
+## Manutenção alpha.57
+
+A apresentação da função Reiniciar foi padronizada no painel principal, mas sua operação continua **exclusivamente ADB TLS autorizado do mesmo host**, com confirmação digitada `REINICIAR`. O comando é o serviço ADB normal `reboot:`, sem shell `poweroff`/`shutdown`, sem parâmetros de recovery e sem repetição automática. A interface de ADB não configurado oferece iniciar o pareamento. Nenhum comando de reinício é executado apenas por abrir a janela.

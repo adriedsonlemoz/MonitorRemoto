@@ -1,4 +1,4 @@
-# Arquitetura (0.1.0-alpha.56)
+# Arquitetura (0.1.0-alpha.57)
 
 ```text
 MONITORADO                                      CONTROLE
@@ -12,6 +12,8 @@ LAN: 192.168.x.x / VPN Tailscale: 100.x.x.x     RemoteClient -> MainActivity
 ```
 
 **Fluxo:** cliente envia `{"v":1,"op":"snapshot","ts":epochMillis}` cifrado num envelope `{n,c}` com nonce 96-bit aleatório. Servidor valida tamanho, autenticação AEAD, versão, operação, tempo ±5 minutos e rejeita nonce já recebido no processo. Servidor responde o snapshot atual com os 30 últimos eventos cifrado pela mesma chave. A alpha.45 inclui operações `dataList` e `dataChunk` de leitura exclusivamente da árvore SAF autorizada no monitorado; não existe leitura arbitrária do sistema de arquivos.
+
+Na alpha.57, `RemoteFilesActivity` oferece filtros, ordenação e seleção em memória dos metadados `dataList`. A cópia múltipla **não amplia a API do servidor**: usa sequencialmente `dataChunk` autenticado, com metadados originais imutáveis para cada arquivo, e escreve somente no controlador, em destino SAF escolhido via `ACTION_OPEN_DOCUMENT_TREE`. Limites locais: 20 arquivos, 128 MiB/lote e 32 MiB/arquivo; não sobrescrever nomes existentes e tentar remover parciais. Origem permanece somente leitura, sem nova permissão Android nem operação destrutiva.
 
 O FGS `connectedDevice` mantém o socket de escuta durante monitoramento ativo. A permissão `CHANGE_NETWORK_STATE` é declarada para o pré-requisito do tipo FGS; o app não altera configurações de rede. O serviço não depende de localização, Accessibility, root, APIs ocultas ou desbloqueio da tela para consultar as APIs permitidas.
 
@@ -29,9 +31,9 @@ A captura usa `ImageReader` RGBA, `Bitmap` JPEG com largura máxima 540 px, taxa
 
 ## Distribuição e assinatura
 
-O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.56` e `versionCode=56`.
+O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.57` e `versionCode=57`.
 
-- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.56.apk`.
+- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.57.apk`.
 - `upload-artifact` sempre distribui um ZIP; GitHub Releases recebe o **arquivo APK direto**.
 - Com quatro Secrets, Gradle gera APK Release assinado e AAB. Sem Secrets, o arquivo é Debug de teste e não preserva necessariamente a assinatura entre execuções.
 - Releases são prévias, não substituem a futura revisão da Google Play e nem os ensaios reais.
