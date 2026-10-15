@@ -90,6 +90,7 @@ class MonitorService : Service() {
         manager.createNotificationChannel(NotificationChannel(
             ACCESS_CHANNEL, "Acesso remoto detectado", NotificationManager.IMPORTANCE_DEFAULT
         ))
+        br.dev.monitorremoto.core.RemotePhysicalControls.start(applicationContext)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -224,6 +225,7 @@ class MonitorService : Service() {
             RecoveryScheduler.refresh(this)
         }
         br.dev.monitorremoto.capture.ScreenShareService.stop(this)
+        br.dev.monitorremoto.core.RemotePhysicalControls.shutdown()
         mainHandler.removeCallbacks(serverWatchdog)
         if (networkCallbackRegistered) {
             runCatching { networkManager.unregisterNetworkCallback(networkCallback) }

@@ -1,6 +1,31 @@
 # Monitor Remoto
 
-**v0.1.0-alpha.58 / versionCode 58** · Android 8.0+ · Kotlin 2.2.21 · AGP 8.13.2 · Gradle 8.13
+**v0.1.0-alpha.61 / versionCode 61** · Android 8.0+ · Kotlin 2.2.21 · AGP 8.13.2 · Gradle 8.13
+
+## Bloquear aparelho remoto (alpha.61)
+
+- Em **Configurações > Bloqueio remoto** no **celular monitorado**: ative manualmente o administrador de dispositivo pela tela oficial do Android, configure PIN/padrão/senha e depois autorize **Permitir bloqueio remoto**. A autorização remota é desativada por padrão, independente do administrador do Android.
+- O único privilégio solicitado ao Android é `<force-lock />`, via `DevicePolicyManager.lockNow()`. Não há permissão para apagar dados, trocar senha, burlar biometria ou criar comandos ADB livres. O Android permite revogar o administrador nas configurações de segurança; a opção remota pode ser revogada no app.
+- No controlador pareado, abra **Bloquear** e digite literalmente `BLOQUEAR` antes de tocar em **Bloquear agora**. A operação usa AES-GCM, versão exata e proteção contra repetição do protocolo existente, com intervalo mínimo de 15 s entre pedidos.
+- O comando responde **solicitação aceita**, não **aparelho bloqueado**: a API não confirma conclusão. A tentativa é agendada com breve atraso para permitir resposta pela rede. A perda de conexão após desligar a tela é possível. Não usar se não for possível acordar/desbloquear aparelho sem botão Power.
+- O pedido é recusado se o administrador estiver inativo, faltar bloqueio seguro (PIN/padrão/senha), a autorização local estiver desligada ou o Android não tiver suporte. **Build Android completo e testes em aparelhos continuam pendentes**.
+
+## Controle remoto de som e lanterna (alpha.60)
+
+- Acesse **Configurações > Som e lanterna** no **celular monitorado**. Ambas as autorizações vêm desativadas e devem ser concedidas separadamente no aparelho. O monitoramento precisa continuar ativo, os dois dispositivos pareados e instalados na mesma alpha.60.
+- No painel do controlador, **Tocar som** abre opções de 5, 10, 20 ou 30 segundos, Iniciar/Interromper e Atualizar estado. Usa bipes temporários pelo volume ALARME, sem forçar o volume. Modo silencioso, Não Perturbe e configurações do fabricante podem impedir audição.
+- **Lanterna** usa a câmera traseira com flash, `CameraManager.setTorchMode()` e `TorchCallback`. A permissão Câmera do Android pode ser exigida; veja a permissão nas configurações do app no aparelho monitorado. Se câmera/flash estiverem ocupados ou ausentes, o app exibe falha e não inventa estado. A confirmação do estado pode atrasar.
+- Desativar permissão de som ou monitoramento local encerra alerta. Desativar a permissão de lanterna ou parar o serviço tenta desligar a lanterna **ligada pelo Monitor Remoto**, sem se apropriar de flash iniciado por outro aplicativo. Se o processo morrer inesperadamente, o Android poderá desligá-la por conta própria, mas não há garantia em todos os fabricantes.
+- As ações usam somente a operação cifrada de lista fechada `deviceControl`; sem novos privilégios ADB, serviços ocultos, novas permissões manifest ou aumento de volume do aparelho.
+- **Validação**: executar build Gradle no GitHub Actions e testar ambos os aparelhos antes de assumir que o som será audível ou a lanterna compatível com determinado modelo.
+
+## Bateria no painel (alpha.59)
+
+- **Painel Controle:** porcentagem reportada pelo Android, ícone com ⚡ quando há informação confirmada de carregamento ou bateria cheia alimentada, e texto curto com estado e fonte (USB, Tomada, Sem fio ou Base).
+- Estados provenientes de `ACTION_BATTERY_CHANGED`: **Carregando, Descarregando, Cheia, Não carregando** e **Desconhecido**. O Android distingue `NOT_CHARGING` de `DISCHARGING`, por isso o app também os distingue.
+- O monitorado envia `state`, `statusCode`, `powerSource`, `pluggedCode` e `chargingIndicator` junto ao snapshot autenticado; temperatura continua ao lado e na tela Detalhes. Sem permissões novas nem consulta de bateria fora do polling existente.
+- Valores ausentes permanecem desconhecidos, não se presume USB/tomada a partir de corrente, porcentagem ou cabo. Exige a mesma versão nos dois aparelhos.
+- **Alpha.59:** Tocar som e Lanterna foram adiados nessa versão e implementados na alpha.60, com autorização local individual.
 
 ## Notificações e aplicativos (alpha.58)
 
@@ -238,7 +263,7 @@ A Home, o Modo Monitorado, a escolha de conexão, os submenus de Configurações
 
 ## Como utilizar
 
-1. Execute GitHub Actions > **Gerar APK e Release** > Run workflow. Para baixar **APK sem ZIP**, use Releases > `v0.1.0-alpha.58` > Assets > **`MonitorRemoto-v0.1.0-alpha.58.apk`**. Em Actions > Artifacts, um APK de contingência (quando presente) continua vindo em ZIP por comportamento padrão do GitHub. Instale o mesmo APK nos dois aparelhos.
+1. Execute GitHub Actions > **Gerar APK e Release** > Run workflow. Para baixar **APK sem ZIP**, use Releases > `v0.1.0-alpha.61` > Assets > **`MonitorRemoto-v0.1.0-alpha.61.apk`**. Em Actions > Artifacts, um APK de contingência (quando presente) continua vindo em ZIP por comportamento padrão do GitHub. Instale o mesmo APK nos dois aparelhos.
 2. No telefone secundário: na nova **Home**, toque em **Monitorar este aparelho**; autorize a notificação de serviço e ative o monitoramento. Em Configurações, conceda apenas as permissões necessárias e selecione os aplicativos cujas notificações deseja compartilhar.
 3. Na página Monitorado, toque no cartão **Gerar QR**. Escolha o IP privado acessível. O QR expira em 2 minutos e é válido para um único pareamento.
 4. No telefone principal: na **Home**, toque em **Conectar novo aparelho > QR Code**, aponte a câmera na janela compacta e confirme os dados do aparelho antes do pareamento. Para um aparelho salvo, use **Aparelhos anteriores > Conectar**. A digitação manual de IP e chave continua disponível.
@@ -265,7 +290,7 @@ Requer Android SDK API 36, Java 17, Gradle 8.13. O repositório ainda não inclu
 gradle :app:testDebugUnitTest :app:assembleDebug
 ```
 
-APK local de teste: `app/build/outputs/apk/debug/app-debug.apk`. O workflow copia esse arquivo ou o Release assinado como **`MonitorRemoto-v0.1.0-alpha.58.apk`**. Baixe diretamente na aba GitHub **Releases**. **O APK não está incluído neste ZIP de código-fonte.** Veja `docs/PAIRING_QR.md` para segurança do QR.
+APK local de teste: `app/build/outputs/apk/debug/app-debug.apk`. O workflow copia esse arquivo ou o Release assinado como **`MonitorRemoto-v0.1.0-alpha.61.apk`**. Baixe diretamente na aba GitHub **Releases**. **O APK não está incluído neste ZIP de código-fonte.** Veja `docs/PAIRING_QR.md` para segurança do QR.
 
 Opcional: configure os quatro Secrets de assinatura para gerar APK Release assinado e AAB. Ver `docs/APK_DOWNLOAD.md`. Preservar a mesma keystore entre builds é essencial para atualizações sem reinstalação.
 

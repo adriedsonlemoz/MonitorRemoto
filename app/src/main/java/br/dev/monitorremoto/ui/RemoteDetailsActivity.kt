@@ -184,16 +184,18 @@ class RemoteDetailsActivity : Activity() {
             else String.format(Locale.getDefault(), "%.${digits}f %s", data.optDouble(key), unit)
 
         section(R.drawable.ic_battery, "Bateria") { card ->
-            val state = when {
-                battery?.optBoolean("full") == true -> "Cheia"
-                battery?.optBoolean("charging") == true -> "Carregando"
-                else -> "Descarregando"
-            }
+            val state = battery?.optString("state")?.takeIf {
+                it in setOf("Carregando", "Descarregando", "Cheia", "Não carregando")
+            } ?: "Desconhecido"
+            val supply = battery?.optString("powerSource")?.takeIf {
+                it in setOf("Tomada", "USB", "Sem fio", "Base")
+            } ?: "Não informada"
             pair(card, "Carga" to decimal(battery, "levelPercent", "%", 0),
                 "Temperatura" to decimal(battery, "temperatureC", "°C"))
             pair(card, "Estado" to state,
                 "Tensão" to if (battery?.has("voltageMv") == true && !battery.isNull("voltageMv"))
                     "${battery.optInt("voltageMv")} mV" else "Não disponível")
+            row(card, "Alimentação", supply)
             pair(card, "Corrente atual" to decimal(battery, "currentMa", "mA", 0),
                 "Corrente média" to decimal(battery, "averageMa", "mA", 0))
             card.addView(text("Corrente e tensão são leituras fornecidas pelo Android; podem variar conforme o hardware.", 10.5f, muted = true))

@@ -109,6 +109,25 @@ internal class RemoteConnectionManager(context: Context) {
         }
     }
 
+    /** Resposta ignorada se o aparelho selecionado mudou durante a operação. */
+    fun deviceControl(host: String, action: String, seconds: Int = 0,
+        confirmation: String = "", onComplete: (Result<JSONObject>) -> Unit) {
+        val key = if (host.isBlank()) null else RecentDevices.key(appContext, host)
+        if (key == null || state != "connected" || cachedHost != host) {
+            onComplete(Result.failure(IllegalStateException("Atualize a conexão antes de comandar.")))
+            return
+        }
+        val accessMethod = method
+        thread(name = "MonitorRemoto-device-control") {
+            val response = runCatching { RemoteClient.deviceControl(host, key, appContext, accessMethod,
+                action, seconds, confirmation) }
+            main.post {
+                if (state == "connected" && cachedHost == host &&
+                    br.dev.monitorremoto.core.SettingsStore.getRemoteHost(appContext) == host) onComplete(response)
+            }
+        }
+    }
+
     /**
      * Callback receives (finished, freshSnapshot). When finished is false the state became loading.
      * A failed request can still have [cached] for the same host, but it is not marked as live data.

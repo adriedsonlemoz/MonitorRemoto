@@ -16,7 +16,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.58" and code.group(1) == "58", "Versões incompatíveis"
+assert version == "0.1.0-alpha.61" and code.group(1) == "61", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -192,7 +192,7 @@ assert 'ACCESS_CHANNEL' in service and 'IMPORTANCE_DEFAULT' in service
 assert 'SettingsStore.isMonitorEnabled(this) && !MonitorService.isServiceActive' in ui
 assert 'private fun recoverAuthorizedServiceIfStopped()' in ui
 assert 'renderSettingsModule()' in ui and 'openSettingsModule()' in ui
-assert 'private fun MainActivity.compactMetricCard(' in ui and 'minimumHeight = dp(115)' in ui
+assert 'private fun MainActivity.compactMetricCard(' in ui and 'minimumHeight = dp(125)' in ui
 assert (root / 'app/src/test/java/br/dev/monitorremoto/transport/AppVersionTest.kt').is_file()
 assert len(list((root / 'app/src/main/res/drawable').glob('ic_*.xml'))) >= 10
 print('PASSOU: alpha.20, versão exata, disconnect, notificação, Activity de acesso e UI vetorial')
@@ -820,3 +820,67 @@ assert '<uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"' n
 assert 'RemoteCatalogActivity" android:exported="false"' in (root / 'app/src/main/AndroidManifest.xml').read_text()
 assert 'RemoteCatalogActivity::class.java' in (ui_root / 'RemoteDashboardUi.kt').read_text()
 print('PASSOU: alpha.58, notificações e apps autorizados sob demanda')
+
+# Alpha.59: telemetria somente do Android, sem permissões/comandos extras.
+telemetry59 = (root / 'app/src/main/java/br/dev/monitorremoto/core/BatteryTelemetry.kt').read_text()
+battery59 = (root / 'app/src/main/java/br/dev/monitorremoto/core/BatteryReader.kt').read_text()
+ui59 = (ui_root / 'RemoteDashboardUi.kt').read_text()
+details59 = (ui_root / 'RemoteDetailsActivity.kt').read_text()
+for token in ['fun percentage(', 'fun state(', 'fun powerSource(', 'fun showChargingIndicator(', '"Não carregando"', '"Desconhecido"']:
+    assert token in telemetry59, 'alpha.59: sem telemetria ' + token
+for token in ['ACTION_BATTERY_CHANGED', 'BatteryManager.EXTRA_STATUS', 'BatteryManager.EXTRA_PLUGGED', 'BatteryTelemetry.percentage', 'BatteryTelemetry.state', 'BatteryTelemetry.powerSource', '"chargingIndicator"', '"charging"', '"full"']:
+    assert token in battery59, 'alpha.59: snapshot sem ' + token
+assert 'statusLine' in ui59 and 'chargingIndicator' in ui59 and '⚡' in ui59
+assert 'R.drawable.ic_battery_charging' in ui59
+plain_icon = (root / 'app/src/main/res/drawable/ic_battery.xml').read_text()
+charging_icon = (root / 'app/src/main/res/drawable/ic_battery_charging.xml').read_text()
+assert 'M11,8 L8,13 L12,13 L10,16' not in plain_icon
+assert 'M11,8 L8,13 L12,13 L10,16' in charging_icon
+assert '"Alimentação"' in details59 and '"Desconhecido"' in details59
+assert (root / 'app/src/test/java/br/dev/monitorremoto/core/BatteryTelemetryTest.kt').is_file()
+assert 'android.permission.BATTERY_STATS' not in manifest
+print('PASSOU: alpha.59, bateria com estado/fonte conservadores, indicador e teste unitário')
+
+# Alpha.60: ações físicas nunca concedidas implicitamente ao parear.
+policy60 = (root / 'app/src/main/java/br/dev/monitorremoto/core/DeviceControlPolicy.kt').read_text()
+control60 = (root / 'app/src/main/java/br/dev/monitorremoto/core/RemotePhysicalControls.kt').read_text()
+ui60 = (ui_root / 'RemotePhysicalControlsUi.kt').read_text()
+settings60 = (ui_root / 'SettingsScreenUi.kt').read_text()
+service60 = (root / 'app/src/main/java/br/dev/monitorremoto/service/MonitorService.kt').read_text()
+assert '"remote_sound", false' in settings and '"remote_torch", false' in settings
+assert 'setAllowRemoteSound' in settings and 'setAllowRemoteTorch' in settings
+assert 'DeviceControlPolicy.permitted' in server and 'DeviceControlPolicy.valid' in server
+assert '"deviceControl"' in server and 'RemotePhysicalControls.startSound' in server
+assert 'RemotePhysicalControls.setTorch' in server and 'RemotePhysicalControls.stopSound' in server
+assert 'RemotePhysicalControls.shutdown()' in service60
+assert 'ToneGenerator(AudioManager.STREAM_ALARM, 70)' in control60
+assert 'setTorchMode' in control60 and 'CameraManager.TorchCallback' in control60
+assert all(f'"{action}"' in policy60 for action in ("status", "soundStart", "soundStop", "torchOn", "torchOff"))
+assert '5, 10, 20, 30' in policy60 and 'seconds in durations' in policy60
+assert 'showRemotePhysicalDialog' in ui60 and 'remoteConnection.deviceControl' in ui60
+assert 'Permitir alerta sonoro remoto' in settings60 and 'Permitir lanterna remota' in settings60
+assert 'Tocar som' in ui59 and 'Lanterna' in ui59
+assert '<uses-permission android:name="android.permission.CAMERA"' in manifest
+assert '<uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"' not in manifest
+assert (root / 'app/src/test/java/br/dev/monitorremoto/core/DeviceControlPolicyTest.kt').exists()
+print('PASSOU: alpha.60, controles autenticados, opt-in separados, estados hardware e testes de política')
+
+# Alpha.61: force-lock Ã© estritamente opcional, limitado a polÃ­tica Android Ãºnica.
+lock_policy = (root / 'app/src/main/java/br/dev/monitorremoto/core/DeviceControlPolicy.kt').read_text()
+lock_runtime = (root / 'app/src/main/java/br/dev/monitorremoto/core/RemoteScreenLock.kt').read_text()
+lock_ui = (ui_root / 'RemoteScreenLockUi.kt').read_text()
+lock_xml = (root / 'app/src/main/res/xml/monitor_lock_admin.xml').read_text()
+assert '"remote_lock", false' in settings and 'fun setAllowRemoteLock' in settings
+assert '<force-lock />' in lock_xml and '<wipe-data' not in lock_xml and '<reset-password' not in lock_xml
+assert 'android.permission.BIND_DEVICE_ADMIN' in manifest and '@xml/monitor_lock_admin' in manifest
+assert 'DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN' in settings60
+assert 'DeviceControlPolicy.valid(action, seconds, confirmation)' in server
+assert 'DeviceControlPolicy.permitted' in server and 'SettingsStore.allowRemoteLock(context)' in server
+assert 'RemoteScreenLock.requestLock(context)' in server
+assert 'LOCK_CONFIRMATION = "BLOQUEAR"' in lock_policy and '"lockNow" -> lockAllowed' in lock_policy
+assert 'requirement(app) == null' in lock_runtime and 'lockNow()' in lock_runtime
+assert 'secureLockConfigured' in lock_runtime and 'adminActive' in lock_runtime
+assert 'showRemoteLockDialog()' in ui59 and 'Digite BLOQUEAR' in lock_ui
+assert 'remoteConnection.deviceControl(host, action, 0, confirmation)' in lock_ui
+assert 'Bloqueio remoto' in settings60
+print('PASSOU: alpha.61, DeviceAdmin apenas force-lock, opt-in local e confirmação digitada')

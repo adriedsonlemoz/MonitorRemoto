@@ -66,6 +66,20 @@
             </intent-filter>
         </activity>
 
+        <!-- Administrador opcional ativado APENAS na tela oficial do Android.
+             Política única force-lock: não altera senhas nem apaga arquivos. -->
+        <receiver android:name=".core.MonitorLockAdminReceiver"
+            android:label="Monitor Remoto - Bloquear tela"
+            android:description="@string/lock_admin_description"
+            android:permission="android.permission.BIND_DEVICE_ADMIN"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
+            </intent-filter>
+            <meta-data android:name="android.app.device_admin"
+                android:resource="@xml/monitor_lock_admin" />
+        </receiver>
+
         <!-- Job de contingência: apenas monitoramento explicitamente autorizado. -->
         <service android:name=".service.RecoveryJobService"
             android:permission="android.permission.BIND_JOB_SERVICE"

@@ -1,3 +1,40 @@
+# Monitor Remoto v0.1.0-alpha.61
+
+## Bloqueio remoto com duplo consentimento
+
+- Cartão **Bloquear** e confirmação digitada BLOQUEAR no controlador, sem execução por toque acidental.
+- Autorização independente no monitorado, desligada por padrão, além da ativação manual do administrador pelo Android.
+- Somente política `force-lock`, sem reset de senhas, exclusão de dados ou ADB arbitrário.
+- Recusa quando não há PIN/padrão/senha ou administrador ativado; intervalo mínimo de 15 s. Resposta informa aceitação, sem alegar confirmação do bloqueio físico.
+- Preservados Tocar som, Lanterna, bateria e demais recursos. Validação estrutural/JVM local disponível; build e ensaios Android reais pendentes.
+
+---
+
+# Monitor Remoto v0.1.0-alpha.60
+
+## Tocar som e Lanterna
+
+- Dois novos cartões no painel remoto, com pop-ups compactos e confirmação do status obtido do aparelho monitorado.
+- Em **Configurações > Som e lanterna**, no telefone monitorado, ative separadamente as permissões locais. Por padrão ambas estão desativadas.
+- **Tocar som**: escolher 5, 10, 20 ou 30 segundos, Iniciar som / Interromper, autoencerramento. Respeita o volume do canal alarme e as políticas do sistema; a tentativa iniciada não é prova de que ficou audível.
+- **Lanterna**: ligar/desligar o flash traseiro via Camera2, com atualização de estado real por TorchCallback. Flash ocupado, ausência de hardware ou permissão Câmera sem concessão podem bloquear. `Desconhecida` significa que o Android ainda não confirmou o estado.
+- Ações utilizam somente a rede local autenticada AES-GCM e mesmo versionName. Parar o serviço interrompe o som e tenta desligar somente a lanterna ligada por ele. Nenhum comando ADB livre foi criado.
+- APK/compilação Android completos e testes com dois celulares permanecem pendentes; este ZIP contém código-fonte.
+
+---
+
+# Monitor Remoto v0.1.0-alpha.59
+
+## Cartão de bateria do celular remoto
+
+- No painel remoto, **Bateria** mostra percentual, estado real e origem elétrica quando informada, por exemplo `72% ⚡ / Carregando · USB`.
+- `Descarregando`, `Cheia`, `Não carregando` e `Desconhecido` correspondem a estados distintos do Android, sem atribuição automática de descarga quando não há leitura.
+- São exibidos somente os dados do broadcast `ACTION_BATTERY_CHANGED` enviado pelo monitorado na consulta autenticada já existente. Temperatura e Rede seguem no painel. Detalhes inclui Alimentação.
+- Nenhuma nova permissão, código de controle remoto, câmera ou ADB. **Tocar som e Lanterna não implementados nesta versão**, aguardando controles locais e testes seguros.
+- Ambos os aparelhos devem usar exatamente alpha.59. Compilação Android e testes físicos são pendentes até serem executados.
+
+---
+
 ### Alpha.58 · notificações e aplicativos
 
 - Tela de Notificações redesenhada e diagnóstico para eventos ausentes.
@@ -5,7 +42,7 @@
 - Nova lista de aplicativos com acesso autorizado no monitorado, disponível sob demanda e sem alterações remotas.
 - Build completo e validação em aparelhos pendentes.
 
-# Monitor Remoto v0.1.0-alpha.58
+# Monitor Remoto v0.1.0-alpha.59
 
 ## Gerenciador remoto SAF e manutenção
 

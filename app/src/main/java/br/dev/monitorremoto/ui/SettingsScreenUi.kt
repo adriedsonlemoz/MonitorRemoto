@@ -33,6 +33,8 @@ internal fun MainActivity.renderSettingsModule() {
         "apps" to "Aplicativos instalados",
         "sms" to "SMS e telefonia",
         "service" to "Serviço e recuperação",
+        "physical" to "Som e lanterna",
+        "lock" to "Bloqueio remoto",
         "files" to "Arquivos e recuperação",
         "screen" to "Tela e controle remoto",
         "appearance" to "Aparência",
@@ -69,6 +71,10 @@ internal fun MainActivity.renderSettingsModule() {
         val groupB = panel(15)
         groupB.addView(label("APARELHO E MANUTENÇÃO", 11.5f, strong = true, muted = true))
         sectionGap(groupB, 10)
+        settingsEntry(groupB, R.drawable.ic_flashlight, "Som e lanterna",
+            "Autorizações para localizar e ligar o flash", "physical")
+        settingsEntry(groupB, R.drawable.ic_shield, "Bloqueio remoto",
+            "Permissão Android e autorização local", "lock")
         settingsEntry(groupB, R.drawable.ic_power, "Serviço e recuperação",
             "Inicialização, retomada e funcionamento", "service")
         settingsEntry(groupB, R.drawable.ic_activity, "Diagnóstico",
@@ -92,6 +98,8 @@ internal fun MainActivity.renderSettingsModule() {
             "apps" -> fillAppsSettings(page)
             "sms" -> fillSmsSettings(page)
             "screen" -> fillScreenSettings(page)
+            "physical" -> fillPhysicalControlSettings(page)
+            "lock" -> fillRemoteLockSettings(page)
             "files" -> fillFileRecoverySettings(page)
             "service" -> fillServiceSettings(page)
             "security" -> fillSecuritySettings(page)
@@ -273,6 +281,103 @@ private fun MainActivity.fillSmsSettings(layout: LinearLayout) {
             }
         }
     })
+}
+
+private fun MainActivity.fillPhysicalControlSettings(layout: LinearLayout) {
+    dialogIntro(layout, "Autorizações somente neste aparelho. O controlador deve ter a chave pareada e a mesma versão do app. Nenhum controle funciona se o serviço estiver parado.")
+    layout.addView(iconMenuRow(R.drawable.ic_bell, "Permitir alerta sonoro remoto",
+        if (SettingsStore.allowRemoteSound(this)) "Autorizado · máximo 30 s" else "Desativado por padrão") {
+        if (SettingsStore.allowRemoteSound(this)) {
+            SettingsStore.setAllowRemoteSound(this, false)
+            openSettingsSection("physical")
+        } else showAppConfirm("Autorizar alerta sonoro?",
+            "Quem possuir a chave de pareamento poderá tocar um alerta por 5, 10, 20 ou 30 segundos. O som segue o volume, Não Perturbe e restrições do Android. Pode ser interrompido no aparelho controlador ou revogando esta opção aqui.",
+            R.drawable.ic_bell, "Autorizar") {
+            SettingsStore.setAllowRemoteSound(this, true)
+            openSettingsSection("physical")
+        }
+    })
+    sectionGap(layout, 10)
+    layout.addView(iconMenuRow(R.drawable.ic_flashlight, "Permitir lanterna remota",
+        if (SettingsStore.allowRemoteTorch(this)) "Autorizada · pode estar ocupada" else "Desativada por padrão") {
+        if (SettingsStore.allowRemoteTorch(this)) {
+            SettingsStore.setAllowRemoteTorch(this, false)
+            openSettingsSection("physical")
+        } else showAppConfirm("Autorizar lanterna remota?",
+            "Quem possuir a chave de pareamento poderá ligar ou desligar o flash traseiro. " +
+                "A permissão Câmera precisa estar concedida neste aparelho. O Android pode negar se outra câmera estiver ocupada. O flash remoto é desligado ao encerrar o serviço.",
+            R.drawable.ic_flashlight, "Autorizar") {
+            SettingsStore.setAllowRemoteTorch(this, true)
+            openSettingsSection("physical")
+        }
+    })
+    sectionGap(layout, 12)
+    val cameraGranted = checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+    layout.addView(iconMenuRow(R.drawable.ic_remote_camera, "Permissão Câmera do Android",
+        if (cameraGranted) "Concedida" else "Não concedida · necessária para o flash em alguns aparelhos") {
+        startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+            android.net.Uri.parse("package:$packageName")))
+    })
+    sectionGap(layout, 8)
+    layout.addView(label("O Monitor Remoto não liga câmera nem microfone por estas funções. Tocar som não aumenta o volume e a lanterna pode consumir bastante bateria.", 12f, muted = true))
+}
+
+
+/** Duplo consentimento: administrador Android pelo usuário e chave local independente. */
+private fun MainActivity.fillRemoteLockSettings(layout: LinearLayout) {
+    val admin = br.dev.monitorremoto.core.RemoteScreenLock.adminActive(this)
+    val secure = br.dev.monitorremoto.core.RemoteScreenLock.secureLockConfigured(this)
+    val supported = br.dev.monitorremoto.core.RemoteScreenLock.supported(this)
+    val enabled = SettingsStore.allowRemoteLock(this)
+    layout.addView(iconSectionHeader(R.drawable.ic_shield, "Bloqueio remoto", "Somente com autorização neste celular"))
+    sectionGap(layout, 9)
+    layout.addView(label("Requer administrador de dispositivo autorizado pelo Android e PIN, padrão ou senha já configurados. Não altera senha nem substitui biometria. O bloqueio pode impedir acesso a celulares sem botão Power.", 12.5f, muted = true))
+    sectionGap(layout, 12)
+    layout.addView(iconMenuRow(R.drawable.ic_shield, "Administrador do Android", when {
+        !supported -> "Não suportado neste aparelho"
+        admin -> "Ativo · revogue nas Configurações do Android"
+        else -> "Desativado · ativação manual necessária"
+    }) {
+        if (!supported) {
+            message("Este dispositivo Android não oferece a função necessária.")
+        } else if (admin) {
+            showAppNotice("Administrador ativado",
+                "Para revogar, abra Configurações do Android › Segurança › Apps de administração do dispositivo. O Monitor Remoto não desativa a proteção do sistema por comando remoto.")
+        } else showAppConfirm("Ativar administrador para bloqueio?",
+            "O Android abrirá a tela oficial para você aprovar ou recusar. O Monitor Remoto solicita somente a política de bloquear a tela: não pode apagar dados nem definir senhas. A chave de autorização remota continuará desligada até sua ativação separada.",
+            R.drawable.ic_shield, "Abrir autorização Android") {
+            val intent = Intent(android.app.admin.DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN)
+                .putExtra(android.app.admin.DevicePolicyManager.EXTRA_DEVICE_ADMIN,
+                    br.dev.monitorremoto.core.RemoteScreenLock.adminComponent(this))
+                .putExtra(android.app.admin.DevicePolicyManager.EXTRA_ADD_EXPLANATION,
+                    "Apenas bloqueio remoto da tela após confirmação no outro celular.")
+            runCatching { startActivity(intent) }.onFailure { message("Não foi possível abrir a autorização do Android.") }
+        }
+    })
+    sectionGap(layout, 10)
+    layout.addView(iconMenuRow(R.drawable.ic_shield, "Bloqueio seguro do Android",
+        if (secure) "PIN, padrão ou senha configurados" else "Configure proteção de tela no Android") {
+        runCatching { startActivity(Intent(Settings.ACTION_SECURITY_SETTINGS)) }
+            .onFailure { message("Abra Configurações › Segurança e configure a tela de bloqueio.") }
+    })
+    sectionGap(layout, 10)
+    layout.addView(iconMenuRow(R.drawable.ic_shield, "Permitir bloqueio remoto",
+        if (enabled) "Autorizado · toque para revogar" else "Desativado por padrão") {
+        if (enabled) {
+            SettingsStore.setAllowRemoteLock(this, false)
+            openSettingsSection("lock")
+        } else if (!supported || !admin || !secure) {
+            showAppNotice("Autorização incompleta",
+                "Primeiro ative o administrador pelo Android e configure PIN, padrão ou senha. Depois volte a esta tela e autorize o comando.")
+        } else showAppConfirm("Autorizar bloqueio remoto?",
+            "Qualquer controlador com a chave de pareamento poderá solicitar o bloqueio após confirmação digitada. Isto pode apagar a tela e exigir PIN, senha ou padrão para desbloquear. Não habilite se não puder acordar/desbloquear este celular.",
+            R.drawable.ic_shield, "Autorizar bloqueio") {
+            SettingsStore.setAllowRemoteLock(this, true)
+            openSettingsSection("lock")
+        }
+    })
+    sectionGap(layout, 10)
+    layout.addView(label("Para revogar imediatamente, desative a opção acima ou pare o monitoramento. Também é possível remover o administrador pelas Configurações do Android.", 12f, muted = true))
 }
 
 private fun MainActivity.fillScreenSettings(layout: LinearLayout) {

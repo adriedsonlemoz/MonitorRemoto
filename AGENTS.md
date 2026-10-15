@@ -1,4 +1,4 @@
-# Monitor Remoto 0.1.0-alpha.58
+# Monitor Remoto 0.1.0-alpha.61
 # Convenções permanentes do projeto Monitor Remoto
 
 - Toda alteração de código incrementa sequencialmente `versionCode` e `versionName` (ex.: `0.1.0-alpha.8` -> `0.1.0-alpha.9`). Sincronizar tela, README, CHANGELOG, RELEASE_NOTES e documentação.
@@ -21,7 +21,7 @@
 - Alpha.10: manter tema **claro padrão**, as opções da engrenagem, janela Conectar, botão de atualização compacto, lista de até 5 aparelhos recentes e os dados do Controle no topo. Não reintroduzir formulário longo na tela principal.
 - Credenciais por dispositivo usam `RecentDevices` + `SecretVault.profileKeyName`, com migração única da alpha.9. Não reaproveitar `CONTROLLER_KEY` antigo para IPs novos nem gravar segredo em preferências sem criptografia. Esquecer apaga o segredo correspondente.
 - Respostas HTTP/TCP não são conexão persistente. Exibir "Conectado" apenas após consulta autenticada bem-sucedida e "Sem resposta" após erro. Não inventar tempos de atualização.
-- Próxima versão sequencial: `0.1.0-alpha.59`, `versionCode 59`.
+- Próxima versão sequencial: `0.1.0-alpha.62`, `versionCode 62`.
 
 - Alpha.15: preservar a seleção Conectar → QR/Manual/Salvos, confirmação do QR antes de parear, cartões salvos com três ações e o scanner em Activity com tema Dialog.
 
@@ -116,3 +116,9 @@
 
 - Alpha.58: Notificações passam a ter tela própria com cartões no estilo Detalhes, atualização autenticada sob demanda e indicadores separados de permissão, listener e filtros. `NotificationCaptureService` recarrega somente notificações **ainda ativas** após o listener reconectar e solicita rebind apenas quando monitoramento autorizado. Não criar armazenamento histórico persistente nem incluir notificações sensíveis no snapshot.
 - Alpha.58: novo catálogo de aplicativos **visíveis no lançador**, sob autorização local desligada por padrão. Endpoint `appsList` cifrado/authenticated, somente leitura, até 120 nomes e pacotes, sem `QUERY_ALL_PACKAGES`, nem iniciar, desinstalar ou extrair dados dos apps.
+
+- Alpha.59: `BatteryReader` envia estados e fonte de `ACTION_BATTERY_CHANGED` com indicadores explícitos em snapshot autenticado; não inferir descarga a partir de `NOT_CHARGING` nem inferir fonte a partir de corrente. `BatteryTelemetry` é puro e possui testes JVM; manter `charging`/`full` antigos. Cartão compacto mostra estado/fonte e ⚡ somente com confirmação. `RemoteDetailsActivity` não deve usar fallback falso “Descarregando”. Tocar som e Lanterna continuam na fila; não introduzir comando remoto sem controle local, consentimento e testes.
+
+- Alpha.60: Tocar som e Lanterna usam somente operações AES-GCM `deviceControl` explicitamente permitidas, com `status`, `soundStart`, `soundStop`, `torchOn`, `torchOff`. Nenhum comando ADB, câmera aberta, gravação ou permissão invasiva. Duas autorizações locais independentes, OFF por padrão. Alerta em STREAM_ALARM por 5/10/20/30 segundos, parar manual e ao revogar/desativar serviço, sem subir volume ou ignorar Não Perturbe. Lanterna via CameraManager.setTorchMode/CameraManager.TorchCallback, estado real `ligada/desligada/indisponível/desconhecida` sem assumir sucesso imediato; ao parar serviço desligar apenas se este serviço a tiver ativado. Falhas de CAMERA e câmera ocupada devem ser comunicadas; teste de hardware e build Android são requisitos antes de afirmar compatibilidade plena. Próxima alpha.61.
+
+- Alpha.61: bloquear tela somente com `DevicePolicyManager.lockNow` após `ACTION_ADD_DEVICE_ADMIN` concedido localmente para Receiver estável com SOMENTE `<force-lock/>`, senha/PIN/padrão configurados e preferência `remote_lock=false` por padrão. O controlador exige digitar BLOQUEAR; endpoint `deviceControl` exige confirmação exata e rate-limit 15s. É solicitação aceita, não comprovação do bloqueio. Não adicionar resetPassword, wipeData, shell ADB ou ativação automática de administrador. Usuário pode revogar no sistema e no app. Build/hardware pendentes. Próxima alpha.62.

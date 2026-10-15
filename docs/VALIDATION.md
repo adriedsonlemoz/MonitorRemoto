@@ -1,3 +1,21 @@
+## Alpha.61 · bloqueio remoto (15/10/2026)
+
+- [x] Código fonte da alpha.60 preservado e versionCode/versionName incrementados.
+- [x] DeviceAdminReceiver com política única force-lock; não há reset-password nem wipe-data.
+- [x] Autorização local padrão OFF, ativação Android pela tela oficial, PIN/senha/padrão necessários.
+- [x] Confirmação digitada e validada no cliente e servidor, rate limit, retorno de solicitação conservador.
+- [ ] Compilação Android/Gradle completa ainda pendente.
+- [ ] Teste real em dois Android e revogação DeviceAdmin pendentes.
+
+## Alpha.59 (14/10/2026) — cartão de bateria
+
+- `python3 tools/check_distribution.py`: **aprovado**, regressões das versões anteriores e novos invariantes de telemetria/ícones.
+- `kotlinc` isolado em `BatteryTelemetry.kt` com runner JVM: **29 casos aprovados**, contemplando escala, limites, cinco estados do Android, fontes e indicador.
+- Parser Kotlin PSI (Kotlin 1.9): **90 fontes Kotlin do app sem erros sintáticos**. Não resolve símbolos nem equivale a Gradle/Android.
+- XML: **41 arquivos Android válidos**. JSON: parsing aprovado. Integridade ZIP/CRC verificada na etapa de empacotamento.
+- **Não executados:** Gradle `:app:testDebugUnitTest` e `:app:assembleDebug`, porque o projeto principal não inclui wrapper Gradle e o SDK Android não está instalado neste ambiente. Assim, os novos testes JUnit existem, mas não foram executados como suite Gradle.
+- **Não executados:** instalação, teste USB/AC/sem fio em hardware real, latência/consumo, regressão em dois Androids, telas claro/escuro. Não afirmar que esses ensaios passaram.
+
 ## Alpha.54 — correção do workflow 52 (14/10/2026)
 
 - Evidência: log fornecido pelo usuário, workflow *Gerar APK e Release 52*. Erro em `:app:compileDebugKotlin`: `MainActivity.kt:192:9 Unresolved reference 'lastRecoveryAttemptMs'`.
@@ -518,3 +536,10 @@ As seções abaixo são registros históricos de versões anteriores, não o sta
 - 41 arquivos XML lidos com ElementTree e workflow YAML válido com PyYAML.
 - Verificar integridade/CRC do ZIP de código-fonte após empacotar.
 - PENDENTE: `:app:testDebugUnitTest :app:assembleDebug` no GitHub Actions; este ambiente não possui wrapper Gradle nem build Android completo. Não foram realizados testes físicos do heartbeat, nomes do fabricante, toque com tela bloqueada nem da latência JPEG/H.264.
+
+
+## Alpha.60 · 14/10/2026
+
+- Alterações: controle físico de som e lanterna em AES-GCM com lista fechada e opt-in local separado.
+- Testes locais: scripts de validação e testes de política JVM (veja relatório final da entrega).
+- **Não comprovados**: build Android integral, execução da UI e chamada real de ToneGenerator/Camera2 em aparelhos físicos. Sem APK gerado aqui.

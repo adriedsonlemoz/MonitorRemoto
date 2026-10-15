@@ -17,6 +17,10 @@ object SettingsStore {
         br.dev.monitorremoto.service.RecoveryScheduler.refresh(context)
         if (!enabled) recordRecoveryEvent(context, "Monitoramento interrompido localmente")
         // Nunca reutilizar eventos da sessão anterior, mesmo com uma captura em trânsito.
+        if (!enabled) {
+            RemotePhysicalControls.stopSound()
+            RemotePhysicalControls.stopOwnedTorch()
+        }
         if (!enabled || !wasEnabled) {
             EventJournal.clear()
             NotificationReplyActions.clear()
@@ -83,6 +87,23 @@ object SettingsStore {
     fun allowRemoteWake(context: Context) = prefs(context).getBoolean("remote_wake", false)
     fun setAllowRemoteWake(context: Context, enabled: Boolean) =
         prefs(context).edit().putBoolean("remote_wake", enabled).apply()
+
+    /** Ações físicas são autorizadas separadamente no telefone monitorado; OFF por padrão. */
+    fun allowRemoteSound(context: Context) = prefs(context).getBoolean("remote_sound", false)
+    fun setAllowRemoteSound(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean("remote_sound", enabled).apply()
+        if (!enabled) RemotePhysicalControls.stopSound()
+    }
+    fun allowRemoteTorch(context: Context) = prefs(context).getBoolean("remote_torch", false)
+    fun setAllowRemoteTorch(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean("remote_torch", enabled).apply()
+        if (!enabled) RemotePhysicalControls.stopOwnedTorch()
+    }
+
+    /** O administrador Android e este opt-in são requisitos independentes; OFF por padrão. */
+    fun allowRemoteLock(context: Context) = prefs(context).getBoolean("remote_lock", false)
+    fun setAllowRemoteLock(context: Context, enabled: Boolean) =
+        prefs(context).edit().putBoolean("remote_lock", enabled).apply()
 
     /** No controlador: solicitar acordar uma vez ao abrir Ver tela. OFF por padrão. */
     fun autoWakeOnView(context: Context) = prefs(context).getBoolean("auto_wake_view", false)

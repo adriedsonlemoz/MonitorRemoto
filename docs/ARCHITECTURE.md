@@ -1,4 +1,4 @@
-# Arquitetura (0.1.0-alpha.58)
+# Arquitetura (0.1.0-alpha.61)
 
 ```text
 MONITORADO                                      CONTROLE
@@ -31,9 +31,9 @@ A captura usa `ImageReader` RGBA, `Bitmap` JPEG com largura máxima 540 px, taxa
 
 ## Distribuição e assinatura
 
-O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.58` e `versionCode=58`.
+O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.61` e `versionCode=61`.
 
-- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.58.apk`.
+- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.61.apk`.
 - `upload-artifact` sempre distribui um ZIP; GitHub Releases recebe o **arquivo APK direto**.
 - Com quatro Secrets, Gradle gera APK Release assinado e AAB. Sem Secrets, o arquivo é Debug de teste e não preserva necessariamente a assinatura entre execuções.
 - Releases são prévias, não substituem a futura revisão da Google Play e nem os ensaios reais.
@@ -224,3 +224,16 @@ A sessão ADB é detida no processo, não em um serviço. Ao sair do visualizado
 ## Catálogos remotos (alpha.58)
 
 `RemoteCatalogActivity` abre somente após seleção de aparelho pareado e consulta o snapshot autenticado ou `appsList` AES-GCM. `NotificationCaptureService` sinaliza estado em `NotificationCaptureStatus` (RAM), reintegra apenas eventos ainda ativos após reconexão e mantém filtros de segurança. `InstalledAppsReader` retorna até 120 atividades de lançador (únicas por pacote), sujeitas à visibilidade de pacotes Android. `SettingsStore.shareInstalledApps()` é um opt-in local revogável; a resposta ao cliente é sempre autenticada e não altera aplicativos.
+
+## Telemetria de bateria (alpha.59)
+
+No monitorado, `BatteryReader.snapshot` lê o sticky broadcast `ACTION_BATTERY_CHANGED` no mesmo momento da solicitação `snapshot` e calcula percentual validado a partir de `EXTRA_LEVEL/EXTRA_SCALE`. O objeto `BatteryTelemetry` traduz `EXTRA_STATUS` (2 carregando, 3 descarregando, 4 não carregando, 5 cheia, demais desconhecido), e `EXTRA_PLUGGED` (1 AC, 2 USB, 4 sem fio, 8 dock) sem inventar fonte para códigos não reconhecidos. O retorno é um snapshot cifrado com a chave já pareada, sem listener contínuo, permissões adicionais nem aumento de frequência de polling. `state`, `statusCode`, `powerSource`, `pluggedCode`, `chargingIndicator` são campos novos; `charging`/`full` permanecem disponíveis.
+
+O painel Controller apresenta texto secundário em seu cartão de bateria e um indicador ⚡ quando o Android confirmou carga (ou cheia ligada a fonte reconhecida). `NOT_CHARGING` não é equivalente a `DISCHARGING`. Dados em cache permanecem rotulados conforme estado de conexão. A Activity de detalhes mostra a alimentação informada pelo Android. Verificações com cabo USB, tomada, Qi, bateria cheia, aparelho descarregando e dados incompletos ainda dependem de testes físicos.
+
+
+## Alpha.60: controles físicos autenticados
+
+O `RemoteClient.deviceControl` envia somente `status`, `soundStart`, `soundStop`, `torchOn` ou `torchOff` pelo `WireProtocol` AES-GCM, com chave de pareamento, nonce, timestamp e exigência de `AppVersion` exata. A resposta contém `ok`, mensagem e `status`. `DeviceControlPolicy` fecha allowlist e tempos permitidos. `MonitorServer` revalida as duas autorizações locais do `SettingsStore` a cada comando; a consulta de status não altera hardware.
+
+O `RemotePhysicalControls`, propriedade lógica do `MonitorService`, mantém o alarme ToneGenerator e o callback Camera2. O som para no limite escolhido, na revogação ou no encerramento do serviço. TorchCallback é a fonte de estado; `setTorchMode()` não confirma imediatamente que o flash mudou. O servidor não abre câmera nem transmite fotos, não altera volume e não tenta ignorar Não Perturbe. Controles novos ficam na página **Configurações > Som e lanterna**, padrão desativado. Build Android e testes físicos pendentes.

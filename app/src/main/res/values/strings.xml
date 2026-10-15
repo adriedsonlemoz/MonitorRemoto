@@ -1,3 +1,4 @@
 <resources>
     <string name="remote_touch_description">Permite executar toques remotos durante sessão de tela autorizada e quando o controle remoto estiver habilitado neste aparelho. Não lê o conteúdo de elementos da tela.</string>
+    <string name="lock_admin_description">Permite somente bloquear a tela deste celular após autorização local e solicitação remota confirmada. Não acessa senhas nem apaga dados.</string>
 </resources>

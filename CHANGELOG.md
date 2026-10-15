@@ -1,3 +1,27 @@
+## 0.1.0-alpha.61 (versionCode 61)
+
+- Bloqueio remoto restrito por `DevicePolicyManager.lockNow`, política única `force-lock`, administrador habilitado manualmente no sistema, PIN/senha/padrão já configurados e autorização local independente OFF por padrão.
+- Card Bloquear no controlador com confirmação digitada BLOQUEAR, transmissão AES-GCM já existente, mínimo 15s entre solicitações e resposta conservadora sem alegar execução comprovada.
+- Novos XML/Receiver e cobertura de política/consentimento no verificador estrutural. Funções anteriores preservadas.
+- Compilação APK Android e testes com aparelho real ainda pendentes.
+
+## 0.1.0-alpha.60 (14/10/2026)
+
+- Controles físicos **Tocar som** e **Lanterna** no painel remoto, cada um em pop-up compacto, usando o canal AES-GCM autenticado e versão idêntica nos dois aparelhos. Operações permitidas são fixas (`status`, `soundStart`, `soundStop`, `torchOn`, `torchOff`); nenhum shell/ADB novo.
+- Som: seleção de 5, 10, 20 ou 30 segundos, repetição de bip em STREAM_ALARM sem alterar o volume ou desrespeitar políticas de Não Perturbe. Interromper manualmente, revogar permissão e parar serviço encerram o som; desligamento automático ao atingir o tempo.
+- Lanterna: API Camera2 `setTorchMode` no flash traseiro e observação de estado real via `TorchCallback`; estados desconhecido/ocupado são informados sem presumir sucesso. O serviço tenta desligar o flash que ligou ao encerrar, sem interferir deliberadamente na lanterna que outra aplicação ligou previamente.
+- Nova seção local **Configurações > Som e lanterna**, com opt-in separado, ambos desligados por padrão; permissão Câmera Android pode ser necessária para lanterna. Sem novas permissões no manifesto nem captura de câmera ou microfone.
+- Testes estáticos e de allowlist registrados; build Android completo e testes nos aparelhos ainda pendentes. Mantidos bateria, notificações, ADB, transmissão, mensagens e recuperação de arquivos.
+
+## 0.1.0-alpha.59 (14/10/2026)
+
+- Bateria: porcentagem calculada por nível/escala do broadcast oficial, com validação de limites, e estado derivado de `BATTERY_STATUS_CHARGING`, `DISCHARGING`, `FULL`, `NOT_CHARGING` ou desconhecido. O estado NOT_CHARGING não é apresentado erroneamente como descarga.
+- Nova fonte de energia identificada somente quando `EXTRA_PLUGGED` informar tomada (AC), USB, sem fio ou dock/base. Indicador visual ⚡ somente quando o Android reporta carregamento ou bateria cheia ainda conectada à alimentação identificada.
+- Cartão principal compacto com estado e fonte sob a porcentagem. Tela Detalhes também mostra estado correto e alimentação. Temperatura, rede e todos os demais recursos anteriores mantidos.
+- Campos extras no snapshot AES-GCM (`state`, `statusCode`, `powerSource`, `pluggedCode`, `chargingIndicator`), mantendo `charging` e `full` para compatibilidade interna. Nenhuma nova permissão, serviço, operação remota ou comando ADB.
+- Testes unitários novos para níveis válidos/inválidos, estados, fontes e indicador; verificador de distribuição atualizado. Tocar som e Lanterna avaliados e adiados, priorizando estabilidade e consentimento antes de abrir novos comandos.
+- Versão sincronizada em Gradle, AppVersion, README, CHANGELOG, AGENTS e documentação. Build Android/ensaio físico ainda dependem de validação.
+
 ## 0.1.0-alpha.58 (14/10/2026)
 
 - Tela própria de Notificações no padrão dos cartões de Detalhes, com Atualizar, estado da captura, informação da fonte e mensagens mais úteis em caso de ausência de eventos.

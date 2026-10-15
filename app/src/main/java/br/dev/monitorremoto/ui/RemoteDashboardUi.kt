@@ -2,7 +2,6 @@ package br.dev.monitorremoto.ui
 
 import android.app.AlertDialog
 import android.content.Intent
-import android.graphics.Color
 import android.view.Gravity
 import android.view.View
 import android.widget.LinearLayout
@@ -16,12 +15,20 @@ internal fun MainActivity.displayResult(root: JSONObject, fromCache: Boolean = f
     container.removeAllViews()
     val battery = root.optJSONObject("battery") ?: return
     val network = root.optJSONObject("network")
-    val percentage = if (battery.isNull("levelPercent")) "—" else "${battery.optDouble("levelPercent").toInt()}%"
+    val percentage = if (!battery.has("levelPercent") || battery.isNull("levelPercent")) "—"
+        else battery.optInt("levelPercent", -1).takeIf { it in 0..100 }?.let { "$it%" } ?: "—"
+    val status = battery.optString("state").takeIf {
+        it in setOf("Carregando", "Descarregando", "Cheia", "Não carregando")
+    } ?: "Desconhecido"
+    val source = battery.optString("powerSource").takeIf { it in setOf("USB", "Tomada", "Sem fio", "Base") }
+    val statusLine = if (source == null) status else "$status · $source"
+    val chargingIndicator = battery.optBoolean("chargingIndicator", false)
     val temperature = if (battery.isNull("temperatureC")) "—" else
         String.format(Locale.getDefault(), "%.1f °C", battery.optDouble("temperatureC"))
     val networkType = network?.optString("type")?.ifBlank { "Indisponível" } ?: "Indisponível"
     val items = listOf(
-        compactMetricCard(R.drawable.ic_battery, "Bateria", percentage),
+        compactMetricCard(if (chargingIndicator) R.drawable.ic_battery_charging else R.drawable.ic_battery, "Bateria",
+            if (chargingIndicator) "$percentage ⚡" else percentage, statusLine),
         compactMetricCard(R.drawable.ic_thermometer, "Temperatura", temperature),
         compactMetricCard(R.drawable.ic_wifi, "Rede", networkType),
     )
@@ -62,6 +69,15 @@ internal fun MainActivity.displayResult(root: JSONObject, fromCache: Boolean = f
                 putExtra(RemoteScreenActivity.EXTRA_HOST, br.dev.monitorremoto.core.SettingsStore.getRemoteHost(this@displayResult))
                 putExtra(RemoteScreenActivity.EXTRA_METHOD, remoteConnection.method)
             })
+        },
+        actionTile(R.drawable.ic_bell, "Tocar som", "Localizar · até 30 s", enabled = true) {
+            showRemotePhysicalDialog(sound = true)
+        },
+        actionTile(R.drawable.ic_flashlight, "Lanterna", "Ligar e desligar", enabled = true) {
+            showRemotePhysicalDialog(sound = false)
+        },
+        actionTile(R.drawable.ic_shield, "Bloquear", "Confirmação + PIN", enabled = true) {
+            showRemoteLockDialog()
         },
         actionTile(R.drawable.ic_settings, "Manutenção", "Reiniciar via ADB", enabled = true) {
             showRemoteMaintenance()
@@ -115,13 +131,14 @@ private fun MainActivity.showRemoteMaintenance() {
         .setNegativeButton("Cancelar", null))
 }
 
-private fun MainActivity.compactMetricCard(icon: Int, title: String, value: String): LinearLayout =
+private fun MainActivity.compactMetricCard(icon: Int, title: String, value: String,
+    subtitle: String? = null): LinearLayout =
     LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         gravity = Gravity.CENTER
         background = shape(fieldColor, 18)
         setPadding(dp(3), dp(13), dp(3), dp(12))
-        minimumHeight = dp(115)
+        minimumHeight = dp(125)
         addView(vectorIcon(icon, 28), LinearLayout.LayoutParams(dp(28), dp(28)))
         addView(label(title, 11.5f, muted = true).apply {
             gravity = Gravity.CENTER
@@ -133,6 +150,12 @@ private fun MainActivity.compactMetricCard(icon: Int, title: String, value: Stri
             maxLines = 2
             setPadding(0, 0, 0, 0)
         })
+        if (!subtitle.isNullOrBlank()) addView(label(subtitle, 10f, muted = true).apply {
+            gravity = Gravity.CENTER
+            maxLines = 2
+            setPadding(dp(2), dp(3), dp(2), 0)
+        })
+        contentDescription = listOfNotNull(title, value, subtitle).joinToString(". ")
     }
 
 private fun MainActivity.addMetricGrid(parent: LinearLayout, cards: List<LinearLayout>) {

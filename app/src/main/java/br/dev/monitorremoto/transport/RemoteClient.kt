@@ -45,6 +45,32 @@ object RemoteClient {
         }
     }
 
+    /** Comandos físicos restritos, cifrados e vinculados à versão e à chave já pareada. */
+    fun deviceControl(host: String, key: ByteArray, context: Context, method: String,
+        action: String, seconds: Int = 0, confirmation: String = ""): JSONObject {
+        require(br.dev.monitorremoto.core.DeviceControlPolicy.valid(action, seconds, confirmation)) { "Comando recusado." }
+        require(host.isNotBlank() && host.length <= 253 && !host.contains('/') &&
+            !host.contains(':') && !host.contains(' ')) { "Host inválido." }
+        val request = JSONObject().put("v", WireProtocol.VERSION).put("op", "deviceControl")
+            .put("action", action).put("seconds", seconds).put("confirm", confirmation)
+            .put("appVersion", AppVersion.NAME).put("ts", System.currentTimeMillis())
+            .put("clientId", SettingsStore.controllerId(context))
+            .put("clientName", listOf(Build.MANUFACTURER, Build.MODEL).joinToString(" ").take(72))
+            .put("accessMethod", method)
+        return Socket().use { socket ->
+            socket.connect(InetSocketAddress(host, WireProtocol.PORT), 4500)
+            socket.soTimeout = 6500
+            WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(key, request))
+            val reply = WireProtocol.decode(key, WireProtocol.receive(socket.getInputStream(), 16 * 1024))
+            if (reply.optString("op") == "versionMismatch")
+                error(AppVersion.incompatibility(reply.optString("appVersion")))
+            check(reply.optString("op") == "deviceControl" && reply.optInt("v") == WireProtocol.VERSION &&
+                AppVersion.compatible(reply.optString("appVersion"))) { "Resposta remota inválida." }
+            check(reply.optJSONObject("status") != null) { "Estado remoto ausente." }
+            reply
+        }
+    }
+
     /** Consulta autorizada da lista de apps com lançador, em canal criptografado. */
     fun installedApps(host: String, key: ByteArray, context: Context, method: String): JSONObject {
         require(host.isNotBlank() && host.length <= 253 && !host.contains('/') && !host.contains(':') && !host.contains(' '))
