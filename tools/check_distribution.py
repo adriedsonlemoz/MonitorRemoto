@@ -16,7 +16,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.65" and code.group(1) == "65", "Versões incompatíveis"
+assert version == "0.1.0-alpha.66" and code.group(1) == "66", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -888,6 +888,16 @@ print('PASSOU: alpha.61, DeviceAdmin apenas force-lock, opt-in local e confirma�
 
 # Alpha.62: câmera não pode ser iniciada por comando remoto nem em background.
 camera_local = (ui_root / 'CameraShareActivity.kt').read_text(encoding='utf-8')
+# Regressão de compilação da execução GitHub Actions #61 (:app:compileDebugKotlin):
+# dentro de TextureView.apply, `this` é TextureView, não o SurfaceTextureListener.
+# Kotlin PSI/parse não detecta este erro de resolução de tipos.
+assert re.search(r'TextureView\(this\)\.apply\s*\{\s*surfaceTextureListener\s*=\s*this@CameraShareActivity\s*\}', camera_local), (
+    'Regressão CameraShareActivity: SurfaceTextureListener precisa ser this@CameraShareActivity'
+)
+assert not re.search(r'surfaceTextureListener\s*=\s*this\s*\}', camera_local), (
+    'SurfaceTextureListener recebeu TextureView (this implícito de apply)'
+)
+
 camera_viewer = (ui_root / 'RemoteCameraActivity.kt').read_text(encoding='utf-8')
 camera_store = (root / 'app/src/main/java/br/dev/monitorremoto/capture/CameraFrameStore.kt').read_text(encoding='utf-8')
 camera_codec = (root / 'app/src/main/java/br/dev/monitorremoto/capture/CameraImageCodec.kt').read_text(encoding='utf-8')

@@ -80,7 +80,7 @@ class CameraShareActivity : Activity(), TextureView.SurfaceTextureListener {
             setPadding(0, dp(7), 0, dp(12))
         }
         body.addView(status)
-        preview = TextureView(this).apply { surfaceTextureListener = this }
+        preview = TextureView(this).apply { surfaceTextureListener = this@CameraShareActivity }
         body.addView(preview, LinearLayout.LayoutParams(-1, 0, 1f))
         val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
         switchButton = button("Trocar câmera") {

@@ -1,3 +1,18 @@
+## Alpha.66 — correção do workflow 61 (15/10/2026)
+
+- [x] **Falha confirmada no GitHub Actions**: `drilemoz/MonitorRemoto`, execução `38685307320`, número 61, tentativa 2, `:app:compileDebugKotlin`. Compilador reportou `CameraShareActivity.kt:83:70 Assignment type mismatch: actual type is 'TextureView', but 'TextureView.SurfaceTextureListener?' was expected`.
+- [x] Causa corrigida: `surfaceTextureListener = this@CameraShareActivity` em vez de `this` dentro do `TextureView.apply`.
+- [x] Teste de regressão incluído em `tools/check_distribution.py` para conferir que o receiver explícito é mantido.
+- [x] Versões sincronizadas para `versionName=0.1.0-alpha.66` e `versionCode=66`, sem alteração de políticas de permissão, comandos ou transmissão.
+- [x] `python3 tools/check_distribution.py` aprovado, incluindo a regressão de `surfaceTextureListener = this@CameraShareActivity`.
+- [x] Teste Kotlin/JVM de escopo compilado e executado com stub tipado; forma incorreta `= this` falha com *type mismatch* (teste negativo). Não compila a Activity Android real.
+- [x] Parser Kotlin PSI: 132 fontes sem erros sintáticos (não resolve API Android).
+- [x] 46 XML válidos.
+- [x] 0 JSON válidos.
+- [x] Workflow YAML analisado.
+- [ ] **Compilação Android real ainda NÃO executada para alpha.66**; aplicar no GitHub e verificar resultados do workflow novo. O log original não substitui build da versão corrigida.
+- [ ] Testes de prévia Camera2, trocas autorizadas, rede, bateria e regressão nos aparelhos permanecem pendentes.
+
 ## Alpha.65 — alternância remota de câmera com opt-in temporário (15/10/2026)
 
 - [x] Base alpha.64 extraída e `AGENTS.md`, README, CHANGELOG, código da câmera e documentação examinados antes das alterações.

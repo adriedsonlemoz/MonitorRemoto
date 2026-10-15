@@ -1,3 +1,10 @@
+## 0.1.0-alpha.66 (versionCode 66)
+
+- **Correção de compilação** do workflow GitHub Actions **Gerar APK e Release #61** (`:app:compileDebugKotlin`): em `CameraShareActivity.kt:83`, atribuição de `TextureView` incompatível com `TextureView.SurfaceTextureListener?` dentro de `apply`.
+- Listener da prévia Camera2 agora recebe explicitamente `this@CameraShareActivity`, classe que implementa `TextureView.SurfaceTextureListener`; mantém a prévia, controle de sessão e alternância remota autorizada da alpha.65.
+- Verificador estrutural ganhou teste de regressão específico para impedir a volta do `surfaceTextureListener = this` ambíguo.
+- Versões e documentação sincronizadas. Nada mudou em permissões, autenticação, protocolo ou demais módulos. **Build completo da alpha.66 e teste em aparelho permanecem pendentes**, devem ser executados no GitHub Actions e no Android real.
+
 ## 0.1.0-alpha.65 (versionCode 65)
 
 - Alternância frontal/traseira solicitável pelo controlador exclusivamente quando a câmera está aberta na Activity local e o monitorado marcou opt-in temporário nesta sessão, desligado por padrão.

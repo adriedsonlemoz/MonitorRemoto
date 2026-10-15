@@ -1,4 +1,4 @@
-# Monitor Remoto 0.1.0-alpha.65
+# Monitor Remoto 0.1.0-alpha.66
 # Convenções permanentes do projeto Monitor Remoto
 
 - Toda alteração de código incrementa sequencialmente `versionCode` e `versionName` (ex.: `0.1.0-alpha.8` -> `0.1.0-alpha.9`). Sincronizar tela, README, CHANGELOG, RELEASE_NOTES e documentação.
@@ -21,7 +21,7 @@
 - Alpha.10: manter tema **claro padrão**, as opções da engrenagem, janela Conectar, botão de atualização compacto, lista de até 5 aparelhos recentes e os dados do Controle no topo. Não reintroduzir formulário longo na tela principal.
 - Credenciais por dispositivo usam `RecentDevices` + `SecretVault.profileKeyName`, com migração única da alpha.9. Não reaproveitar `CONTROLLER_KEY` antigo para IPs novos nem gravar segredo em preferências sem criptografia. Esquecer apaga o segredo correspondente.
 - Respostas HTTP/TCP não são conexão persistente. Exibir "Conectado" apenas após consulta autenticada bem-sucedida e "Sem resposta" após erro. Não inventar tempos de atualização.
-- Próxima versão sequencial: `0.1.0-alpha.66`, `versionCode 66`.
+- Próxima versão sequencial: `0.1.0-alpha.67`, `versionCode 67`.
 
 - Alpha.15: preservar a seleção Conectar → QR/Manual/Salvos, confirmação do QR antes de parear, cartões salvos com três ações e o scanner em Activity com tema Dialog.
 
@@ -130,3 +130,5 @@
 - Alpha.64: conversão JPEG da câmera somente com `CameraFrameStore.hasRecentViewer()` após `viewerPing` por pedido de `cameraFrame` autenticado no servidor; a demanda expira em 4,5s e é zerada em `begin/stop`. Nunca usar esse ping para abrir Camera2 remotamente. Cliente envia `afterSequence`, servidor omite `jpeg` se o número de sequência for o mesmo, e retorna `active/lens/age/sequence` de snapshot sincronizado. UI apresenta duração real das consultas, tamanho do último JPEG e intervalo entre quadros novos, sem chamar essas métricas de latência ponta a ponta ou FPS de hardware. Manter troca de lente exclusivamente no monitorado; não adicionar câmera em background, notificações ocultas ou controles remotos sem revisão de segurança. Próxima alpha.65.
 
 - Alpha.65: novo `cameraSwitch` **somente** troca frontal/traseira em sessão `CameraShareActivity` já visível, após opt-in local temporário OFF por padrão no CheckBox da própria Activity. Nenhuma permissão persistente, serviço de câmera em background ou comando de abertura remota. `CameraFrameStore` exige sessionToken retornado por `cameraFrame`, lente em allowlist, controlador recentemente consultando, opt-in ativo e rate-limit. O comando remoto indica solicitação aceita, **não confirmação de troca**; o controlador deve verificar o novo `lens`/`sessionToken` no polling. Limpar pedidos em `begin/stop/revoke`, controlar callbacks obsoletos e revogar ao pausar/parar monitoramento. Na alpha.66, priorizar build real/testes físicos e correção de regressões antes de gravação de vídeo.
+
+- Alpha.66: GitHub Actions run 61 (tentativa 2, 15/10/2026) falhou em `:app:compileDebugKotlin`, `CameraShareActivity.kt:83:70 Assignment type mismatch`: `TextureView(this).apply { surfaceTextureListener = this }` resolve `this` ao próprio TextureView, não ao `TextureView.SurfaceTextureListener`. Corrigido para `this@CameraShareActivity`, seguindo o padrão de `QrScanActivity`. `tools/check_distribution.py` agora verifica o receiver explícito. Sem novas permissões/protocolo. Antes de declarar build bem-sucedido, reexecutar CI com alpha.66.
