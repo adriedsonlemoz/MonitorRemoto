@@ -630,3 +630,13 @@ As seções abaixo são registros históricos de versões anteriores, não o sta
 - Alterações: controle físico de som e lanterna em AES-GCM com lista fechada e opt-in local separado.
 - Testes locais: scripts de validação e testes de política JVM (veja relatório final da entrega).
 - **Não comprovados**: build Android integral, execução da UI e chamada real de ToneGenerator/Camera2 em aparelhos físicos. Sem APK gerado aqui.
+
+## Alpha.70 (15/10/2026)
+
+- [x] Fonte derivada do ZIP alpha.69; versões, constantes e nomes de distribuição sincronizados para alpha.70.
+- [x] Estado dos selos explícito (26 linhas): teste JVM de enumeração/booleano e verificador estrutural.
+- [x] Encerramento Camera2 por token: teste de callback/sessão obsoleta adicionado.
+- [x] Polling de tela com executor único e invalidação na retomada.
+- [x] Testes Kotlin/JVM isolados: 26/26 aprovados (câmera, política de demanda, troca, selos). Parser PSI: 134/134 Kotlin sem erros sintáticos; 46 XML e 2 YAML válidos.
+- [ ] GitHub Actions `:app:testDebugUnitTest :app:assembleDebug`; build local completo indisponível sem SDK/Gradle.
+- [ ] Testes físicos de duas instâncias de CameraShareActivity, H.264/JPEG e fluidez/consumo.

@@ -1,3 +1,10 @@
+## 0.1.0-alpha.70 (versionCode 70) | 15/10/2026
+
+- Configurações: selos de estado deixam de analisar frases dos subtítulos. `SettingsBadgeKind.forEnabled` recebe booleanos reais para 24 toggles/permissões, além de status contextual de pasta revogável e tema selecionado; ações comuns ficam com `ABRIR`, revogação destrutiva conserva `REVOGAR`.
+- Câmera Camera2: `CameraShareActivity` encerra somente o token de sessão que ela abriu. Callback atrasado de erro/desconexão não executa `CameraFrameStore.stop()` global e não interrompe câmera aberta por uma Activity mais nova; o serviço preserva capacidade de parada global. Novo teste de sessão antiga.
+- Tela remota: polling usa uma única thread executor durante toda a vida da Activity, com descarte de resultados de visita anterior e shutdown ao destruir. Sem mudar cadência, AES-GCM, endpoints ou controles existentes.
+- Testes de estados dos selos e reforço do verificador de invariantes. Teste JVM local isolado e verificador estático não comprovam compilação Android/Gradle, que permanece pendente até execução da CI; consumo, fluidez e Camera2 real aguardam dois aparelhos.
+
 ## 0.1.0-alpha.69 (versionCode 69)
 
 - Corrigidos os **oito erros de compilação Kotlin** registrados no GitHub Actions #64 da alpha.68: quatro tentativas de atribuir `lineSpacingExtra` (somente leitura) e quatro acessos à função `darkTheme()` privada de `MainActivity`.

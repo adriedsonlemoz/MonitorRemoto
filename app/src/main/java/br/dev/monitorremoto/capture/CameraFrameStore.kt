@@ -47,6 +47,12 @@ object CameraFrameStore {
         return session
     }
 
+    /** Fecha apenas a geração que esta Activity abriu; Activity antiga não revoga a nova. */
+    @Synchronized fun stop(sessionToken: Long) {
+        if (sessionToken <= 0L || sessionToken != session || activeLens == null) return
+        stop()
+    }
+
     @Synchronized fun stop() {
         activeLens = null
         lastViewerRequestAt = 0L

@@ -7,6 +7,24 @@ import org.junit.Test
 class CameraFrameStoreGenerationTest {
     private val jpeg = byteArrayOf(0xFF.toByte(), 0xD8.toByte(), 0, 0xFF.toByte(), 0xD9.toByte())
 
+    @Test fun encerramentoDeSessaoAntigaNaoRevogaCameraNova() {
+        CameraFrameStore.stop()
+        try {
+            val antigo = CameraFrameStore.begin("Traseira")
+            val atual = CameraFrameStore.begin("Frontal")
+            CameraFrameStore.setRemoteSwitchAllowed(atual, true)
+            CameraFrameStore.stop(antigo)
+            assertTrue(CameraFrameStore.isActive())
+            assertEquals("Frontal", CameraFrameStore.lens())
+            assertTrue(CameraFrameStore.status(-1L).remoteSwitchAllowed)
+            CameraFrameStore.stop(atual)
+            assertFalse(CameraFrameStore.isActive())
+            CameraFrameStore.stop(atual) // idempotente
+        } finally {
+            CameraFrameStore.stop()
+        }
+    }
+
     @Test fun sessaoAntigaNaoPublicaEmNovaCamera() {
         CameraFrameStore.stop()
         try {

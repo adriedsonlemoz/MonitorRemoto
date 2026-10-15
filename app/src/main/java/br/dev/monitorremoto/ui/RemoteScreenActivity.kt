@@ -40,6 +40,7 @@ import br.dev.monitorremoto.core.SettingsStore
 import br.dev.monitorremoto.core.ScreenCapturePolicy
 import br.dev.monitorremoto.transport.RemoteClient
 import br.dev.monitorremoto.video.AvcDecoder
+import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.abs
 
@@ -61,6 +62,11 @@ class RemoteScreenActivity : Activity() {
     private var isFullscreen = false
     private var sharingReady = false
     private val fetching = AtomicBoolean(false)
+    // Reutiliza uma única thread de consulta; não cresce com o FPS solicitado.
+    private val pollExecutor = Executors.newSingleThreadExecutor { task ->
+        Thread(task, "MonitorRemoto-screen-poll").apply { isDaemon = true }
+    }
+    private var visitGeneration = 0L
     private val saving = AtomicBoolean(false)
     private lateinit var picture: ImageView
     private lateinit var status: TextView
@@ -335,7 +341,8 @@ class RemoteScreenActivity : Activity() {
     private val poll = object : Runnable {
         override fun run() {
             if (!active || !fetching.compareAndSet(false, true)) return
-            Thread({
+            val visit = visitGeneration
+            pollExecutor.execute {
                 var nextStatus = ""
                 var nextBitmap: Bitmap? = null
                 var nextJpeg: ByteArray? = null
@@ -460,7 +467,11 @@ class RemoteScreenActivity : Activity() {
                 }
                 main.post {
                     fetching.set(false)
-                    if (!active || isFinishing || isDestroyed) { nextBitmap?.recycle(); return@post }
+                    if (!active || isFinishing || isDestroyed || visit != visitGeneration) {
+                        nextBitmap?.recycle()
+                        if (active && visit != visitGeneration && !isFinishing && !isDestroyed) main.post(poll)
+                        return@post
+                    }
                     screenChannelAuthenticated = authenticatedThisPoll
                     sharingReady = sharing
                     remoteDeviceLocked = deviceLocked
@@ -493,7 +504,7 @@ class RemoteScreenActivity : Activity() {
                     updateControls()
                     main.postDelayed(this, retryDelay)
                 }
-            }, "MonitorRemoto-screen-poll").start()
+            }
         }
     }
 
@@ -1003,6 +1014,7 @@ class RemoteScreenActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        visitGeneration++
         active = host.isNotBlank() && ::picture.isInitialized
         updateChannelBadge()
         if (isFullscreen) applyImmersiveMode(true)
@@ -1013,6 +1025,7 @@ class RemoteScreenActivity : Activity() {
         }
     }
     override fun onPause() {
+        visitGeneration++
         active = false; sharingReady = false; touchMode = false; touchReady = false; audioReady = false
         remoteDeviceLocked = false; remoteScreenInteractive = true
         screenChannelAuthenticated = false
@@ -1025,7 +1038,7 @@ class RemoteScreenActivity : Activity() {
         super.onPause()
     }
     override fun onDestroy() {
-        main.removeCallbacks(poll); stopAudio(); closeVideo()
+        main.removeCallbacks(poll); pollExecutor.shutdownNow(); stopAudio(); closeVideo()
         if (::picture.isInitialized) clearFrame()
         super.onDestroy()
     }

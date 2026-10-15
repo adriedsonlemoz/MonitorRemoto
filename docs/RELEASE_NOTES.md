@@ -1,3 +1,11 @@
+# Monitor Remoto v0.1.0-alpha.70
+
+**Estabilidade e fidelidade dos estados:** Configurações exibem `ATIVADO`, `DESATIVADO`, `ABRIR` ou `REVOGAR` a partir do estado real das permissões e preferências, não de palavras nos textos. A câmera compartilhada encerra apenas sua sessão de captura, protegendo uma nova sessão contra callbacks atrasados. O visualizador reutiliza uma thread para consultar quadros, descartando resultados obsoletos ao retornar ao app. Acrescentados testes Kotlin/JVM e verificações estruturais.
+
+Sem alterações nas permissões, autorização local, protocolo de rede, pareamento, criptografia ou políticas de captura em primeiro plano. **APK e execução real ainda não validados por Gradle/Android ou testes físicos.**
+
+---
+
 # Monitor Remoto v0.1.0-alpha.69
 
 **Correção de compilação da interface de Configurações**: o workflow **Gerar APK e Release #64** falhou em `:app:compileDebugKotlin` com 8 erros em `UiComponents.kt` e `AppDialogUi.kt`. O espaçamento do TextView agora chama `setLineSpacing` em vez de atribuir a `val lineSpacingExtra`, e a função de tema `darkTheme()` foi disponibilizada internamente à UI modular. Testes estruturais de regressão foram adicionados. Mantém o redesenho da alpha.68 e as funções anteriores, sem novas permissões, fluxo de rede ou comandos. **Ainda requer novo build Android/Gradle e teste físico.**

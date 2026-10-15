@@ -13,7 +13,6 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
-import java.util.Locale
 
 /** Alpha.22: módulo de interface extraído de MainActivity. Sem estado de conexão próprio. */
 
@@ -195,43 +194,17 @@ internal fun MainActivity.iconTile(
     })
 }
 
-private enum class SettingsBadgeTone { ACTIVE, INACTIVE, ACTION, WARNING, DANGER, NEUTRAL }
-
-private data class SettingsBadgeModel(val text: String, val tone: SettingsBadgeTone)
-
-private fun MainActivity.settingsBadgeModel(title: String, subtitle: String, dangerous: Boolean): SettingsBadgeModel {
-    if (dangerous) return SettingsBadgeModel("REVOGAR", SettingsBadgeTone.DANGER)
-    val probe = listOf(title, subtitle).joinToString(" ").lowercase(Locale.ROOT)
-    return when {
-        title.contains("voltar", ignoreCase = true) -> SettingsBadgeModel("VOLTAR", SettingsBadgeTone.NEUTRAL)
-        probe.contains("desativ") || probe.contains("inativo") || probe.contains("sem permissão") ||
-            probe.contains("sem acesso") || probe.contains("ausente") || probe.contains("parado") ||
-            probe.contains("não conced") || probe.contains("não suportado") || probe.contains("bloqueado") ->
-            SettingsBadgeModel("DESATIVADO", SettingsBadgeTone.INACTIVE)
-        probe.contains("revogar") || probe.contains("retirar") -> SettingsBadgeModel("REVOGAR", SettingsBadgeTone.WARNING)
-        probe.contains("diagnóstico") || probe.contains("consultar") || probe.contains("mostrar") ||
-            probe.contains("abrir") || probe.contains("configur") || probe.contains("ajustar") ||
-            probe.contains("escolher") || probe.contains("copiar") || probe.contains("substituir") ->
-            SettingsBadgeModel("ABRIR", SettingsBadgeTone.ACTION)
-        probe.contains("autoriz") || probe.contains("habilit") || probe.contains("concedid") ||
-            probe.contains("ativo") || probe.contains("selecionado") || probe.contains("escutando") ||
-            probe.contains("ligada") || probe.contains("ligado") || probe.contains("pasta autorizada") ->
-            SettingsBadgeModel("ATIVADO", SettingsBadgeTone.ACTIVE)
-        else -> SettingsBadgeModel("ABRIR", SettingsBadgeTone.ACTION)
-    }
-}
-
-private fun MainActivity.statusBadge(model: SettingsBadgeModel): TextView {
-    val (fill, stroke, textColor) = when (model.tone) {
-        SettingsBadgeTone.ACTIVE -> Triple(highlight, highlight, highlightText)
-        SettingsBadgeTone.ACTION -> Triple(if (darkTheme()) Color.rgb(33, 53, 78) else Color.rgb(231, 239, 248), highlight, ink)
-        SettingsBadgeTone.WARNING -> Triple(if (darkTheme()) Color.rgb(74, 54, 15) else Color.rgb(255, 244, 210), Color.rgb(191, 145, 0), ink)
-        SettingsBadgeTone.DANGER -> Triple(if (darkTheme()) Color.rgb(71, 34, 35) else Color.rgb(255, 235, 234), Color.rgb(186, 67, 58), Color.rgb(186, 67, 58))
-        SettingsBadgeTone.INACTIVE -> Triple(if (darkTheme()) Color.rgb(28, 42, 58) else Color.rgb(235, 240, 245), lineColor, dim)
-        SettingsBadgeTone.NEUTRAL -> Triple(surface, lineColor, ink)
+private fun MainActivity.statusBadge(model: SettingsBadgeKind): TextView {
+    val (fill, stroke, textColor) = when (model) {
+        SettingsBadgeKind.ACTIVE -> Triple(highlight, highlight, highlightText)
+        SettingsBadgeKind.ACTION -> Triple(if (darkTheme()) Color.rgb(33, 53, 78) else Color.rgb(231, 239, 248), highlight, ink)
+        SettingsBadgeKind.WARNING -> Triple(if (darkTheme()) Color.rgb(74, 54, 15) else Color.rgb(255, 244, 210), Color.rgb(191, 145, 0), ink)
+        SettingsBadgeKind.DANGER -> Triple(if (darkTheme()) Color.rgb(71, 34, 35) else Color.rgb(255, 235, 234), Color.rgb(186, 67, 58), Color.rgb(186, 67, 58))
+        SettingsBadgeKind.INACTIVE -> Triple(if (darkTheme()) Color.rgb(28, 42, 58) else Color.rgb(235, 240, 245), lineColor, dim)
+        SettingsBadgeKind.NEUTRAL -> Triple(surface, lineColor, ink)
     }
     return TextView(this).apply {
-        text = model.text
+        text = model.label
         textSize = 11.5f
         setTypeface(null, Typeface.BOLD)
         gravity = Gravity.CENTER
@@ -251,9 +224,11 @@ internal fun MainActivity.iconMenuRow(
     title: String,
     subtitle: String = "",
     dangerous: Boolean = false,
+    badge: SettingsBadgeKind = SettingsBadgeKind.ACTION,
     onClick: () -> Unit
 ): LinearLayout = LinearLayout(this).apply {
-    val badge = settingsBadgeModel(title, subtitle, dangerous)
+    // Ação perigosa sempre prevalece; demais estados vêm da configuração real.
+    val resolvedBadge = if (dangerous) SettingsBadgeKind.DANGER else badge
     orientation = LinearLayout.HORIZONTAL
     gravity = Gravity.CENTER_VERTICAL
     background = shape(fieldColor, 20, true)
@@ -261,7 +236,7 @@ internal fun MainActivity.iconMenuRow(
     minimumHeight = dp(82)
     isClickable = true
     isFocusable = true
-    contentDescription = listOf(title, subtitle, badge.text).filter { it.isNotBlank() }.joinToString(". ")
+    contentDescription = listOf(title, subtitle, resolvedBadge.label).filter { it.isNotBlank() }.joinToString(". ")
     setOnClickListener { onClick() }
 
     val symbol = LinearLayout(this@iconMenuRow).apply {
@@ -286,7 +261,7 @@ internal fun MainActivity.iconMenuRow(
     }
     addView(words, LinearLayout.LayoutParams(0, -2, 1f))
     addView(View(this@iconMenuRow), LinearLayout.LayoutParams(dp(12), 1))
-    addView(statusBadge(badge), LinearLayout.LayoutParams(-2, -2))
+    addView(statusBadge(resolvedBadge), LinearLayout.LayoutParams(-2, -2))
 }
 
 internal fun MainActivity.iconSectionHeader(iconRes: Int, title: String, subtitle: String = ""): LinearLayout =

@@ -198,7 +198,6 @@ class CameraShareActivity : Activity(), TextureView.SurfaceTextureListener {
                     if (generation != cameraGeneration) return
                     if (camera === device) camera = null
                     opening = false
-                    CameraFrameStore.stop()
                     runOnUiThread {
                         if (generation == cameraGeneration) {
                             closeCamera()
@@ -211,7 +210,6 @@ class CameraShareActivity : Activity(), TextureView.SurfaceTextureListener {
                     if (generation != cameraGeneration) return
                     if (camera === device) camera = null
                     opening = false
-                    CameraFrameStore.stop()
                     runOnUiThread {
                         if (generation == cameraGeneration) {
                             closeCamera()
@@ -252,7 +250,6 @@ class CameraShareActivity : Activity(), TextureView.SurfaceTextureListener {
                         configured.setRepeatingRequest(request.build(), null, workerHandler)
                         report("● Câmera ${if (front) "frontal" else "traseira"} ativa · envia JPEG somente com visualizador aberto")
                     } catch (e: Exception) {
-                        CameraFrameStore.stop()
                         runOnUiThread {
                             if (generation == cameraGeneration) {
                                 closeCamera()
@@ -264,7 +261,6 @@ class CameraShareActivity : Activity(), TextureView.SurfaceTextureListener {
                 override fun onConfigureFailed(configured: CameraCaptureSession) {
                     configured.close()
                     if (generation != cameraGeneration) return
-                    CameraFrameStore.stop()
                     runOnUiThread {
                         if (generation == cameraGeneration) {
                             closeCamera()
@@ -274,7 +270,6 @@ class CameraShareActivity : Activity(), TextureView.SurfaceTextureListener {
                 }
             }, workerHandler)
         } catch (e: Exception) {
-            CameraFrameStore.stop()
             runOnUiThread {
                 if (generation == cameraGeneration) {
                     closeCamera()
@@ -321,8 +316,9 @@ class CameraShareActivity : Activity(), TextureView.SurfaceTextureListener {
 
     private fun closeCamera() {
         cameraGeneration++
+        val ownedSession = frameSessionToken
         frameSessionToken = -1L
-        CameraFrameStore.stop()
+        CameraFrameStore.stop(ownedSession)
         opening = false
         try { session?.close() } catch (_: Exception) { }
         session = null

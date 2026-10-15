@@ -16,7 +16,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.69" and code.group(1) == "69", "Versões incompatíveis"
+assert version == "0.1.0-alpha.70" and code.group(1) == "70", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -908,7 +908,7 @@ assert '"cameraFrame"' in (root / 'app/src/main/java/br/dev/monitorremoto/transp
 assert 'startActivity(Intent(this, CameraShareActivity::class.java))' in (ui_root / 'MonitorScreenUi.kt').read_text()
 assert 'showAppConfirm("Compartilhar câmera ao vivo?"' in (ui_root / 'MonitorScreenUi.kt').read_text()
 assert 'override fun onPause()' in camera_local and 'closeCamera()' in camera_local
-assert 'CameraFrameStore.stop()' in camera_local and 'CameraFrameStore.stop()' in settings
+assert 'CameraFrameStore.stop(ownedSession)' in camera_local and 'CameraFrameStore.stop()' in settings
 assert 'CameraFrameStore.begin(' in camera_local and 'ImageReader.newInstance' in camera_local
 assert 'YuvImage(' in camera_codec and 'plane.rowStride' in camera_codec and 'plane.pixelStride' in camera_codec
 assert 'MAX_FRAME_BYTES = 110_000' in (root / 'app/src/main/java/br/dev/monitorremoto/core/CameraStreamPolicy.kt').read_text()
@@ -943,7 +943,7 @@ assert 'fresh.sequence != afterSequence' in camera_store
 assert 'store.viewerPing()' in server and 'store.status(knownSequence)' in server
 assert '.put("afterSequence", afterSequence)' in (root / 'app/src/main/java/br/dev/monitorremoto/transport/RemoteClient.kt').read_text()
 assert 'lastRttMs = measuredRttMs' in camera_viewer and 'observedPeriodMs' in camera_viewer
-assert 'CameraFrameStore.begin(' in camera_local and 'CameraFrameStore.stop()' in camera_local
+assert 'CameraFrameStore.begin(' in camera_local and 'CameraFrameStore.stop(ownedSession)' in camera_local
 assert '"cameraStart"' not in server
 print('PASSOU: alpha.64, demanda autenticada, resposta delta JPEG, métricas medidas e captura apenas local')
 
@@ -989,3 +989,24 @@ assert _components.count("setLineSpacing(") >= 2 and _dialogs.count("setLineSpac
 assert "internal fun darkTheme(): Boolean" in _main, "darkTheme deve ser acessível às extensões UI"
 assert "private fun darkTheme(): Boolean" not in _main, "darkTheme privado causou erro de compilação no workflow 64"
 print("PASSOU: alpha.69 regressão Kotlin TextView.setLineSpacing e visibilidade de darkTheme")
+
+# Alpha.70: os selos não dependem mais de palavras nos subtítulos.
+_badge = (_ui_dir / "SettingsBadgeKind.kt").read_text(encoding="utf-8")
+_settings = (_ui_dir / "SettingsScreenUi.kt").read_text(encoding="utf-8")
+_camera = (_ui_dir / "CameraShareActivity.kt").read_text(encoding="utf-8")
+_store = (root / "app/src/main/java/br/dev/monitorremoto/capture/CameraFrameStore.kt").read_text(encoding="utf-8")
+_viewer = (_ui_dir / "RemoteScreenActivity.kt").read_text(encoding="utf-8")
+assert "settingsBadgeModel" not in _components, "Selos ainda usam heurística de texto"
+assert "SettingsBadgeKind.forEnabled(" in _settings and _settings.count("badge = ") >= 26, "Estados reais da tela não fornecidos"
+assert 'val resolvedBadge = if (dangerous) SettingsBadgeKind.DANGER else badge' in _components
+assert "fun forEnabled(enabled: Boolean)" in _badge
+assert (root / "app/src/test/java/br/dev/monitorremoto/ui/SettingsBadgeKindTest.kt").is_file(), "Teste de selo ausente"
+assert "@Synchronized fun stop(sessionToken: Long)" in _store
+assert "sessionToken != session" in _store
+assert "CameraFrameStore.stop(ownedSession)" in _camera
+assert "CameraFrameStore.stop()" not in _camera, "CameraShareActivity não deve revogar outra geração"
+assert "val visit = visitGeneration" in _viewer and "visit != visitGeneration" in _viewer
+assert "Executors.newSingleThreadExecutor" in _viewer and "pollExecutor.shutdownNow()" in _viewer
+assert '"MonitorRemoto-screen-poll").start()' not in _viewer
+assert "encerramentoDeSessaoAntigaNaoRevogaCameraNova" in (root / "app/src/test/java/br/dev/monitorremoto/core/CameraFrameStoreGenerationTest.kt").read_text()
+print("PASSOU: alpha.70, selos explícitos, limpeza por sessão e executor de polling único")

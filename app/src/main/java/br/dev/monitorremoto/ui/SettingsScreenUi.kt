@@ -129,7 +129,7 @@ private fun MainActivity.fillNotificationSettings(layout: LinearLayout) {
     }
     val count = SettingsStore.notificationAllowlist(this).size
     dialogIntro(layout, "O monitoramento da bateria funciona sem esta permissão. As notificações só são enviadas para apps autorizados e não financeiros.")
-    layout.addView(iconMenuRow(R.drawable.ic_bell, "Acesso às notificações", state) {
+    layout.addView(iconMenuRow(R.drawable.ic_bell, "Acesso às notificações", state, badge = SettingsBadgeKind.forEnabled(hasListener())) {
         showAppConfirm(
             "Acesso às notificações",
             "O Android poderá mostrar notificações sensíveis. Somente aplicativos escolhidos serão transmitidos, com filtros que podem falhar. O acesso pode ser revogado nas Configurações do Android.",
@@ -144,7 +144,7 @@ private fun MainActivity.fillNotificationSettings(layout: LinearLayout) {
     sectionGap(layout, 8)
     val allApps = SettingsStore.allNotifications(this)
     layout.addView(iconMenuRow(R.drawable.ic_bell, "Todas as notificações elegíveis",
-        if (allApps) "Apps não financeiros elegíveis estão liberados" else "Somente a lista individual está liberada") {
+        if (allApps) "Apps não financeiros elegíveis estão liberados" else "Somente a lista individual está liberada", badge = SettingsBadgeKind.forEnabled(allApps)) {
         if (allApps) {
             SettingsStore.setAllNotifications(this, false)
             message("Acesso amplo desativado. Apenas a lista de aplicativos individuais continua valendo.")
@@ -157,10 +157,10 @@ private fun MainActivity.fillNotificationSettings(layout: LinearLayout) {
     })
     sectionGap(layout, 8)
     layout.addView(iconMenuRow(R.drawable.ic_phone, "Aplicativos autorizados",
-        if (allApps) "Todos os apps elegíveis podem enviar notificações" else "$count aplicativo(s) selecionado(s)") { selectNotificationApps() })
+        if (allApps) "Todos os apps elegíveis podem enviar notificações" else "$count aplicativo(s) selecionado(s)", badge = SettingsBadgeKind.forEnabled((allApps || count > 0))) { selectNotificationApps() })
     sectionGap(layout, 8)
     val replyOn = SettingsStore.allowNotificationReplies(this)
-    layout.addView(iconMenuRow(R.drawable.ic_message, "Responder notificações", if (replyOn) "Respostas remotas liberadas para eventos elegíveis" else "O controlador não pode responder por aqui") {
+    layout.addView(iconMenuRow(R.drawable.ic_message, "Responder notificações", if (replyOn) "Respostas remotas liberadas para eventos elegíveis" else "O controlador não pode responder por aqui", badge = SettingsBadgeKind.forEnabled(replyOn)) {
         if (replyOn) {
             SettingsStore.setAllowNotificationReplies(this, false)
             message("Respostas por notificações desativadas. Tokens pendentes apagados.")
@@ -181,7 +181,7 @@ private fun MainActivity.fillAppsSettings(layout: LinearLayout) {
     layout.addView(label("Consulta sob demanda pelos controladores pareados. Compartilha nomes e identificadores de pacote, sem dados internos; alguns apps podem não aparecer pelas restrições do Android.", 12.5f, muted = true))
     sectionGap(layout, 10)
     layout.addView(iconMenuRow(R.drawable.ic_shield,
-        "Permitir consulta de aplicativos", if (allowed) "Controladores pareados podem consultar a lista" else "Consulta bloqueada neste aparelho") {
+        "Permitir consulta de aplicativos", if (allowed) "Controladores pareados podem consultar a lista" else "Consulta bloqueada neste aparelho", badge = SettingsBadgeKind.forEnabled(allowed)) {
         if (allowed) {
             SettingsStore.setShareInstalledApps(this, false)
             message("Compartilhamento da lista de aplicativos desativado.")
@@ -198,7 +198,7 @@ private fun MainActivity.fillSmsSettings(layout: LinearLayout) {
     dialogIntro(layout, "A leitura e o envio de SMS dependem da autorização local e das permissões do Android. Ative somente o necessário.")
     val smsRead = SettingsStore.shareSmsInbox(this) &&
         checkSelfPermission(Manifest.permission.READ_SMS) == PackageManager.PERMISSION_GRANTED
-    layout.addView(iconMenuRow(R.drawable.ic_message, "Ler caixa de SMS", if (smsRead) "Até 30 SMS recentes podem ser consultados" else "Leitura de SMS bloqueada neste aparelho") {
+    layout.addView(iconMenuRow(R.drawable.ic_message, "Ler caixa de SMS", if (smsRead) "Até 30 SMS recentes podem ser consultados" else "Leitura de SMS bloqueada neste aparelho", badge = SettingsBadgeKind.forEnabled(smsRead)) {
         if (smsRead) {
             SettingsStore.setShareSmsInbox(this, false)
             SettingsStore.setAllowSmsReplies(this, false)
@@ -217,7 +217,7 @@ private fun MainActivity.fillSmsSettings(layout: LinearLayout) {
     val smsLive = SettingsStore.receiveSmsEvents(this) &&
         checkSelfPermission(Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED
     layout.addView(iconMenuRow(R.drawable.ic_message, "Receber SMS em tempo real",
-        if (smsLive) "Novos SMS elegíveis podem ser detectados" else "Novos SMS não serão acompanhados") {
+        if (smsLive) "Novos SMS elegíveis podem ser detectados" else "Novos SMS não serão acompanhados", badge = SettingsBadgeKind.forEnabled(smsLive)) {
         if (smsLive) {
             SettingsStore.setReceiveSmsEvents(this, false)
             message("Recepção de eventos SMS desativada.")
@@ -235,7 +235,7 @@ private fun MainActivity.fillSmsSettings(layout: LinearLayout) {
     sectionGap(layout, 8)
     val smsWrite = SettingsStore.allowSmsReplies(this) &&
         checkSelfPermission(Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED
-    layout.addView(iconMenuRow(R.drawable.ic_message, "Responder SMS", if (smsWrite) "O controlador pode responder SMS elegíveis" else "Envio remoto de SMS bloqueado") {
+    layout.addView(iconMenuRow(R.drawable.ic_message, "Responder SMS", if (smsWrite) "O controlador pode responder SMS elegíveis" else "Envio remoto de SMS bloqueado", badge = SettingsBadgeKind.forEnabled(smsWrite)) {
         if (smsWrite) {
             SettingsStore.setAllowSmsReplies(this, false)
             message("Respostas SMS remotas desativadas.")
@@ -253,7 +253,7 @@ private fun MainActivity.fillSmsSettings(layout: LinearLayout) {
     sectionGap(layout, 8)
     val simAccess = checkSelfPermission(Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED
     layout.addView(iconMenuRow(R.drawable.ic_sim, "Escolher chip para SMS",
-        if (simAccess) "Controlador pode escolher SIM 1 ou SIM 2" else "Usando o chip padrão do Android") {
+        if (simAccess) "Controlador pode escolher SIM 1 ou SIM 2" else "Usando o chip padrão do Android", badge = SettingsBadgeKind.forEnabled(simAccess)) {
         if (simAccess) message("Permissão de SIM já autorizada. A seleção é feita ao responder uma mensagem SMS.")
         else showAppConfirm("Autorizar seleção de SIM?",
             "Opcional: identificar apenas SIM 1/SIM 2 para enviar SMS. Nenhum identificador ICCID ou número de linha será transmitido.",
@@ -264,7 +264,7 @@ private fun MainActivity.fillSmsSettings(layout: LinearLayout) {
     sectionGap(layout, 8)
     val numberEnabled = SettingsStore.sharePhoneNumber(this) &&
         checkSelfPermission(Manifest.permission.READ_PHONE_NUMBERS) == PackageManager.PERMISSION_GRANTED
-    layout.addView(iconMenuRow(R.drawable.ic_sim, "Número do chip", if (numberEnabled) "Número poderá ser compartilhado quando o Android informar" else "Número não será compartilhado") {
+    layout.addView(iconMenuRow(R.drawable.ic_sim, "Número do chip", if (numberEnabled) "Número poderá ser compartilhado quando o Android informar" else "Número não será compartilhado", badge = SettingsBadgeKind.forEnabled(numberEnabled)) {
         if (numberEnabled) {
             SettingsStore.setSharePhoneNumber(this, false)
             message("Compartilhamento do número desativado. O Android pode manter a permissão concedida, mas o app não transmitirá o número.")
@@ -286,7 +286,7 @@ private fun MainActivity.fillSmsSettings(layout: LinearLayout) {
 private fun MainActivity.fillPhysicalControlSettings(layout: LinearLayout) {
     dialogIntro(layout, "Autorizações somente neste aparelho. O controlador deve ter a chave pareada e a mesma versão do app. Nenhum controle funciona se o serviço estiver parado.")
     layout.addView(iconMenuRow(R.drawable.ic_bell, "Permitir alerta sonoro remoto",
-        if (SettingsStore.allowRemoteSound(this)) "Controlador pode tocar alerta de até 30 segundos" else "Alerta sonoro remoto bloqueado") {
+        if (SettingsStore.allowRemoteSound(this)) "Controlador pode tocar alerta de até 30 segundos" else "Alerta sonoro remoto bloqueado", badge = SettingsBadgeKind.forEnabled(SettingsStore.allowRemoteSound(this))) {
         if (SettingsStore.allowRemoteSound(this)) {
             SettingsStore.setAllowRemoteSound(this, false)
             openSettingsSection("physical")
@@ -299,7 +299,7 @@ private fun MainActivity.fillPhysicalControlSettings(layout: LinearLayout) {
     })
     sectionGap(layout, 10)
     layout.addView(iconMenuRow(R.drawable.ic_flashlight, "Permitir lanterna remota",
-        if (SettingsStore.allowRemoteTorch(this)) "Controlador pode ligar o flash quando disponível" else "Lanterna remota bloqueada") {
+        if (SettingsStore.allowRemoteTorch(this)) "Controlador pode ligar o flash quando disponível" else "Lanterna remota bloqueada", badge = SettingsBadgeKind.forEnabled(SettingsStore.allowRemoteTorch(this))) {
         if (SettingsStore.allowRemoteTorch(this)) {
             SettingsStore.setAllowRemoteTorch(this, false)
             openSettingsSection("physical")
@@ -314,7 +314,7 @@ private fun MainActivity.fillPhysicalControlSettings(layout: LinearLayout) {
     sectionGap(layout, 12)
     val cameraGranted = checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
     layout.addView(iconMenuRow(R.drawable.ic_remote_camera, "Permissão Câmera do Android",
-        if (cameraGranted) "Permissão da câmera já concedida ao app" else "Abra o Android para conceder a permissão da câmera") {
+        if (cameraGranted) "Permissão da câmera já concedida ao app" else "Abra o Android para conceder a permissão da câmera", badge = SettingsBadgeKind.forEnabled(cameraGranted)) {
         startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
             android.net.Uri.parse("package:$packageName")))
     })
@@ -337,7 +337,7 @@ private fun MainActivity.fillRemoteLockSettings(layout: LinearLayout) {
         !supported -> "Não suportado neste aparelho"
         admin -> "Administrador já ativo no Android"
         else -> "Ative manualmente no Android para usar o bloqueio"
-    }) {
+    }, badge = SettingsBadgeKind.forEnabled(admin)) {
         if (!supported) {
             message("Este dispositivo Android não oferece a função necessária.")
         } else if (admin) {
@@ -356,13 +356,13 @@ private fun MainActivity.fillRemoteLockSettings(layout: LinearLayout) {
     })
     sectionGap(layout, 10)
     layout.addView(iconMenuRow(R.drawable.ic_shield, "Bloqueio seguro do Android",
-        if (secure) "O Android já possui proteção de bloqueio configurada" else "Abra o Android e configure PIN, padrão ou senha") {
+        if (secure) "O Android já possui proteção de bloqueio configurada" else "Abra o Android e configure PIN, padrão ou senha", badge = SettingsBadgeKind.forEnabled(secure)) {
         runCatching { startActivity(Intent(Settings.ACTION_SECURITY_SETTINGS)) }
             .onFailure { message("Abra Configurações › Segurança e configure a tela de bloqueio.") }
     })
     sectionGap(layout, 10)
     layout.addView(iconMenuRow(R.drawable.ic_shield, "Permitir bloqueio remoto",
-        if (enabled) "Controlador pareado pode solicitar o bloqueio" else "Bloqueio remoto ainda não foi liberado") {
+        if (enabled) "Controlador pareado pode solicitar o bloqueio" else "Bloqueio remoto ainda não foi liberado", badge = SettingsBadgeKind.forEnabled(enabled)) {
         if (enabled) {
             SettingsStore.setAllowRemoteLock(this, false)
             openSettingsSection("lock")
@@ -383,7 +383,7 @@ private fun MainActivity.fillRemoteLockSettings(layout: LinearLayout) {
 private fun MainActivity.fillScreenSettings(layout: LinearLayout) {
     dialogIntro(layout, "A tela requer aprovação do Android a cada nova sessão. Reconectar o controlador reutiliza a sessão ainda ativa, sem nova autorização.")
     layout.addView(iconMenuRow(R.drawable.ic_monitor, "Compartilhamento de tela",
-        if (ScreenFrameStore.sharing) "Sessão ativa e pronta para reconectar" else "Abra o Modo monitorado para iniciar a tela") {
+        if (ScreenFrameStore.sharing) "Sessão ativa e pronta para reconectar" else "Abra o Modo monitorado para iniciar a tela", badge = SettingsBadgeKind.forEnabled(ScreenFrameStore.sharing)) {
         message(if (ScreenFrameStore.sharing) "A projeção já está ativa. Use Parar compartilhamento no Modo monitorado para encerrá-la."
             else "Abra o Modo monitorado e toque em Compartilhar tela para aprovar pelo Android.")
     })
@@ -391,7 +391,7 @@ private fun MainActivity.fillScreenSettings(layout: LinearLayout) {
     val touch = SettingsStore.allowRemoteTouch(this)
     layout.addView(iconMenuRow(R.drawable.ic_phone, "Controle por toque",
         when { !touch -> "Toques remotos estão bloqueados"; RemoteTouchService.isReady() -> "Toques remotos permitidos e serviço pronto";
-            else -> "Autorizado no app; falta ativar a Acessibilidade" }) {
+            else -> "Autorizado no app; falta ativar a Acessibilidade" }, badge = SettingsBadgeKind.forEnabled(touch)) {
         if (touch) {
             SettingsStore.setAllowRemoteTouch(this, false)
             message("Controle por toque desativado neste aparelho.")
@@ -405,7 +405,7 @@ private fun MainActivity.fillScreenSettings(layout: LinearLayout) {
     sectionGap(layout, 9)
     val wake = SettingsStore.allowRemoteWake(this)
     layout.addView(iconMenuRow(R.drawable.ic_remote_wake, "Permitir acender tela remotamente",
-        if (wake) "Tela pode acender remotamente, sem desbloquear" else "Acender tela remotamente está bloqueado") {
+        if (wake) "Tela pode acender remotamente, sem desbloquear" else "Acender tela remotamente está bloqueado", badge = SettingsBadgeKind.forEnabled(wake)) {
         if (SettingsStore.allowRemoteWake(this)) {
             SettingsStore.setAllowRemoteWake(this, false)
             message("Ativação remota da tela desativada neste aparelho.")
@@ -421,7 +421,7 @@ private fun MainActivity.fillScreenSettings(layout: LinearLayout) {
     sectionGap(layout, 9)
     val automatic = SettingsStore.autoWakeOnView(this)
     layout.addView(iconMenuRow(R.drawable.ic_remote_wake, "Acender automaticamente ao abrir Ver tela",
-        if (automatic) "Ao abrir Ver tela, este controlador tentará acender a tela" else "Este controlador não faz a solicitação automática") {
+        if (automatic) "Ao abrir Ver tela, este controlador tentará acender a tela" else "Este controlador não faz a solicitação automática", badge = SettingsBadgeKind.forEnabled(automatic)) {
         val next = !SettingsStore.autoWakeOnView(this)
         SettingsStore.setAutoWakeOnView(this, next)
         message(if (!next) "Ativação ao abrir desabilitada neste aparelho."
@@ -430,7 +430,7 @@ private fun MainActivity.fillScreenSettings(layout: LinearLayout) {
     sectionGap(layout, 9)
     val audio = SettingsStore.captureInternalAudio(this)
     layout.addView(iconMenuRow(R.drawable.ic_bell, "Capturar áudio interno",
-        if (audio) "Novas sessões poderão incluir áudio interno" else "Áudio interno não será capturado") {
+        if (audio) "Novas sessões poderão incluir áudio interno" else "Áudio interno não será capturado", badge = SettingsBadgeKind.forEnabled(audio)) {
         if (audio) {
             SettingsStore.setCaptureInternalAudio(this, false)
             if (ScreenFrameStore.sharing) startService(Intent(this, br.dev.monitorremoto.capture.ScreenShareService::class.java)
@@ -483,7 +483,7 @@ private fun MainActivity.fillAppearanceSettings(layout: LinearLayout) {
     )
     options.forEachIndexed { i, entry ->
         layout.addView(iconMenuRow(R.drawable.ic_palette, entry.second,
-            if (SettingsStore.theme(this) == entry.first) "Tema selecionado agora · ${entry.third}" else entry.third) {
+            if (SettingsStore.theme(this) == entry.first) "Tema selecionado agora · ${entry.third}" else entry.third, badge = if (SettingsStore.theme(this) == entry.first) SettingsBadgeKind.ACTIVE else SettingsBadgeKind.ACTION) {
             if (SettingsStore.theme(this) != entry.first) {
                 SettingsStore.setTheme(this, entry.first)
                 recreate()
@@ -510,14 +510,14 @@ private fun MainActivity.fillServiceSettings(layout: LinearLayout) {
     sectionGap(layout, 9)
     val autostart = SettingsStore.autoStartEnabled(this)
     layout.addView(iconMenuRow(R.drawable.ic_clock, "Iniciar depois de reiniciar o celular",
-        if (autostart) "O app tentará voltar após reiniciar o aparelho" else "O app não tentará iniciar após reiniciar") {
+        if (autostart) "O app tentará voltar após reiniciar o aparelho" else "O app não tentará iniciar após reiniciar", badge = SettingsBadgeKind.forEnabled(autostart)) {
         SettingsStore.setAutoStart(this, !autostart)
         render()
     })
     sectionGap(layout, 9)
     val jobsEnabled = SettingsStore.recoveryJobsEnabled(this)
     layout.addView(iconMenuRow(R.drawable.ic_refresh, "Recuperação agendada (15 min)",
-        if (jobsEnabled) "Há tentativas agendadas de recuperação a cada 15 min" else "A recuperação agendada está desligada") {
+        if (jobsEnabled) "Há tentativas agendadas de recuperação a cada 15 min" else "A recuperação agendada está desligada", badge = SettingsBadgeKind.forEnabled(jobsEnabled)) {
         SettingsStore.setRecoveryJobs(this, !jobsEnabled)
         render()
     })
@@ -698,7 +698,7 @@ private fun MainActivity.fillFileRecoverySettings(layout: LinearLayout) {
         "Apenas arquivos dessa pasta e subpastas poderão ser copiados por um aparelho pareado. " +
         "O acesso fica desativado até essa autorização.")
     layout.addView(iconMenuRow(R.drawable.ic_folder_download, "Pasta autorizada",
-        if (active) "Leitura ativada · toque para substituir" else if (chosen) "Pasta selecionada · serviço desativado ou permissão expirada" else "Nenhuma pasta ativa · toque para escolher") {
+        if (active) "Leitura ativada · toque para substituir" else if (chosen) "Pasta selecionada · serviço desativado ou permissão expirada" else "Nenhuma pasta ativa · toque para escolher", badge = SettingsBadgeKind.forEnabled(active)) {
         showAppConfirm("Autorizar recuperação de arquivos?",
             "Você deverá selecionar pessoalmente uma pasta neste celular. " +
             "Controladores que possuem a chave de pareamento poderão listar e baixar os arquivos dessa pasta. " +
@@ -713,7 +713,7 @@ private fun MainActivity.fillFileRecoverySettings(layout: LinearLayout) {
     })
     sectionGap(layout, 12)
     layout.addView(iconMenuRow(R.drawable.ic_shield, "Revogar acesso à pasta",
-        if (active || SettingsStore.sharedDataTree(this).isNotBlank()) "Retirar imediatamente a autorização" else "Sem autorização ativa") {
+        if (active || SettingsStore.sharedDataTree(this).isNotBlank()) "Retirar imediatamente a autorização" else "Sem autorização ativa", badge = if (chosen) SettingsBadgeKind.WARNING else SettingsBadgeKind.INACTIVE) {
         if (SettingsStore.sharedDataTree(this).isBlank()) message("Nenhuma pasta está autorizada.")
         else showAppConfirm("Revogar recuperação remota?",
             "O Monitor Remoto deixará de servir novos blocos de arquivos dessa pasta. " +
