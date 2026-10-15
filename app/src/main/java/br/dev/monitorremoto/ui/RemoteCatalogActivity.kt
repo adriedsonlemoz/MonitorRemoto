@@ -9,6 +9,11 @@ import android.content.Context
 import android.content.res.ColorStateList
 import android.content.res.Configuration
 import android.graphics.Color
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.app.AlertDialog
+import android.content.Intent
+import br.dev.monitorremoto.core.RemoteAppsPolicy
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
@@ -52,6 +57,19 @@ class RemoteCatalogActivity : Activity() {
     private var error: String? = null
     private var search = ""
     private var expandedInfo = false
+    private var appFilter = "todos"
+    private var appPage = 0
+    private val iconCache = mutableMapOf<String, Bitmap>()
+    private val pendingIconPackages = mutableSetOf<String>()
+    private val attemptedIconPackages = mutableSetOf<String>()
+    private val favorites by lazy { getSharedPreferences("remote_app_favorites", Context.MODE_PRIVATE) }
+    private fun prefKey(packageName: String) = "fav_${host}_$packageName"
+    private fun isFavorite(packageName: String) = favorites.getBoolean(prefKey(packageName), false)
+    private fun toggleFavorite(packageName: String) {
+        favorites.edit().putBoolean(prefKey(packageName), !isFavorite(packageName)).apply()
+        renderRecords()
+    }
+
     private lateinit var content: LinearLayout
     private lateinit var items: LinearLayout
     private lateinit var summary: TextView
@@ -186,12 +204,19 @@ class RemoteCatalogActivity : Activity() {
                 addTextChangedListener(object : TextWatcher {
                     override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
                     override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                        search = s?.toString().orEmpty(); renderRecords()
+                        search = s?.toString().orEmpty(); appPage = 0; renderRecords()
                     }
                     override fun afterTextChanged(s: Editable?) {}
                 })
             }
-            content.addView(field, LinearLayout.LayoutParams(-1, dp(52)).apply { bottomMargin = dp(12) })
+            content.addView(field, LinearLayout.LayoutParams(-1, dp(48)).apply { bottomMargin = dp(8) })
+            val filters = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+            listOf("todos" to "Todos", "favoritos" to "Favoritos", "ultimo" to "Último visto").forEachIndexed { index, (value, text) ->
+                filters.addView(action(text) { appFilter = value; appPage = 0; renderRecords() }.apply {
+                    setTextColor(if (appFilter == value) accent else muted)
+                }, LinearLayout.LayoutParams(0, dp(42), 1f).apply { if (index > 0) leftMargin = dp(6) })
+            }
+            content.addView(filters, LinearLayout.LayoutParams(-1, dp(42)).apply { bottomMargin = dp(10) })
         }
         items = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         content.addView(items)
@@ -252,7 +277,20 @@ class RemoteCatalogActivity : Activity() {
             all.add(obj)
         }
         if (!isApps) all.sortByDescending { it.optLong("whenMs") }
-        summary.text = if (isApps) "${all.size} aplicativos visíveis no monitorado" else "${all.size} notificações elegíveis na última consulta"
+        val lastObserved = data.optString("lastObservedPackage").takeIf { it.isNotBlank() && it != "null" }
+        if (isApps) {
+            all.removeAll { item ->
+                val pkg = item.optString("package")
+                when (appFilter) {
+                    "favoritos" -> !isFavorite(pkg)
+                    "ultimo" -> pkg != lastObserved
+                    else -> false
+                }
+            }
+            all.sortWith(compareByDescending<JSONObject> { isFavorite(it.optString("package")) }
+                .thenBy { it.optString("name").lowercase() })
+        }
+        summary.text = if (isApps) "${all.size} aplicativos no filtro · página ${appPage + 1}" else "${all.size} notificações elegíveis na última consulta"
         if (expandedInfo) {
             val help = card()
             help.addView(label(if (isApps) "Apenas aplicativos com ícone no lançador, sem dados internos. É necessária a autorização em Configurações > Aplicativos instalados no monitorado." else "O acesso requer: monitoramento ativo, permissão de notificação do Android e aplicativos autorizados. São exibidos somente até 30 eventos recentes mantidos em memória. Eventos excluídos pelo filtro de segurança não aparecem.", 12f, secondary = true))
@@ -283,15 +321,37 @@ class RemoteCatalogActivity : Activity() {
             items.addView(panel)
             return
         }
-        all.take(120).forEach { item ->
+        if (isApps && appPage * RemoteAppsPolicy.pageSize() >= all.size) appPage = 0
+        val page = if (isApps) all.drop(appPage * RemoteAppsPolicy.pageSize()).take(RemoteAppsPolicy.pageSize()) else all.take(120)
+        page.forEach { item ->
             val panel = card()
             val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.TOP }
-            row.addView(icon(if (isApps) R.drawable.ic_phone else R.drawable.ic_bell),
-                LinearLayout.LayoutParams(dp(24), dp(24)).apply { rightMargin = dp(11) })
+            val pkg = item.optString("package")
+            val iconView = if (isApps && iconCache[pkg] != null) ImageView(this).apply {
+                setImageBitmap(iconCache[pkg]); scaleType = ImageView.ScaleType.FIT_CENTER
+                contentDescription = "Ícone do aplicativo"
+            } else icon(if (isApps) R.drawable.ic_phone else R.drawable.ic_bell)
+            row.addView(iconView,
+                LinearLayout.LayoutParams(dp(if (isApps) 38 else 24), dp(if (isApps) 38 else 24)).apply { rightMargin = dp(11) })
             val textColumn = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
             textColumn.addView(label(if (isApps) item.optString("name") else item.optString("title").ifBlank { "Notificação" }, 14.5f, true))
             textColumn.addView(gap(5))
             textColumn.addView(label(if (isApps) item.optString("package") else notificationAppName(item.optString("app")), 11.5f, secondary = true))
+            if (isApps) {
+                textColumn.addView(gap(7))
+                val controls = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+                listOf("Abrir" to { openApp(pkg) }, "Parar via ADB" to { stopApp(pkg) },
+                    (if (isFavorite(pkg)) "★" else "☆") to { toggleFavorite(pkg) }).forEachIndexed { index, (title, operation) ->
+                    controls.addView(action(title, operation).apply {
+                        textSize = 11f
+                        if (index == 2) contentDescription = if (isFavorite(pkg)) "Remover dos favoritos" else "Adicionar aos favoritos"
+                    },
+                        LinearLayout.LayoutParams(0, dp(42), if (index == 1) 1.5f else 1f).apply {
+                            if (index > 0) leftMargin = dp(4)
+                        })
+                }
+                textColumn.addView(controls)
+            }
             if (!isApps) {
                 textColumn.addView(gap(8))
                 textColumn.addView(label(item.optString("preview"), 12.5f).apply {
@@ -321,14 +381,138 @@ class RemoteCatalogActivity : Activity() {
             }
             row.addView(textColumn, LinearLayout.LayoutParams(0, -2, 1f))
             panel.addView(row)
-            items.addView(panel, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
+            if (isApps) {
+                panel.isClickable = true
+                panel.isFocusable = true
+                panel.contentDescription = "Detalhes de ${item.optString("name")}, ${item.optString("package")}" 
+                panel.setOnClickListener { showAppDetails(item, lastObserved) }
+            }
+            items.addView(panel, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(8) })
         }
+        if (isApps) {
+            val controls = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+            val totalPages = (all.size + RemoteAppsPolicy.pageSize() - 1) / RemoteAppsPolicy.pageSize()
+            controls.addView(action("‹ Anterior") { if (appPage > 0) { appPage--; renderRecords() } },
+                LinearLayout.LayoutParams(0, dp(44), 1f))
+            controls.addView(label("${appPage + 1} / ${totalPages.coerceAtLeast(1)}", 12f, secondary = true).apply { gravity = Gravity.CENTER },
+                LinearLayout.LayoutParams(0, dp(44), 0.7f))
+            controls.addView(action("Próxima ›") { if (appPage + 1 < totalPages) { appPage++; renderRecords() } },
+                LinearLayout.LayoutParams(0, dp(44), 1f))
+            items.addView(controls)
+            requestPageIcons(page.map { it.optString("package") })
+        }
+    }
+
+    private fun requestPageIcons(packages: List<String>) {
+        val missing = packages.filter { RemoteAppsPolicy.validPackage(it) && it !in iconCache && it !in pendingIconPackages && it !in attemptedIconPackages }
+            .take(RemoteAppsPolicy.pageSize())
+        if (missing.isEmpty()) return
+        val key = RecentDevices.key(this, host) ?: return
+        pendingIconPackages.addAll(missing)
+        val request = generation
+        executor.execute {
+            val response = runCatching { RemoteClient.appIcons(host, key, applicationContext, method, missing) }.getOrNull()
+            val icons = response?.optJSONObject("icons")
+            val result = mutableMapOf<String, Bitmap>()
+            missing.forEach { pkg ->
+                val encoded = icons?.optString(pkg).orEmpty()
+                if (encoded.length in 1..8_192) runCatching {
+                    val bytes = android.util.Base64.decode(encoded, android.util.Base64.DEFAULT)
+                    val bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                    if (bmp != null && bmp.width in 1..80 && bmp.height in 1..80) result[pkg] = bmp
+                }
+            }
+            main.post {
+                pendingIconPackages.removeAll(missing.toSet())
+                attemptedIconPackages.addAll(missing)
+                if (request == generation && !isFinishing && !isDestroyed) {
+                    iconCache.putAll(result)
+                    // Sem ícone disponível: não repetir a mesma consulta na sessão.
+                    missing.filter { it !in result }.forEach { iconCache.remove(it) }
+                    if (result.isNotEmpty()) renderRecords()
+                }
+            }
+        }
+    }
+
+    private fun showAppDetails(item: JSONObject, lastObserved: String?) {
+        val pkg = item.optString("package")
+        val name = item.optString("name")
+        val observed = if (lastObserved == pkg) "Último aplicativo observado (não comprova execução atual)"
+            else "Execução não confirmada"
+        val options = arrayOf("Abrir aplicativo", "Forçar parada via ADB", "Configurações via ADB",
+            if (isFavorite(pkg)) "Remover dos favoritos" else "Adicionar aos favoritos")
+        AlertDialog.Builder(this)
+            .setTitle(name.ifBlank { pkg })
+            .setMessage("Pacote: $pkg\n$observed")
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> openApp(pkg)
+                    1 -> stopApp(pkg)
+                    2 -> adbApp(pkg, "settings")
+                    3 -> toggleFavorite(pkg)
+                }
+            }
+            .setNegativeButton("Fechar", null)
+            .show()
+    }
+
+    private fun openApp(packageName: String) {
+        if (!RemoteAppsPolicy.validPackage(packageName)) return
+        AlertDialog.Builder(this).setTitle("Abrir aplicativo remoto?")
+            .setMessage("Tentar abrir $packageName com autorização no monitorado. O Android pode impedir a ação quando a tela do Monitor Remoto estiver em segundo plano.")
+            .setNegativeButton("Cancelar", null)
+            .setNeutralButton("Usar ADB") { _, _ -> adbApp(packageName, "open") }
+            .setPositiveButton("Tentar normal") { _, _ ->
+                val key = RecentDevices.key(this, host) ?: return@setPositiveButton
+                val request = generation
+                executor.execute {
+                    val result = runCatching { RemoteClient.appLaunch(host, key, applicationContext, method, packageName) }
+                    main.post {
+                        if (request != generation || isFinishing || isDestroyed) return@post
+                        result.onSuccess {
+                            AlertDialog.Builder(this).setTitle("Pedido enviado")
+                                .setMessage(it.optString("message") + "\nA abertura visual não é confirmada.")
+                                .setPositiveButton("OK", null).show()
+                        }.onFailure {
+                            AlertDialog.Builder(this).setTitle("Abertura normal indisponível")
+                                .setMessage((it.message ?: "O Android recusou a solicitação.").take(200) + "\nDeseja tentar via ADB autorizado?")
+                                .setNegativeButton("Agora não", null)
+                                .setPositiveButton("Ir para ADB") { _, _ -> adbApp(packageName, "open") }.show()
+                        }
+                    }
+                }
+            }.show()
+    }
+
+    private fun stopApp(packageName: String) {
+        if (!RemoteAppsPolicy.canForceStop(packageName)) {
+            AlertDialog.Builder(this).setMessage("Aplicativo do sistema/protegido: parada indisponível.")
+                .setPositiveButton("OK", null).show()
+            return
+        }
+        AlertDialog.Builder(this).setTitle("Forçar parada pelo ADB?")
+            .setMessage("Isso interromperá tarefas, gravações e transferências de $packageName. Não há API normal do Android para forçar a parada de outros apps. ADB precisa estar autorizado.")
+            .setNegativeButton("Cancelar", null)
+            .setPositiveButton("Abrir ADB") { _, _ -> adbApp(packageName, "stop") }.show()
+    }
+
+    private fun adbApp(packageName: String, action: String) {
+        if (!RemoteAppsPolicy.validPackage(packageName) || action == "stop" && !RemoteAppsPolicy.canForceStop(packageName) ||
+            action !in setOf("open", "stop", "settings")) return
+        startActivity(Intent(this, AdbActivity::class.java).apply {
+            putExtra(AdbActivity.EXTRA_MAINTENANCE_HOST, host)
+            putExtra(AdbActivity.EXTRA_APP_PACKAGE, packageName)
+            putExtra(AdbActivity.EXTRA_APP_ACTION, action)
+        })
     }
 
     override fun onDestroy() {
         generation++
         executor.shutdownNow()
         payload = null
+        iconCache.values.forEach { if (!it.isRecycled) it.recycle() }
+        iconCache.clear()
         super.onDestroy()
     }
 }

@@ -11,8 +11,9 @@ class RemoteBatchPolicyTest {
         assertFalse(RemoteBatchPolicy.eligible(List(21) { 1L }))
         assertFalse(RemoteBatchPolicy.eligible(listOf(0L)))
         assertFalse(RemoteBatchPolicy.eligible(listOf(-1L)))
-        assertFalse(RemoteBatchPolicy.eligible(listOf(32L * 1024L * 1024L + 1)))
-        assertFalse(RemoteBatchPolicy.eligible(List(5) { 32L * 1024L * 1024L }))
+        assertTrue(RemoteBatchPolicy.eligible(listOf(32L * 1024L * 1024L + 1)))
+        assertTrue(RemoteBatchPolicy.eligible(List(5) { 32L * 1024L * 1024L }))
+        assertFalse(RemoteBatchPolicy.eligible(listOf(RemoteBatchPolicy.MAX_TOTAL_BYTES + 1)))
     }
 
     @Test fun nonDestructiveSuffixIsCaseInsensitive() {

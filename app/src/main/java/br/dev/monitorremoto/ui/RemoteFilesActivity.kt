@@ -12,6 +12,16 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.provider.DocumentsContract
+import android.provider.MediaStore
+import android.os.Build
+import android.os.SystemClock
+import android.content.ContentValues
+import android.provider.OpenableColumns
+import android.widget.ProgressBar
+import android.widget.ImageView
+import android.widget.CheckBox
+import android.util.Base64
+import java.security.MessageDigest
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.Gravity
@@ -24,6 +34,7 @@ import android.widget.TextView
 import br.dev.monitorremoto.core.RecentDevices
 import br.dev.monitorremoto.core.RemoteBatchPolicy
 import br.dev.monitorremoto.core.RemoteFilePolicy
+import br.dev.monitorremoto.core.RemoteManagePolicy
 import br.dev.monitorremoto.core.SettingsStore
 import br.dev.monitorremoto.transport.RemoteClient
 import org.json.JSONObject
@@ -33,15 +44,16 @@ import java.util.Locale
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.thread
 
-/** Gerenciador remoto SOMENTE LEITURA de uma árvore SAF autorizada no telefone monitorado. */
+/** Gerenciador SAF bidirecional: apenas a árvore autorizada e operações específicas autenticadas. */
 class RemoteFilesActivity : Activity() {
     companion object {
         const val EXTRA_HOST = "host"
         const val EXTRA_METHOD = "method"
         private const val CREATE_DOCUMENT = 9045
         private const val CHOOSE_FOLDER = 9046
+        private const val PICK_UPLOADS = 9047
         private const val MAX_BATCH_ITEMS = 20
-        private const val MAX_BATCH_BYTES = 128L * 1024L * 1024L
+        private const val MAX_BATCH_BYTES = 2L * 1024L * 1024L * 1024L
     }
 
     private val main = Handler(Looper.getMainLooper())
@@ -51,6 +63,13 @@ class RemoteFilesActivity : Activity() {
     private var generation = 0
     private var copying = false
     private val cancel = AtomicBoolean(false)
+    private val paused = AtomicBoolean(false)
+    private var writeAllowed = false
+    private var currentTransferInfo: TextView? = null
+    private var currentTransferBar: ProgressBar? = null
+    private var progressStartedAt = 0L
+    private var lastProgressAt = 0L
+    private var chooseDownloads = false
     private var key: ByteArray? = null
     private var entries = listOf<JSONObject>()
     private val selected = linkedSetOf<String>()
@@ -72,6 +91,7 @@ class RemoteFilesActivity : Activity() {
     private lateinit var status: TextView
     private lateinit var count: TextView
     private lateinit var search: EditText
+    private var selectButton: Button? = null
 
     private val dark get() = when (SettingsStore.theme(this)) {
         "dark" -> true
@@ -105,6 +125,7 @@ class RemoteFilesActivity : Activity() {
         textSize = 13f
         minHeight = dp(46)
         elevation = 0f
+        stateListAnimator = null
         setTextColor(if (primary) Color.WHITE else this@RemoteFilesActivity.foreground)
         background = rounded(if (primary) accent else panelColor, 14, !primary)
         setOnClickListener { action() }
@@ -127,7 +148,7 @@ class RemoteFilesActivity : Activity() {
         background = rounded(panelColor, 19)
     }
     private fun goBack() {
-        if (copying) { cancel.set(true); status.text = "Cancelando transferência…"; return }
+        if (copying) { cancel.set(true); paused.set(false); status.text = "Cancelando transferência…"; return }
         if (selecting) { selecting = false; selected.clear(); renderItems(); return }
         if (path.isNotEmpty()) { path = path.dropLast(1); listFolder() } else finish()
     }
@@ -187,9 +208,9 @@ class RemoteFilesActivity : Activity() {
     private fun showHelp() {
         val body = panel().apply {
             addView(label("Arquivos compartilhados", 19f, true))
-            addView(label("Somente a pasta escolhida e autorizada no telefone monitorado. O acesso é de leitura: copiar não altera a origem.", 14f))
+            addView(label("A pasta é escolhida no monitorado. Download requer leitura; envio, criação, movimentação e exclusão requerem autorização EXTRA de escrita, desligada por padrão.", 14f))
             addView(label("Para autorizar: no monitorado, abra Monitor Remoto → Configurações → Arquivos e recuperação → Escolher pasta.", 14f))
-            addView(label("Limites: 32 MiB por arquivo, 20 arquivos por lote, 128 MiB por lote; pastas completas disponíveis no menu de cada pasta. Sem retomada após fechar o app. Não recupera arquivos apagados nem lê dados privados de outros apps.", 12f).apply { setTextColor(muted) })
+            addView(label("Até 2 GiB por arquivo/lote, 20 arquivos por lote, 150 itens por pasta. A transferência pausa apenas enquanto esta tela existir, e é cancelada ao fechá-la. Downloads pode ser usado como destino direto no Android 10+. Exclusão remota pode ser definitiva.", 12f).apply { setTextColor(muted) })
         }
         AlertDialog.Builder(this).setView(body).setPositiveButton("Entendi", null).show()
     }
@@ -230,6 +251,7 @@ class RemoteFilesActivity : Activity() {
                     entries = if (json == null) emptyList() else (0 until json.length()).mapNotNull { index ->
                         json.optJSONObject(index)?.takeIf { RemoteFilePolicy.validSegment(it.optString("name")) }
                     }
+                    writeAllowed = response.optBoolean("writable", false)
                     showListing(response.optBoolean("truncated"))
                 }.onFailure { showListingError(it.message ?: "Sem resposta do aparelho remoto.") }
             }
@@ -240,15 +262,21 @@ class RemoteFilesActivity : Activity() {
         screenShell()
         val crumb = panel().apply {
             addView(label(if (path.isEmpty()) "Pasta compartilhada" else "Pasta /${path.joinToString("/")}", 14f, true))
-            addView(label("Somente leitura · ${entries.size} itens" + if (truncated) " · limite 150" else "", 12f).apply { setTextColor(muted) })
+            addView(label("${if (writeAllowed) "Gerenciamento autorizado" else "Somente leitura"} · ${entries.size} itens" +
+                if (truncated) " · lista limitada" else "", 12f).apply { setTextColor(muted) })
         }
-        add(crumb)
+        add(crumb, 7)
+        if (writeAllowed) add(horizontal(
+            button("⬆ Enviar") { pickUploadFiles() },
+            button("＋ Nova pasta") { askNewFolder() }
+        ), 7)
+        selectButton = button(if (selecting) "✓ Cancelar" else "☑ Selecionar", action = {
+            selecting = !selecting; selected.clear(); renderItems()
+        })
         val controls = horizontal(
-            button("Ordenar", action = { chooseSort() }),
+            button("⇅ Ordenar", action = { chooseSort() }),
             button(if (gridMode) "☰ Lista" else "▦ Grade", action = { gridMode = !gridMode; renderItems() }),
-            button(if (selecting) "Cancelar" else "Selecionar", action = {
-                selecting = !selecting; selected.clear(); renderItems()
-            })
+            selectButton!!
         )
         add(controls)
         search = EditText(this).apply {
@@ -274,7 +302,7 @@ class RemoteFilesActivity : Activity() {
         listArea = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         add(listArea)
         if (path.isNotEmpty()) add(button("‹ Pasta anterior") { goBack() })
-        status.text = "Toque em uma pasta para abrir. Selecione arquivos para copiar em lote."
+        status.text = "Menu ⋮: copiar, informações e gerenciar. Downloads direto disponível por arquivo."
         renderItems()
     }
 
@@ -312,14 +340,43 @@ class RemoteFilesActivity : Activity() {
     private fun fileInfo(item: JSONObject) {
         val name = item.optString("name")
         val parent = if (path.isEmpty()) "/" else "/${path.joinToString("/")}/"
-        AlertDialog.Builder(this).setTitle(name).setMessage(
+        val builder = AlertDialog.Builder(this).setTitle(name).setMessage(
             "Tipo: ${if (item.optBoolean("folder")) "Pasta" else item.optString("mime").ifBlank { "Arquivo" }}\n" +
-                "Tamanho: ${entrySize(item)}\nModificado: ${entryDate(item)}\nLocal: $parent\n\nOrigem somente leitura."
-        ).setPositiveButton("Fechar", null).show()
+                "Tamanho: ${entrySize(item)} (${item.optLong("size", -1)} bytes)\n" +
+                "Modificado: ${entryDate(item)}\nLocal: $parent\n" +
+                "Permissão: ${if (writeAllowed) "Leitura e gerenciamento" else "Somente leitura"}\n" +
+                "Formato: ${item.optString("mime")}\n" +
+                "Recursos do provedor: ${item.optInt("flags")} (flags Android).\n" +
+                "Mover, copiar ou excluir depende do provedor de documentos."
+        ).setPositiveButton("Fechar", null)
+        if (!item.optBoolean("folder") && item.optLong("size", 0L) > 0) {
+            builder.setNeutralButton("SHA-256") { _, _ -> showRemoteHash(item) }
+        }
+        builder.show()
     }
+    private fun showRemoteHash(item: JSONObject) {
+        val secret = key ?: return
+        status.text = "Calculando SHA-256 no monitorado; arquivos grandes podem demorar…"
+        val location = path + item.optString("name")
+        thread(name = "MonitorRemoto-file-sha") {
+            val result = runCatching { RemoteClient.dataHash(host, secret, applicationContext, method, location,
+                item.optLong("size", -1), item.optLong("modified", -1)) }
+            main.post { if (!isFinishing && !isDestroyed) result.onSuccess { digest ->
+                status.text = "SHA-256 calculado"
+                AlertDialog.Builder(this).setTitle("SHA-256 · ${item.optString("name")}")
+                    .setMessage(digest).setPositiveButton("Fechar", null)
+                    .setNeutralButton("Copiar") { _, _ ->
+                        (getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager)
+                            .setPrimaryClip(android.content.ClipData.newPlainText("SHA-256", digest))
+                    }.show()
+            }.onFailure { status.text = "Não foi possível calcular SHA-256: ${it.message}" } }
+        }
+    }
+
     private fun renderItems() {
         if (!this::listArea.isInitialized || copying) return
         listArea.removeAllViews()
+        selectButton?.text = if (selecting) "✓ Cancelar" else "☑ Selecionar"
         val filtered = entries.filter { it.optString("name").contains(queryText, ignoreCase = true) }
         val comparator: Comparator<JSONObject> = when (sortMode) {
             1 -> compareByDescending<JSONObject> { it.optLong("modified", 0L) }.thenBy { it.optString("name").lowercase(Locale.ROOT) }
@@ -328,7 +385,7 @@ class RemoteFilesActivity : Activity() {
             else -> compareBy<JSONObject> { it.optString("name").lowercase(Locale.ROOT) }
         }
         val ordered = filtered.sortedWith(compareBy<JSONObject> { !it.optBoolean("folder") }.then(comparator))
-        if (this::count.isInitialized) count.text = "${ordered.size} itens" + if (selected.isNotEmpty()) " · ${selected.size} selecionado(s)" else ""
+        if (this::count.isInitialized) count.text = "${ordered.size} itens" + if (selecting) " · SELEÇÃO ATIVA (${selected.size})" else ""
         if (ordered.isEmpty()) listArea.addView(label(if (entries.isEmpty()) "Pasta vazia." else "Nenhum resultado para a busca."))
         else if (!gridMode) ordered.forEach { item ->
             listArea.addView(entryCard(item, false), LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(8) })
@@ -357,6 +414,11 @@ class RemoteFilesActivity : Activity() {
             background = rounded(if (chosen) softColor else panelColor, 15)
             isClickable = true; isFocusable = true
         }
+        if (selecting) box.addView(CheckBox(this).apply {
+            isChecked = chosen
+            contentDescription = "Selecionar $name"
+            setOnClickListener { toggleSelection(item) }
+        })
         val icon = label(entryIcon(item), if (grid) 29f else 25f).apply {
             gravity = Gravity.CENTER
             setPadding(0, 0, 0, 0)
@@ -368,15 +430,15 @@ class RemoteFilesActivity : Activity() {
         if (!folder) info.addView(label(entryDate(item), 11f).apply { setTextColor(muted); maxLines = 1 })
         box.addView(info, if (grid) LinearLayout.LayoutParams(-1, -2) else LinearLayout.LayoutParams(0, -2, 1f))
         if (!grid) box.addView(button(if (chosen) "✓" else "⋮") {
-            if (selecting && !folder) toggleSelection(item) else openActions(item)
+            if (selecting) toggleSelection(item) else openActions(item)
         }, LinearLayout.LayoutParams(dp(48), dp(46)))
         box.setOnClickListener {
-            if (selecting && !folder) toggleSelection(item)
+            if (selecting) toggleSelection(item)
             else if (folder) openFolder(name)
             else openActions(item)
         }
         box.setOnLongClickListener {
-            if (!folder) { selecting = true; toggleSelection(item) } else fileInfo(item)
+            selecting = true; toggleSelection(item)
             true
         }
         return box
@@ -391,33 +453,72 @@ class RemoteFilesActivity : Activity() {
         queryText = ""
         listFolder()
     }
+    /** Menu nativo do aplicativo, com ícones e ações contextualizadas. */
     private fun openActions(item: JSONObject) {
-        if (entries.count { it.optString("name") == item.optString("name") } > 1) {
-            status.text = "Há nomes repetidos nesta pasta. Renomeie na origem antes de copiar."; return
+        val name = item.optString("name")
+        if (entries.count { it.optString("name") == name } != 1) {
+            status.text = "Nome repetido: renomeie diretamente no aparelho de origem."; return
         }
         val isFolder = item.optBoolean("folder")
-        val choices = if (isFolder) arrayOf("Abrir pasta", "Copiar pasta e subpastas", "Informações") else arrayOf("Copiar para este celular", "Informações", "Selecionar")
-        AlertDialog.Builder(this).setTitle(item.optString("name"))
-            .setItems(choices) { _, which ->
-                if (isFolder) {
-                    when (which) {
-                        0 -> openFolder(item.optString("name"))
-                        1 -> chooseFolderDestination(item.optString("name"))
-                        else -> fileInfo(item)
-                    }
-                } else when (which) {
-                    0 -> chooseDestination(item, path)
-                    1 -> fileInfo(item)
-                    2 -> { selecting = true; toggleSelection(item) }
-                }
-            }.setNegativeButton("Fechar", null).show()
+        val holder = panel().apply { setPadding(dp(10), dp(8), dp(10), dp(8)) }
+        holder.addView(label("${entryIcon(item)} $name", 15f, true).apply { maxLines = 3 })
+        holder.addView(label(if (isFolder) "Pasta" else "${entrySize(item)} · ${entryDate(item)}", 12f).apply {
+            setTextColor(muted)
+        })
+        var menu: AlertDialog? = null
+        fun option(icon: Int, caption: String, action: () -> Unit) {
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(12), dp(8), dp(12), dp(8))
+                isClickable = true; isFocusable = true
+                background = rounded(softColor, 12)
+            }
+            row.addView(ImageView(this).apply {
+                setImageResource(icon)
+                imageTintList = android.content.res.ColorStateList.valueOf(accent)
+                contentDescription = null
+            }, LinearLayout.LayoutParams(dp(28), dp(28)))
+            row.addView(label(caption, 13f, true), LinearLayout.LayoutParams(-1, -2).apply {
+                marginStart = dp(12)
+            })
+            row.setOnClickListener { menu?.dismiss(); action() }
+            holder.addView(row, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(7) })
+        }
+        if (isFolder) {
+            option(android.R.drawable.ic_menu_view, "Abrir pasta") { openFolder(name) }
+            option(android.R.drawable.ic_menu_save, "Baixar pasta e subpastas") { chooseFolderDestination(name) }
+        } else {
+            option(android.R.drawable.ic_menu_save, "Baixar neste celular") { chooseDestination(item, path) }
+            option(android.R.drawable.ic_menu_save, "Salvar em Downloads") { saveDownloads(item) }
+            option(android.R.drawable.ic_menu_view, "Baixar e visualizar") { saveDownloads(item, "view") }
+            option(android.R.drawable.ic_menu_share, "Baixar e compartilhar") { saveDownloads(item, "share") }
+        }
+        option(android.R.drawable.ic_menu_info_details, "Informações") { fileInfo(item) }
+        option(android.R.drawable.ic_menu_agenda, "Selecionar") { selecting = true; toggleSelection(item) }
+        if (writeAllowed) {
+            option(android.R.drawable.ic_menu_edit, "Renomear") { askRename(item) }
+            option(android.R.drawable.ic_menu_directions, "Mover para subpasta") {
+                chooseRemoteFolder("move", listOf(name))
+            }
+            option(android.R.drawable.ic_menu_add, "Copiar dentro da pasta remota") {
+                chooseRemoteFolder("copy", listOf(name))
+            }
+            option(android.R.drawable.ic_menu_delete, "Mover para lixeira (se suportado)") {
+                runBatchAction("trash", listOf(name), emptyList())
+            }
+            option(android.R.drawable.ic_menu_delete, "Excluir definitivamente") {
+                confirmBatchDelete(listOf(item))
+            }
+        }
+        menu = AlertDialog.Builder(this).setView(holder).setNegativeButton("Fechar", null).create()
+        menu.show()
     }
     private fun toggleSelection(item: JSONObject) {
         val name = item.optString("name")
         if (entries.count { it.optString("name") == name } > 1) {
             status.text = "Arquivo ambíguo: renomeie o duplicado na origem."; return
         }
-        if (item.optBoolean("folder")) return
         if (!selected.remove(name)) {
             if (selected.size >= MAX_BATCH_ITEMS) { status.text = "Máximo de $MAX_BATCH_ITEMS arquivos por lote."; return }
             selected.add(name)
@@ -426,17 +527,29 @@ class RemoteFilesActivity : Activity() {
     }
     private fun updateSelectionBar() {
         selectionBar.removeAllViews()
-        if (!selecting || selected.isEmpty()) { selectionBar.visibility = View.GONE; return }
+        if (!selecting) { selectionBar.visibility = View.GONE; return }
         selectionBar.visibility = View.VISIBLE
-        val chosen = entries.filter { !it.optBoolean("folder") && selected.contains(it.optString("name")) }
+        val chosen = entries.filter { selected.contains(it.optString("name")) }
         val total = chosen.sumOf { it.optLong("size", -1L).coerceAtLeast(0L) }
-        selectionBar.addView(label("${chosen.size} arquivos · ${formatBytes(total)}", 13f, true))
+        selectionBar.addView(label("${chosen.size} selecionado(s) · ${formatBytes(total)}", 13f, true))
         selectionBar.addView(horizontal(
-            button("Cancelar") { selected.clear(); selecting = false; renderItems() },
-            button("Copiar selecionados", primary = true) { chooseBatchDestination() }
+            button("Todos") { selected.clear(); entries.take(MAX_BATCH_ITEMS).forEach { selected.add(it.optString("name")) }; renderItems() },
+            button("Limpar") { selected.clear(); renderItems() },
+            button("Baixar", primary = true) { chooseBatchDestination() }
+        ))
+        if (Build.VERSION.SDK_INT >= 29) selectionBar.addView(button("↓ Salvar seleção em Downloads") {
+            copyBatchDownloads(chosen)
+        })
+        if (writeAllowed) selectionBar.addView(horizontal(
+            button("Mover") { chooseRemoteFolder("move", chosen.map { it.optString("name") }) },
+            button("Copiar aqui") { chooseRemoteFolder("copy", chosen.map { it.optString("name") }) },
+            button("Lixeira") { confirmBatchTrash(chosen) },
+            button("Excluir") { confirmBatchDelete(chosen) }
         ))
     }
-    private fun formatBytes(value: Long) = if (value >= 1024 * 1024) "${value / (1024 * 1024)} MiB" else "${value / 1024} KiB"
+    private fun formatBytes(value: Long): String = if (value >= 1024L * 1024L)
+        String.format(Locale.getDefault(), "%.1f MiB", value / (1024.0 * 1024.0)) else
+        String.format(Locale.getDefault(), "%.1f KiB", value / 1024.0)
 
     private fun chooseFolderDestination(name: String) {
         if (copying || !RemoteFilePolicy.validSegment(name) ||
@@ -457,10 +570,11 @@ class RemoteFilesActivity : Activity() {
     private fun chooseBatchDestination() {
         if (copying) return
         val chosen = entries.filter { !it.optBoolean("folder") && it.optString("name") in selected }
+        if (selected.size != chosen.size) { status.text = "Para baixar pastas, use o menu ⋮ da pasta individual."; return }
         val sizes = chosen.map { it.optLong("size", -1L) }
         if (!RemoteBatchPolicy.eligible(sizes) ||
             chosen.map { it.optString("name") }.distinct().size != chosen.size) {
-            status.text = "Selecione até $MAX_BATCH_ITEMS arquivos distintos, com tamanho conhecido entre 1 B e 32 MiB cada (até 128 MiB no lote)."
+            status.text = "Selecione até $MAX_BATCH_ITEMS arquivos, com tamanho conhecido e até 2 GiB no total. Pastas devem ser baixadas pelo menu individual."
             return
         }
         batchFiles = chosen.map { JSONObject(it.toString()) }
@@ -480,7 +594,7 @@ class RemoteFilesActivity : Activity() {
         val name = file.optString("name")
         val size = file.optLong("size", -1L)
         if (!RemoteFilePolicy.validSegment(name) || size !in 1..RemoteFilePolicy.MAX_FILE_BYTES) {
-            status.text = "Esta versão copia arquivos individuais de 1 B a 32 MiB."
+            status.text = "Arquivo sem tamanho conhecido ou acima de 2 GiB."
             return
         }
         pendingFile = JSONObject(file.toString())
@@ -503,6 +617,17 @@ class RemoteFilesActivity : Activity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         when (requestCode) {
+            PICK_UPLOADS -> {
+                if (resultCode != RESULT_OK || data == null) { status.text = "Envio cancelado."; return }
+                val uris = mutableListOf<Uri>()
+                data.data?.let { uris.add(it) }
+                data.clipData?.let { clip -> for (i in 0 until clip.itemCount) {
+                    val uri = clip.getItemAt(i).uri
+                    if (uri !in uris) uris.add(uri)
+                } }
+                if (uris.size > MAX_BATCH_ITEMS) status.text = "Selecione até $MAX_BATCH_ITEMS arquivos."
+                else uploadSelected(uris)
+            }
             CREATE_DOCUMENT -> {
                 val file = pendingFile
                 pendingFile = null
@@ -567,7 +692,7 @@ class RemoteFilesActivity : Activity() {
                     val length = item.optLong("size", -1)
                     check(length in 1..RemoteFilePolicy.MAX_FILE_BYTES) { "Arquivo não permitido: $name" }
                     total += length
-                    check(total <= RemoteBatchPolicy.MAX_TOTAL_BYTES) { "Pasta acima de 128 MiB." }
+                    check(total <= RemoteBatchPolicy.MAX_TOTAL_BYTES) { "Pasta acima de 2 GiB." }
                     result.add(RemoteFolderEntry(branch, JSONObject(item.toString())))
                     countFiles++
                     check(countFiles <= RemoteBatchPolicy.MAX_FILES && result.size <= 200) {
@@ -582,10 +707,9 @@ class RemoteFilesActivity : Activity() {
 
     private fun copyRemoteFolder(tree: Uri, sourceRoot: List<String>, title: String) {
         if (copying) return
-        copying = true; cancel.set(false); ++generation
+        copying = true; cancel.set(false); paused.set(false); ++generation
         screenShell()
-        status.text = "Conferindo a pasta e os limites antes de copiar…"
-        add(button("Cancelar cópia", primary = true) { cancel.set(true) })
+        showTransferPanel("Conferindo pasta remota")
         thread(name = "MonitorRemoto-data-folder") {
             var createdRoot: Uri? = null
             var finished = 0
@@ -621,7 +745,7 @@ class RemoteFilesActivity : Activity() {
                             ?: error("Não foi possível criar $name no destino.")
                         transferTo(uri, entry.data, sourceRoot + entry.relativePath) { written, size ->
                             main.post { if (!isDestroyed && !isFinishing)
-                                status.text = "${finished + 1}/$totalFiles · $name · ${written * 100 / size}%" }
+                                updateProgress(written, size, "${finished + 1}/$totalFiles · $name") }
                         }
                         finished++
                     }
@@ -645,11 +769,10 @@ class RemoteFilesActivity : Activity() {
 
     private fun copyBatch(tree: Uri, files: List<JSONObject>, parent: List<String>) {
         if (copying) return
-        copying = true; cancel.set(false)
+        copying = true; cancel.set(false); paused.set(false)
         ++generation
         screenShell()
-        status.text = "Preparando ${files.size} arquivos…"
-        add(button("Cancelar cópia", primary = true) { cancel.set(true); status.text = "Cancelando após o bloco atual…" })
+        showTransferPanel("Preparando ${files.size} arquivos")
         if (key == null) { copying = false; showProblem("Chave de conexão indisponível."); return }
         thread(name = "MonitorRemoto-data-batch") {
             var copied = 0
@@ -670,8 +793,7 @@ class RemoteFilesActivity : Activity() {
                     try {
                         transferTo(uri, file, parent + name) { written, total ->
                             main.post {
-                                if (!isDestroyed && !isFinishing) status.text =
-                                    "${index + 1}/${files.size} · $name · ${written * 100 / total}%"
+                                if (!isDestroyed && !isFinishing) updateProgress(written, total, "${index + 1}/${files.size} · $name")
                             }
                         }
                     } catch (error: Exception) {
@@ -694,24 +816,38 @@ class RemoteFilesActivity : Activity() {
         }
     }
 
-    private fun copyOne(destination: Uri, file: JSONObject, source: List<String>) {
+    private fun copyOne(destination: Uri, file: JSONObject, source: List<String>, inDownloads: Boolean = false,
+        nextAction: String = "") {
         if (copying) return
-        copying = true; cancel.set(false); ++generation
+        copying = true; cancel.set(false); paused.set(false); ++generation
         screenShell()
-        status.text = "Copiando ${file.optString("name")}…"
-        add(button("Cancelar cópia", primary = true) { cancel.set(true) })
+        showTransferPanel("Copiando ${file.optString("name")}")
         thread(name = "MonitorRemoto-data-copy") {
             val result = runCatching { transferTo(destination, file, source) { done, total ->
-                main.post { if (!isFinishing && !isDestroyed) status.text = "Copiando: ${done * 100 / total}%" }
+                main.post { if (!isFinishing && !isDestroyed) updateProgress(done, total, file.optString("name")) }
             } }
-            if (result.isFailure) runCatching { DocumentsContract.deleteDocument(contentResolver, destination) }
+            val published = if (result.isSuccess && inDownloads && Build.VERSION.SDK_INT >= 29)
+                runCatching { contentResolver.update(destination, ContentValues().apply {
+                    put(MediaStore.MediaColumns.IS_PENDING, 0)
+                }, null, null) == 1 }.getOrDefault(false) else result.isSuccess
+            if (!published) runCatching { contentResolver.delete(destination, null, null) }
             main.post {
                 if (isFinishing || isDestroyed) return@post
                 copying = false
                 screenShell()
-                status.text = if (result.isSuccess) "Arquivo copiado com sucesso." else
-                    "Falha ou cancelamento: ${result.exceptionOrNull()?.message}. Verifique se restou arquivo parcial."
+                status.text = if (published) "Arquivo copiado com sucesso." else
+                    "Falha ou cancelamento: ${result.exceptionOrNull()?.message ?: "não foi possível publicar arquivo"}."
                 add(button("Voltar aos arquivos", primary = true) { listFolder() })
+                if (published && inDownloads && nextAction.isNotBlank()) {
+                    val mime = file.optString("mime").takeIf { '/' in it } ?: "application/octet-stream"
+                    val intent = if (nextAction == "share") Intent(Intent.ACTION_SEND).apply {
+                        type = mime; putExtra(Intent.EXTRA_STREAM, destination)
+                    } else Intent(Intent.ACTION_VIEW).apply { setDataAndType(destination, mime) }
+                    intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    runCatching {
+                        startActivity(if (nextAction == "share") Intent.createChooser(intent, "Compartilhar arquivo") else intent)
+                    }.onFailure { status.text = "Arquivo salvo em Downloads. Nenhum aplicativo aceitou abrir: ${it.message}" }
+                }
             }
         }
     }
@@ -729,14 +865,12 @@ class RemoteFilesActivity : Activity() {
             while (written < size) {
                 check(!cancel.get()) { "Transferência cancelada." }
                 check(SettingsStore.getRemoteHost(applicationContext) == host) { "O aparelho selecionado mudou." }
-                val chunks = fetchChunksWithRetry(secret, source, size, modified, written)
-                for (bytes in chunks) {
-                    check(bytes.isNotEmpty() && bytes.size <= RemoteFilePolicy.CHUNK_BYTES) { "Bloco inválido." }
-                    check(!cancel.get()) { "Transferência cancelada." }
-                    stream.write(bytes)
-                    digest.update(bytes)
-                    written += bytes.size
-                }
+                while (paused.get()) { check(!cancel.get()); Thread.sleep(150L) }
+                val bytes = fetchLargeChunkWithRetry(secret, source, size, modified, written)
+                check(bytes.isNotEmpty() && bytes.size <= RemoteFilePolicy.FAST_CHUNK_BYTES)
+                stream.write(bytes)
+                digest.update(bytes)
+                written += bytes.size
                 val bucket = (written * 100 / size) / 5
                 if (bucket != lastBucket || written == size) {
                     lastBucket = bucket
@@ -770,6 +904,320 @@ class RemoteFilesActivity : Activity() {
             }
         }
         throw failure ?: IllegalStateException("Sem resposta do monitorado.")
+    }
+
+    private fun showTransferPanel(title: String) {
+        status.text = title
+        progressStartedAt = SystemClock.elapsedRealtime(); lastProgressAt = 0L
+        currentTransferBar = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
+            max = 1000; progress = 0
+        }
+        add(currentTransferBar!!, 6)
+        currentTransferInfo = label("Calculando velocidade real…", 12f).apply { setTextColor(muted) }
+        add(currentTransferInfo!!)
+        val pause = button("Pausar") { }
+        pause.setOnClickListener {
+            paused.set(!paused.get())
+            pause.text = if (paused.get()) "Retomar" else "Pausar"
+            currentTransferInfo?.text = if (paused.get()) "Pausada nesta tela" else "Retomando…"
+        }
+        add(horizontal(pause, button("Cancelar") { cancel.set(true); paused.set(false); status.text = "Cancelando…" }))
+    }
+
+    private fun updateProgress(done: Long, total: Long, title: String) {
+        if (total <= 0L) return
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastProgressAt < 400 && done != total) return
+        lastProgressAt = now
+        val elapsed = (now - progressStartedAt).coerceAtLeast(1000L)
+        val bytesPerSecond = done * 1000L / elapsed
+        val remain = if (bytesPerSecond > 0L) (total - done) / bytesPerSecond else 0L
+        currentTransferBar?.progress = (done * 1000L / total).toInt()
+        currentTransferInfo?.text = "$title · ${done * 100 / total}% · ${formatBytes(done)} / ${formatBytes(total)}\n" +
+            "${formatBytes(bytesPerSecond)}/s · ${elapsed / 1000}s decorridos · " +
+            if (bytesPerSecond > 0L) "~${remain}s restantes" else "estimando tempo…"
+    }
+
+    private fun fetchLargeChunkWithRetry(secret: ByteArray, source: List<String>, size: Long,
+        modified: Long, offset: Long): ByteArray {
+        var failure: Exception? = null
+        repeat(3) { attempt ->
+            check(!cancel.get()) { "Transferência cancelada." }
+            try { return RemoteClient.dataRead(host, secret, applicationContext, method, source, size, modified, offset) }
+            catch (e: Exception) {
+                failure = e
+                val msg = e.message.orEmpty().lowercase(Locale.ROOT)
+                if (listOf("versão", "permiss", "integridade", "mudou", "inválid", "recusad").any { it in msg }) throw e
+                if (attempt < 2) Thread.sleep(400L * (attempt + 1))
+            }
+        }
+        throw failure ?: IllegalStateException("Leitura interrompida.")
+    }
+
+    private fun askNewFolder() {
+        if (!writeAllowed) return
+        val input = EditText(this).apply { hint = "Nome da pasta"; setSingleLine(true) }
+        AlertDialog.Builder(this).setTitle("＋ Nova pasta").setView(input)
+            .setNegativeButton("Cancelar", null).setPositiveButton("Criar") { _, _ ->
+                val name = input.text.toString().trim()
+                if (!RemoteFilePolicy.validSegment(name)) { status.text = "Nome de pasta inválido."; return@setPositiveButton }
+                executeRemoteAction("mkdir", path, name = name)
+            }.show()
+    }
+
+    private fun askRename(item: JSONObject) {
+        val oldName = item.optString("name")
+        val edit = EditText(this).apply { setSingleLine(true); setText(oldName); selectAll() }
+        AlertDialog.Builder(this).setTitle("Renomear arquivo/pasta").setView(edit)
+            .setNegativeButton("Cancelar", null).setPositiveButton("Renomear") { _, _ ->
+                val name = edit.text.toString().trim()
+                if (RemoteFilePolicy.validSegment(name) && name != oldName)
+                    executeRemoteAction("rename", path + oldName, name = name)
+            }.show()
+    }
+
+    private fun confirmBatchDelete(items: List<JSONObject>) {
+        if (!writeAllowed || items.isEmpty()) return
+        val names = items.map { it.optString("name") }
+        AlertDialog.Builder(this).setTitle("Excluir ${names.size} item(ns) da origem?")
+            .setMessage("A exclusão é REMOTA e pode ser DEFINITIVA. Ela não apaga apenas uma cópia local.\n" +
+                names.take(5).joinToString("\n") + if (names.size > 5) "\n…" else "")
+            .setNegativeButton("Cancelar", null).setPositiveButton("EXCLUIR") { _, _ ->
+                runBatchAction("delete", names, emptyList())
+            }.show()
+    }
+
+    private fun confirmBatchTrash(items: List<JSONObject>) {
+        if (!writeAllowed || items.isEmpty()) return
+        AlertDialog.Builder(this).setTitle("Mover ${items.size} item(ns) à lixeira?")
+            .setMessage("A lixeira é criada dentro da pasta autorizada. A operação depende do suporte do Android a mover documentos; o arquivo não será apagado se falhar.")
+            .setNegativeButton("Cancelar", null).setPositiveButton("Mover") { _, _ ->
+                runBatchAction("trash", items.map { it.optString("name") }, emptyList())
+            }.show()
+    }
+
+    private fun executeRemoteAction(action: String, source: List<String>, destination: List<String> = emptyList(),
+        name: String = "") {
+        runBatchAction(action, listOf(source.lastOrNull() ?: name), destination, source, name)
+    }
+
+    private fun runBatchAction(action: String, names: List<String>, destination: List<String>,
+        explicitSource: List<String>? = null, requestedName: String = "") {
+        if (copying || !writeAllowed || names.isEmpty()) return
+        val secret = key ?: return
+        copying = true; cancel.set(false); paused.set(false); ++generation
+        screenShell(); showTransferPanel("${action.uppercase(Locale.ROOT)} · ${names.size} item(ns)")
+        thread(name = "MonitorRemoto-data-manage") {
+            var completed = 0
+            val outcome = runCatching {
+                names.forEach { name ->
+                    check(!cancel.get())
+                    check(SettingsStore.getRemoteHost(applicationContext) == host) { "O aparelho selecionado mudou." }
+                    while (paused.get()) { check(!cancel.get()); Thread.sleep(150L) }
+                    val source = explicitSource ?: if (action == "mkdir") path else path + name
+                    val newName = if (action in setOf("mkdir", "rename")) requestedName else ""
+                    check(RemoteManagePolicy.allowed(action, source, destination, newName)) { "Operação ou destino inválidos." }
+                    RemoteClient.dataManage(host, secret, applicationContext, method, action, source, destination, newName)
+                    completed++
+                    val step = completed
+                    main.post { if (!isDestroyed && !isFinishing) {
+                        currentTransferBar?.progress = step * 1000 / names.size
+                        currentTransferInfo?.text = "$step/${names.size} concluídos · $name"
+                    } }
+                }
+            }
+            main.post { if (!isFinishing && !isDestroyed) {
+                copying = false; selected.clear(); selecting = false
+                screenShell(); status.text = if (outcome.isSuccess) "Operação concluída em $completed item(ns)." else
+                    "Concluídos $completed/${names.size}. ${outcome.exceptionOrNull()?.message}"
+                add(button("Atualizar arquivos", true) { listFolder() })
+            } }
+        }
+    }
+
+    /** Navegador remoto para selecionar pasta interna; o caminho nunca sai da árvore SAF. */
+    private fun chooseRemoteFolder(action: String, names: List<String>, at: List<String> = emptyList()) {
+        if (!writeAllowed || names.isEmpty()) return
+        val secret = key ?: return
+        val current = at.toList()
+        thread(name = "MonitorRemoto-destinations") {
+            val fetched = runCatching { RemoteClient.dataList(host, secret, applicationContext, method, current) }
+            main.post { if (!isFinishing && !isDestroyed) fetched.onSuccess { data ->
+                val array = data.optJSONArray("entries")
+                val folders = (0 until (array?.length() ?: 0)).mapNotNull { array?.optJSONObject(it) }
+                    .filter { it.optBoolean("folder") }.map { it.optString("name") }
+                val labels = (listOf("✓ Usar esta pasta") +
+                    (if (current.isEmpty()) emptyList() else listOf("↑ Pasta anterior")) +
+                    folders.map { "📁 $it" }).toTypedArray()
+                AlertDialog.Builder(this).setTitle("Destino: /${current.joinToString("/")}")
+                    .setItems(labels) { _, index -> when {
+                        index == 0 -> if (action == "copy" || action == "move") runBatchAction(action, names, current)
+                        index == 1 && current.isNotEmpty() -> chooseRemoteFolder(action, names, current.dropLast(1))
+                        else -> {
+                            val pos = index - if (current.isEmpty()) 1 else 2
+                            folders.getOrNull(pos)?.let { chooseRemoteFolder(action, names, current + it) }
+                        }
+                    } }.setNegativeButton("Cancelar", null).show()
+            }.onFailure { status.text = "Destino indisponível: ${it.message}" } }
+        }
+    }
+
+    private fun pickUploadFiles() {
+        if (!writeAllowed || copying) return
+        try { @Suppress("DEPRECATION")
+            startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                addCategory(Intent.CATEGORY_OPENABLE); type = "*/*"
+                putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }, PICK_UPLOADS)
+        } catch (e: Exception) { status.text = "Seletor de envio indisponível: ${e.message}" }
+    }
+
+    private data class LocalUpload(val uri: Uri, val name: String, val mime: String, val size: Long)
+    private fun uploadSelected(files: List<Uri>) {
+        if (files.isEmpty() || !writeAllowed || copying) return
+        val secret = key ?: return
+        copying = true; cancel.set(false); paused.set(false); ++generation
+        screenShell(); showTransferPanel("Enviando ${files.size} arquivo(s) ao monitorado")
+        thread(name = "MonitorRemoto-upload") {
+            var sent = 0
+            val outcome = runCatching {
+                val items = files.map { source ->
+                    var name = ""; var size = -1L
+                    contentResolver.query(source, arrayOf(OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE), null, null, null)?.use { cursor ->
+                        if (cursor.moveToFirst()) { name = cursor.getString(0).orEmpty(); if (!cursor.isNull(1)) size = cursor.getLong(1) }
+                    }
+                    val mime = contentResolver.getType(source) ?: "application/octet-stream"
+                    check(RemoteFilePolicy.validSegment(name) && RemoteFilePolicy.validUploadSize(size) &&
+                        mime.length in 3..110 && '/' in mime) { "Arquivo sem nome/tamanho válido: $name" }
+                    LocalUpload(source, name, mime, size)
+                }
+                check(items.size <= MAX_BATCH_ITEMS && items.sumOf { it.size } <= MAX_BATCH_BYTES) { "Lote acima de 20 arquivos ou 2 GiB." }
+                items.forEachIndexed { index, file ->
+                    check(!cancel.get())
+                    check(SettingsStore.getRemoteHost(applicationContext) == host) { "O aparelho selecionado mudou." }
+                    val open = RemoteClient.dataUpload(host, secret, applicationContext, method, "dataUploadStart", path,
+                        JSONObject().put("name", file.name).put("size", file.size).put("mime", file.mime))
+                    val session = open.getJSONObject("result").getString("session")
+                    try {
+                        contentResolver.openInputStream(file.uri)?.use { input ->
+                            val buffer = ByteArray(RemoteFilePolicy.UPLOAD_CHUNK_BYTES)
+                            val hash = MessageDigest.getInstance("SHA-256")
+                            var offset = 0L
+                            while (offset < file.size) {
+                                check(!cancel.get()); while (paused.get()) { check(!cancel.get()); Thread.sleep(150L) }
+                                val needed = minOf(buffer.size.toLong(), file.size - offset).toInt()
+                                var read = 0
+                                while (read < needed) {
+                                    val n = input.read(buffer, read, needed - read)
+                                    check(n > 0) { "Arquivo local mudou durante o envio." }; read += n
+                                }
+                                val bytes = buffer.copyOf(read)
+                                val payload = JSONObject().put("session", session)
+                                    .put("offset", offset).put("bytes", Base64.encodeToString(bytes, Base64.NO_WRAP))
+                                val accepted = runCatching {
+                                    RemoteClient.dataUpload(host, secret, applicationContext, method,
+                                        "dataUploadChunk", emptyList(), payload).getJSONObject("result").optLong("offset", -1)
+                                }.getOrElse { failure ->
+                                    // Se a resposta se perdeu depois da gravação, a sessão informa o deslocamento.
+                                    val serverOffset = runCatching { RemoteClient.dataUpload(host, secret,
+                                        applicationContext, method, "dataUploadStatus", emptyList(),
+                                        JSONObject().put("session", session)).getJSONObject("result").optLong("offset", -1) }
+                                        .getOrElse { throw failure }
+                                    when (serverOffset) {
+                                        offset + read -> serverOffset
+                                        offset -> RemoteClient.dataUpload(host, secret, applicationContext, method,
+                                            "dataUploadChunk", emptyList(), payload).getJSONObject("result").optLong("offset", -1)
+                                        else -> error("Deslocamento remoto inesperado; envio interrompido.")
+                                    }
+                                }
+                                hash.update(bytes)
+                                offset += read
+                                check(accepted == offset) { "Envio não confirmado pelo monitorado." }
+                                val done = offset
+                                main.post { if (!isFinishing && !isDestroyed)
+                                    updateProgress(done, file.size.coerceAtLeast(1), "${index + 1}/${items.size} · ${file.name}") }
+                            }
+                            check(input.read() == -1) { "Arquivo local cresceu durante o envio." }
+                            val digest = hash.digest().joinToString("") { "%02x".format(it.toInt() and 255) }
+                            RemoteClient.dataUpload(host, secret, applicationContext, method, "dataUploadFinish", emptyList(),
+                                JSONObject().put("session", session).put("sha256", digest))
+                        } ?: error("Não foi possível abrir arquivo local.")
+                        sent++
+                    } catch (error: Exception) {
+                        runCatching { RemoteClient.dataUpload(host, secret, applicationContext, method,
+                            "dataUploadAbort", emptyList(), JSONObject().put("session", session)) }
+                        throw error
+                    }
+                }
+            }
+            main.post { if (!isDestroyed && !isFinishing) {
+                copying = false; screenShell()
+                status.text = if (outcome.isSuccess) "$sent arquivo(s) enviados e conferidos." else
+                    "$sent/${files.size} enviados. ${outcome.exceptionOrNull()?.message}"
+                add(button("Voltar aos arquivos", true) { listFolder() })
+            } }
+        }
+    }
+
+    private fun copyBatchDownloads(items: List<JSONObject>) {
+        if (Build.VERSION.SDK_INT < 29 || copying || items.isEmpty() ||
+            items.any { it.optBoolean("folder") } ||
+            !RemoteBatchPolicy.eligible(items.map { it.optLong("size", -1) })) {
+            status.text = "Escolha até 20 arquivos com tamanho conhecido e total de até 2 GiB."; return
+        }
+        copying = true; cancel.set(false); paused.set(false); ++generation
+        screenShell(); showTransferPanel("Baixando ${items.size} para Downloads")
+        thread(name = "MonitorRemoto-downloads-batch") {
+            var finished = 0
+            val outcome = runCatching {
+                items.forEachIndexed { index, item ->
+                    check(!cancel.get())
+                    val name = item.optString("name")
+                    val mime = item.optString("mime").takeIf { '/' in it } ?: "application/octet-stream"
+                    val values = ContentValues().apply {
+                        put(MediaStore.MediaColumns.DISPLAY_NAME, name)
+                        put(MediaStore.MediaColumns.MIME_TYPE, mime)
+                        put(MediaStore.MediaColumns.RELATIVE_PATH, "Download/Monitor Remoto")
+                        put(MediaStore.MediaColumns.IS_PENDING, 1)
+                    }
+                    val target = contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+                        ?: error("Não foi possível criar arquivo em Downloads.")
+                    try {
+                        transferTo(target, item, path + name) { done, total ->
+                            main.post { if (!isFinishing && !isDestroyed)
+                                updateProgress(done, total, "${index + 1}/${items.size} · $name") }
+                        }
+                        val published = contentResolver.update(target, ContentValues().apply {
+                            put(MediaStore.MediaColumns.IS_PENDING, 0)
+                        }, null, null)
+                        check(published == 1) { "Não foi possível publicar $name em Downloads." }
+                        finished++
+                    } catch (e: Exception) { runCatching { contentResolver.delete(target, null, null) }; throw e }
+                }
+            }
+            main.post { if (!isDestroyed && !isFinishing) {
+                copying = false; screenShell()
+                status.text = if (outcome.isSuccess) "$finished arquivo(s) salvos em Downloads/Monitor Remoto." else
+                    "Salvos $finished/${items.size}. ${outcome.exceptionOrNull()?.message}"
+                add(button("Voltar aos arquivos", true) { listFolder() })
+            } }
+        }
+    }
+
+    private fun saveDownloads(item: JSONObject, nextAction: String = "") {
+        if (Build.VERSION.SDK_INT < 29) { chooseDestination(item, path); return }
+        val name = item.optString("name")
+        val mime = item.optString("mime").takeIf { '/' in it } ?: "application/octet-stream"
+        val values = ContentValues().apply {
+            put(MediaStore.MediaColumns.DISPLAY_NAME, name)
+            put(MediaStore.MediaColumns.MIME_TYPE, mime)
+            put(MediaStore.MediaColumns.RELATIVE_PATH, "Download/Monitor Remoto")
+            put(MediaStore.MediaColumns.IS_PENDING, 1)
+        }
+        val target = runCatching { contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values) }.getOrNull()
+        if (target == null) { status.text = "Downloads indisponível. Escolha outro destino."; return }
+        copyOne(target, item, path + name, inDownloads = true, nextAction = nextAction)
     }
 
     @Deprecated("Navegação por Activity")

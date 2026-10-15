@@ -44,11 +44,18 @@ import java.util.concurrent.Executors
 
 /** ADB consentido, sempre visível; QR -> pareamento -> descoberta -> conexão TLS. */
 class AdbActivity : Activity() {
-    companion object { const val EXTRA_MAINTENANCE_HOST = "br.dev.monitorremoto.MAINTENANCE_ADB_HOST" }
+    companion object {
+        const val EXTRA_MAINTENANCE_HOST = "br.dev.monitorremoto.MAINTENANCE_ADB_HOST"
+        const val EXTRA_APP_PACKAGE = "br.dev.monitorremoto.ADB_APP_PACKAGE"
+        const val EXTRA_APP_ACTION = "br.dev.monitorremoto.ADB_APP_ACTION"
+    }
     private var pendingMaintenanceHost: String? = null
     private var maintenanceRequiredHost: String? = null
     private var maintenanceLaunchConsumed = false
     private var rebootRequested = false
+    private var appTargetPackage: String? = null
+    private var appTargetAction: String? = null
+    private lateinit var appActionButton: Button
     private val handler = Handler(Looper.getMainLooper())
     private val worker = Executors.newSingleThreadExecutor()
     private var client: AdbClient? = null
@@ -175,6 +182,12 @@ class AdbActivity : Activity() {
         pendingMaintenanceHost = intent.getStringExtra(EXTRA_MAINTENANCE_HOST)
             ?.takeIf { it.isNotBlank() }
         maintenanceRequiredHost = pendingMaintenanceHost
+        val packageName = intent.getStringExtra(EXTRA_APP_PACKAGE).orEmpty()
+        val action = intent.getStringExtra(EXTRA_APP_ACTION).orEmpty()
+        if (br.dev.monitorremoto.core.RemoteAppsPolicy.validPackage(packageName) && action in setOf("open", "stop", "settings")) {
+            appTargetPackage = packageName
+            appTargetAction = action
+        }
         window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
         val scroll = ScrollView(this).apply {
             isFillViewport = true
@@ -215,6 +228,8 @@ class AdbActivity : Activity() {
         openViewerButton = button("Ver tela remota", primary = true) { openViewerWithAdb() }
         openViewerButton.visibility = View.GONE
         summaryCard.addView(openViewerButton)
+        appActionButton = button("Operação no aplicativo") { showPendingAppAction() }.apply { visibility = View.GONE }
+        summaryCard.addView(appActionButton)
         activeActionsRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         openControlsButton = button("Controles") { showControls() }
         val maintenanceButton = button("Manutenção") { showMaintenance() }
@@ -279,6 +294,15 @@ class AdbActivity : Activity() {
             else "Escolha um dispositivo salvo para reconectar."
         if (this::stopRetryButton.isInitialized) stopRetryButton.visibility = if (waiting) View.VISIBLE else View.GONE
         if (this::openViewerButton.isInitialized) openViewerButton.visibility = if (connected) View.VISIBLE else View.GONE
+        if (this::appActionButton.isInitialized) {
+            val matches = client?.endpoint?.substringBeforeLast(':') == maintenanceRequiredHost
+            appActionButton.visibility = if (connected && appTargetPackage != null && matches) View.VISIBLE else View.GONE
+            appActionButton.text = when (appTargetAction) {
+                "stop" -> "Forçar parada do aplicativo"
+                "settings" -> "Abrir configurações via ADB"
+                else -> "Abrir aplicativo via ADB"
+            }
+        }
         if (this::activeActionsRow.isInitialized) activeActionsRow.visibility = if (connected) View.VISIBLE else View.GONE
         if (this::activeSettingsRow.isInitialized) activeSettingsRow.visibility = if (connected) View.VISIBLE else View.GONE
         val known = AdbKnownDevices.load(this)
@@ -739,6 +763,50 @@ class AdbActivity : Activity() {
         check.show()
     }
 
+    private fun showPendingAppAction() {
+        val pkg = appTargetPackage ?: return
+        val action = appTargetAction ?: return
+        val active = client ?: return
+        val endpoint = active.endpoint ?: return
+        val requiredHost = maintenanceRequiredHost ?: return
+        if (!active.connected() || endpoint.substringBeforeLast(':') != requiredHost || busy) {
+            setFeedback("Conecte o ADB ao mesmo aparelho selecionado antes de continuar.")
+            return
+        }
+        val body = modalBody()
+        body.addView(text(pkg, 16f, bold = true))
+        body.addView(text(if (action == "stop")
+            "Forçar parada pode interromper a gravação do Minha Câmera, transferências e notificações. Não executaremos nada sem nova confirmação."
+            else "ADB enviará o pedido de abertura ou de configurações. Confira a tela do monitorado.", 13f, secondary = true))
+        val confirmation = if (action == "stop") "PARAR" else "ABRIR"
+        body.addView(text("Digite $confirmation para executar", 13f, bold = true))
+        val entry = formField(confirmation)
+        body.addView(entry)
+        val dialog = AlertDialog.Builder(this).setTitle("Confirmar operação ADB")
+            .setView(body).setNegativeButton("Cancelar", null)
+            .setPositiveButton("Executar", null).create()
+        dialog.setOnShowListener {
+            val yes = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+            yes.isEnabled = false
+            entry.addTextChangedListener(object : TextWatcher {
+                override fun beforeTextChanged(s: CharSequence?, st: Int, count: Int, after: Int) {}
+                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                    yes.isEnabled = s?.toString()?.trim() == confirmation
+                }
+                override fun afterTextChanged(s: Editable?) {}
+            })
+            yes.setOnClickListener {
+                if (entry.text.toString().trim() != confirmation || busy || client !== active ||
+                    active.endpoint != endpoint || !active.connected()) return@setOnClickListener
+                dialog.dismiss()
+                runOperation("Enviando operação autorizada…", operation = { adb ->
+                    adb.executeAppAction(pkg, action)
+                })
+            }
+        }
+        dialog.show()
+    }
+
     private fun showControls() {
         if (client?.connected() != true) {
             setFeedback("Conecte um aparelho antes de abrir os controles ADB.")
@@ -993,7 +1061,8 @@ class AdbActivity : Activity() {
                 if (!visible) return@post
                 val saved = AdbKnownDevices.load(this).firstOrNull { it.host == requested }
                 if (saved != null) {
-                    setFeedback("Preparando manutenção de ${saved.name}. Confirme a sessão ADB antes de reiniciar.")
+                    setFeedback(if (appTargetPackage != null) "Conecte ${saved.name} e confirme a ação de aplicativo." else
+                        "Preparando manutenção de ${saved.name}. Confirme a sessão ADB antes de reiniciar.")
                     reconnect(saved)
                 } else {
                     pendingMaintenanceHost = null
@@ -1003,7 +1072,7 @@ class AdbActivity : Activity() {
                     notice.addView(text("Este aparelho ainda não foi conectado por ADB neste aplicativo. A conexão normal do Monitor Remoto não autoriza reinicialização.", 14f, secondary = true))
                     body.addView(button("Adicionar aparelho ADB", primary = true) { chooseRole() })
                     body.addView(button("Agora não") { closeDialog() })
-                    modal("Antes de reiniciar", body)
+                    modal(if (appTargetPackage != null) "Conectar ADB para aplicativos" else "Antes de reiniciar", body)
                 }
             }
         }

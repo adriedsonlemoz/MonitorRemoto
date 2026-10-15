@@ -19,6 +19,14 @@ class RemoteFilePolicyTest {
         assertEquals(1, RemoteFilePolicy.nextChunkLength(1, 0))
         assertEquals(48 * 1024, RemoteFilePolicy.nextChunkLength(150_000, 0))
     }
+    @Test fun largeFileAndFastChunks() {
+        val size = 749L * 1024L * 1024L
+        assertTrue(RemoteFilePolicy.validFastChunk(size, 0L))
+        assertEquals(192 * 1024, RemoteFilePolicy.nextFastLength(size, 0L))
+        assertFalse(RemoteFilePolicy.validFastChunk(size, 48L * 1024L))
+        assertTrue(RemoteFilePolicy.validUploadSize(0L))
+        assertFalse(RemoteFilePolicy.validUploadSize(RemoteFilePolicy.MAX_FILE_BYTES + 1L))
+    }
     @Test fun rejectsMisalignedAndOversized() {
         val chunk = RemoteFilePolicy.CHUNK_BYTES.toLong()
         assertEquals(0, RemoteFilePolicy.nextChunkLength(150_000, 48_000))

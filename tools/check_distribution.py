@@ -16,7 +16,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.77" and code.group(1) == "77", "Versões incompatíveis"
+assert version == "0.1.0-alpha.79" and code.group(1) == "79", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -645,7 +645,7 @@ assert 'DocumentsContract.buildChildDocumentsUriUsingTree' in shared_folder and 
 assert 'RemoteFilePolicy.validPath(path)' in client and 'RemoteFilePolicy.validPath(path)' in shared_folder
 assert 'dataList' in server and 'dataChunk' in server and 'SharedDataFolder.handle(context, regular)' in server
 assert 'ACTION_CREATE_DOCUMENT' in remote_files and 'RemoteClient.dataChunks(' in remote_files and 'cancel.set(true)' in remote_files
-assert 'MessageDigest.getInstance("SHA-256")' in client and 'MAX_FILE_BYTES = 32L * 1024L * 1024L' in file_policy
+assert 'MessageDigest.getInstance("SHA-256")' in client and 'MAX_FILE_BYTES = 2L * 1024L * 1024L * 1024L' in file_policy
 assert 'MANAGE_EXTERNAL_STORAGE' not in manifest and 'READ_EXTERNAL_STORAGE' not in manifest
 assert 'android:name=".ui.RemoteFilesActivity" android:exported="false"' in manifest
 assert (root / 'app/src/test/java/br/dev/monitorremoto/core/RemoteFilePolicyTest.kt').exists()
@@ -789,9 +789,9 @@ print('PASSOU: alpha.56, botões espaçados, histórico sem repetição e codec/
 files57 = (ui_root / 'RemoteFilesActivity.kt').read_text(encoding='utf-8')
 dashboard57 = (ui_root / 'RemoteDashboardUi.kt').read_text(encoding='utf-8')
 for token in ['ACTION_OPEN_DOCUMENT_TREE', 'ACTION_CREATE_DOCUMENT', 'MAX_BATCH_ITEMS = 20',
-              'MAX_BATCH_BYTES = 128L * 1024L * 1024L', 'safeNewDocumentName',
+              'MAX_BATCH_BYTES = 2L * 1024L * 1024L * 1024L', 'safeNewDocumentName',
               'DocumentsContract.createDocument', 'DocumentsContract.deleteDocument',
-              'RemoteClient.dataChunks(', 'RemoteClient.dataList(', 'Selecionar', 'Copiar selecionados',
+              'RemoteClient.dataChunks(', 'RemoteClient.dataList(', 'Selecionar', 'Baixar',
               'Ordenar', 'Buscar nesta pasta', 'Grade', 'entryDate', 'entrySize', 'showHelp']:
     assert token in files57, f'alpha.57: função ausente: {token}'
 assert 'SharedDataFolder.handle' not in files57
@@ -1097,3 +1097,38 @@ assert 'lastControllerName' not in notice, "Referência obsoleta lastControllerN
 assert 'lastControllerSeenMs = 0L' in notice, "Limpeza do registro de último acesso removida"
 assert 'AuthenticatedAccess.clear()' in notice, "Limpeza de acessos autenticados removida"
 print('PASSOU: alpha.77, onDestroy sem símbolo inexistente e estado de acesso limpo.')
+
+# Alpha.78: controles de aplicativos continuam limitados, explícitos e sem shell arbitrário.
+policy = (root / 'app/src/main/java/br/dev/monitorremoto/core/RemoteAppsPolicy.kt').read_text()
+reader = (root / 'app/src/main/java/br/dev/monitorremoto/core/InstalledAppsReader.kt').read_text()
+catalog = (ui_root / 'RemoteCatalogActivity.kt').read_text()
+adbclient = (root / 'app/src/main/java/br/dev/monitorremoto/adb/AdbClient.kt').read_text()
+adbui = (ui_root / 'AdbActivity.kt').read_text()
+assert 'fun canForceStop' in policy and 'br.dev.monitorremoto' in policy
+assert '"stop" -> {' in policy and 'am force-stop $packageName' in policy
+assert 'requestPageIcons' in catalog and 'iconCache' in catalog and 'toggleFavorite' in catalog
+assert 'fun iconBatch' in reader and 'take(120)' in reader and '4_096' in reader
+assert '"appsIcons"' in server and '"appLaunch"' in server and 'RemoteAppLauncher.request' in server
+assert 'allowRemoteAppLaunch' in settings and 'VisibleMonitorUi.active' in (root / 'app/src/main/java/br/dev/monitorremoto/core/RemoteAppLauncher.kt').read_text()
+assert 'executeAppAction' in adbclient and 'showPendingAppAction' in adbui
+assert 'PARAR' in adbui and 'EXTRA_APP_PACKAGE' in adbui
+assert (root / 'app/src/test/java/br/dev/monitorremoto/core/RemoteAppsPolicyTest.kt').exists()
+print('PASSOU: alpha.78, ícones limitados, autorização local, ADB com allowlist e confirmação.')
+
+# alpha.79: nenhuma escrita/remoção sem grant de escrita e opt-in local independente.
+folder = (root/'app/src/main/java/br/dev/monitorremoto/core/SharedDataFolder.kt').read_text()
+store = (root/'app/src/main/java/br/dev/monitorremoto/core/RemoteUploadStore.kt').read_text()
+server = (root/'app/src/main/java/br/dev/monitorremoto/transport/MonitorServer.kt').read_text()
+client = (root/'app/src/main/java/br/dev/monitorremoto/transport/RemoteClient.kt').read_text()
+settings = (root/'app/src/main/java/br/dev/monitorremoto/ui/SettingsScreenUi.kt').read_text()
+filesui = (root/'app/src/main/java/br/dev/monitorremoto/ui/RemoteFilesActivity.kt').read_text()
+assert 'SettingsStore.allowRemoteFileWrite(context)' in folder and 'it.isWritePermission' in folder
+assert 'check(writable(context))' in folder and 'RemoteUploadStore.finish(' in folder
+assert 'dataRead' in server and 'dataManage' in server and 'dataUploadStatus' in server
+assert 'dataRead(' in client and 'dataUpload(' in client and 'dataManage(' in client
+assert 'expectedHash' in store and 'session.owner == owner' in store
+assert 'setAllowRemoteFileWrite(this, true)' in settings and 'Autorizar escrita' in settings
+assert 'confirmBatchDelete' in filesui and 'confirmBatchTrash' in filesui
+assert 'MediaStore.Downloads.EXTERNAL_CONTENT_URI' in filesui and 'PICK_UPLOADS' in filesui
+assert 'FAST_CHUNK_BYTES' in file_policy and 'RemoteClient.dataRead(' in filesui
+print('PASSOU: alpha.79, opt-in de escrita, CRUD SAF, uploads staged, Downloads e fast chunks.')

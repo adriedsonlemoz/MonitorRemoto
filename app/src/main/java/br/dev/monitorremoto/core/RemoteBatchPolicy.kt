@@ -5,10 +5,10 @@ import java.util.Locale
 /** Limites e geração de nomes não destrutivos para copiar arquivos SAF ao controlador. */
 object RemoteBatchPolicy {
     const val MAX_FILES = 20
-    const val MAX_TOTAL_BYTES = 128L * 1024L * 1024L
+    const val MAX_TOTAL_BYTES = 2L * 1024L * 1024L * 1024L
 
     fun eligible(sizes: List<Long>): Boolean = sizes.isNotEmpty() && sizes.size <= MAX_FILES &&
-        sizes.all { it in 1..RemoteFilePolicy.MAX_FILE_BYTES } && sizes.sum() <= MAX_TOTAL_BYTES
+        sizes.all { it in 1..RemoteFilePolicy.MAX_FILE_BYTES } && sizes.fold(0L) { a, b -> a + b } <= MAX_TOTAL_BYTES
 
     fun availableName(desired: String, existing: Set<String>): String {
         require(RemoteFilePolicy.validSegment(desired)) { "Nome do arquivo inválido." }

@@ -1,3 +1,19 @@
+## 0.1.0-alpha.79 (versionCode 79) | 15/10/2026
+
+- Recuperar dados: interface compactada com menu de ícones, seleção por checkboxes para arquivos e pastas, selecionar todos, seleção em lote para baixar/mover/copiar/excluir e informações de arquivo mais completas.
+- SAF remoto bidirecional: leitura continua autorizada pela pasta escolhida; escrita/destruição somente após nova autorização local explícita independente. Upload de arquivos múltiplos, criar pastas, renomear, copiar, mover, mover para lixeira quando suportado e excluir definitivamente com confirmação.
+- Segurança: nomes e caminhos validados e resolvidos exclusivamente dentro da árvore, sem overwrite silencioso; upload no cache privado do monitorado, sessão autenticada vinculada ao clientId informado, SHA-256 antes de publicar e limpeza de parcial. Para operações de renomear/mover/copiar, comportamento depende do DocumentsProvider.
+- Download: até 2 GiB por arquivo/lote, 192 KiB por requisição autenticada com hash de bloco e SHA-256 final. Dados de velocidade real, bytes, tempo decorrido e estimativa, pausa e cancelamento enquanto Activity estiver aberta. Downloads diretos via MediaStore no Android 10+, incluindo lote; seletor SAF ainda necessário para destinos alternativos.
+- Limitações: não há transferência persistente em background nem retomada após processo/Activity fechada. A cópia completa de pasta continua limitada a 20 arquivos e o provedor pode recusar mover/excluir; lixeira depende de moveDocument. Não houve build Gradle nem teste físico nesta entrega.
+
+## 0.1.0-alpha.78 (versionCode 78) | 15/10/2026
+
+- Aplicativos: ícones reais em lotes paginados de até 12 (PNG ou fallback vetorial), favoritos locais por host, pesquisa e filtro por último aplicativo observado, sem inventar estado de execução.
+- Abertura normal autorizada separadamente no monitorado e somente com MainActivity visível. Android pode bloquear; cliente oferece ADB manual após falha, sem executar comandos adicionais silenciosamente.
+- Controle ADB: abrir via comando fixo e forçar parada de pacote permitido somente após sessão TLS no mesmo endereço e confirmação textual. Bloqueio de parada de sistema e do próprio Monitor Remoto; nada é parado automaticamente.
+- Energia e manutenção: centraliza bloqueio, orientação para acender tela, reinicialização normal com confirmação existente e aviso de segurança para aparelhos sem botão Power. Sem desligamento total.
+- Mantidas credenciais protegidas, AES-GCM, consentimentos, módulo Localização, notificação com escudo e serviços anteriores. Sem build Android completo nem ensaio em aparelhos nesta entrega.
+
 ## 0.1.0-alpha.77 (versionCode 77) | 15/10/2026
 
 - Correção de compilação do workflow GitHub Actions **Gerar APK e Release #72**: `:app:compileDebugKotlin` falhava em `MonitorService.kt:308:9` por referência inexistente `lastControllerName`.

@@ -1,8 +1,12 @@
 # Monitor Remoto
 
-**v0.1.0-alpha.77 / versionCode 77** · Android 8.0+ · Kotlin 2.2.21 · AGP 8.13.2 · Gradle 8.13
+**v0.1.0-alpha.79 / versionCode 79** · Android 8.0+ · Kotlin 2.2.21 · AGP 8.13.2 · Gradle 8.13
+
+**Novidades alpha.79:** Recuperar dados passa a oferecer gerenciamento autorizado da árvore SAF: upload em lotes via cache privado e validação SHA-256, criar pastas, renomear, mover/copy (quando permitido pelo provedor), lixeira interna opcional e exclusão com confirmação. A permissão de escrita é independente da leitura e desligada por padrão. Seleção mostra checkboxes e barra persistente; menu usa ícones, Downloads pode receber arquivos pelo MediaStore (Android 10+), arquivos de até 2 GiB e blocos de leitura de 192 KiB com velocidade e previsão. Pausar/retomar só vale enquanto a tela está aberta; não existe retomada persistente após terminar o processo. Aplicativos com a chave de pareamento compartilham os mesmos direitos de escrita concedidos localmente. **Build Android e dispositivos físicos pendentes.**
 
 **Correção alpha.77:** os logs do workflow #72 registraram falha em `:app:compileDebugKotlin`, `MonitorService.kt:308`, pela referência inexistente `lastControllerName` no encerramento do serviço. Essa atribuição residual foi removida, preservando a limpeza de `lastControllerSeenMs`, as notificações e o registro de acessos. O verificador de regressão impede retornar à referência inexistente. Nenhuma mudança de permissão, GPS, criptografia ou protocolo. **Reexecutar CI para confirmar build Android.**
+
+**Atualização alpha.78:** aba Aplicativos com ícones reais solicitados em lotes de até 12, favoritos por aparelho, busca, detalhes, paginação e filtro do último app observado (não é confirmação de execução contínua). Abrir por API normal apenas com opt-in local e Monitor Remoto visível no monitorado, com fallback manual para ADB TLS. Forçar parada somente com ADB autorizado, verificação de pacote e confirmação digitada, nunca automaticamente. Energia e Manutenção reúne bloqueio, instruções para acender tela e reinicialização ADB sem desligamento total. Não adiciona integração direta com Minha Câmera. **Compilação Android e testes nos dois aparelhos pendentes.**
 
 **Alterações alpha.76:** ícone adaptativo próprio de escudo para o launcher e glifo monocromático de proteção nas notificações. A notificação permanente do serviço distingue aguardando controlador, acessos autenticados recentes (expiram após 45 s) e reconexão, com resumo de localização, tela, câmera e alertas conforme estados locais. A ação **Detalhes** abre uma tela dedicada; **Parar** permanece. Atualização deduplicada sem avisos repetidos; versão pública genérica na tela bloqueada. Nomes de controladores são autodeclarados, não identidades verificadas. Nenhuma nova permissão, rastreamento ou alteração do transporte AES-GCM. **Compilação Android/testes físicos pendentes.**
 
@@ -71,7 +75,7 @@
 
 - **Recuperar dados**: tela de gerenciador SAF remoto com topo compacto (Voltar/Ajuda/Atualizar), pasta e caminho, lista ou grade, busca local, ordenação por nome/data/tamanho/tipo e informações de arquivos.
 - **Copiar individual**: toque em um arquivo → Copiar e escolha o destino pelo seletor de documentos do Android.
-- **Copiar múltiplos**: toque em Selecionar, marque até 20 arquivos, toque Copiar selecionados e escolha uma pasta no controlador. Arquivos são copiados sequencialmente, com limite agregado de 128 MiB e individual de 32 MiB, sem sobrescrever nomes existentes quando o provedor SAF os informa. A pasta remota permanece SOMENTE LEITURA.
+- **Copiar múltiplos**: toque em Selecionar, marque até 20 arquivos e escolha Baixar, Downloads, Mover/Copiar na origem ou Excluir, conforme o opt-in de gerenciamento no monitorado. O lote tem limite de 2 GiB; arquivos são transmitidos em sequência com hash e sem sobrescrever nomes existentes. A leitura não concede escrita automaticamente.
 - **Ajuda (?)** explica a autorização obrigatória no celular monitorado; não há acesso a arquivos excluídos, privados ou protegidos por outros apps.
 - **Manutenção** tem pop-up padronizado, cartão com identificação do alvo, alerta para celulares sem botão Power e reinício somente via ADB do mesmo host, com confirmação digitada REINICIAR. A depuração pode não voltar após o reinício.
 - Ainda sem prévia local de imagem/PDF/vídeo, compartilhamento automático de cópias, escrita, exclusão ou renomeação no aparelho remoto. Validar no GitHub Actions e com dois celulares.
@@ -144,7 +148,7 @@
 - **Monitorado:** Configurações → Arquivos e recuperação → Pasta autorizada → Escolher pasta no seletor SAF do Android. Conceda leitura somente da pasta necessária. O servidor precisa estar ativado; a autorização fica salva até você revogar no mesmo menu.
 - **Controlador:** conecte o telefone com QR/chave e toque em **Recuperar dados**. Navegue nas subpastas autorizadas, escolha o arquivo e use o seletor Android **Salvar como** para criar uma cópia no controlador. Não copia nem altera a origem.
 - Tráfego pelo protocolo existente AES-GCM autenticado, com verificação SHA-256 por bloco e do arquivo completo, até dois blocos de 48 KiB por solicitação, proteção de tamanho/caminho e tentativa de remover destino parcial se falhar ou cancelar. Apresenta progresso; controle de cancelamento e mensagens de falha.
-- Limites iniciais: 32 MiB por arquivo, 150 entradas por diretório, até 12 níveis. Arquivos sem tamanho disponível ou vazios não são suportados; cópia recursiva de pastas está sujeita ao limite de 20 arquivos e 200 itens. Não há restauração de dados apagados, root, depuração ADB para arquivos, bypass de senha, varredura completa nem leitura de dados privados de outros apps.
+- Limites na alpha.79: 2 GiB por arquivo e lote, 150 entradas por diretório e até 12 níveis. Downloads não requer seleção da raiz pelo SAF quando o controlador usa MediaStore. Arquivos de tamanho desconhecido e arquivo vazio na cópia de leitura ainda não são suportados; pasta recursiva limitada a 20 arquivos e 200 itens. Operações dependem do DocumentsProvider e da permissão local de escrita. Não há acesso irrestrito, root ou ADB para arquivos.
 - O Android 11+ restringe escolha de raiz e determinadas pastas. A capacidade depende do provedor SAF e permissões persistidas. Se a rede cair, poderá haver arquivo parcial no destino; revise antes de usar.
 - **Compilação Android e testes entre aparelhos ainda pendentes** nesta entrega; validar no GitHub Actions antes de instalar.
 
@@ -297,7 +301,7 @@ A Home, o Modo Monitorado, a escolha de conexão, os submenus de Configurações
 
 ## Como utilizar
 
-1. Execute GitHub Actions > **Gerar APK e Release** > Run workflow. Para baixar **APK sem ZIP**, use Releases > `v0.1.0-alpha.77` > Assets > **`MonitorRemoto-v0.1.0-alpha.77.apk`**. Em Actions > Artifacts, um APK de contingência (quando presente) continua vindo em ZIP por comportamento padrão do GitHub. Instale o mesmo APK nos dois aparelhos.
+1. Execute GitHub Actions > **Gerar APK e Release** > Run workflow. Para baixar **APK sem ZIP**, use Releases > `v0.1.0-alpha.79` > Assets > **`MonitorRemoto-v0.1.0-alpha.79.apk`**. Em Actions > Artifacts, um APK de contingência (quando presente) continua vindo em ZIP por comportamento padrão do GitHub. Instale o mesmo APK nos dois aparelhos.
 2. No telefone secundário: na nova **Home**, toque em **Monitorar este aparelho**; autorize a notificação de serviço e ative o monitoramento. Em Configurações, conceda apenas as permissões necessárias e selecione os aplicativos cujas notificações deseja compartilhar.
 3. Na página Monitorado, toque no cartão **Gerar QR**. Escolha o IP privado acessível. O QR expira em 2 minutos e é válido para um único pareamento.
 4. No telefone principal: na **Home**, toque em **Conectar novo aparelho > QR Code**, aponte a câmera na janela compacta e confirme os dados do aparelho antes do pareamento. Para um aparelho salvo, use **Aparelhos anteriores > Conectar**. A digitação manual de IP e chave continua disponível.
@@ -324,7 +328,7 @@ Requer Android SDK API 36, Java 17, Gradle 8.13. O repositório ainda não inclu
 gradle :app:testDebugUnitTest :app:assembleDebug
 ```
 
-APK local de teste: `app/build/outputs/apk/debug/app-debug.apk`. O workflow copia esse arquivo ou o Release assinado como **`MonitorRemoto-v0.1.0-alpha.77.apk`**. Baixe diretamente na aba GitHub **Releases**. **O APK não está incluído neste ZIP de código-fonte.** Veja `docs/PAIRING_QR.md` para segurança do QR.
+APK local de teste: `app/build/outputs/apk/debug/app-debug.apk`. O workflow copia esse arquivo ou o Release assinado como **`MonitorRemoto-v0.1.0-alpha.79.apk`**. Baixe diretamente na aba GitHub **Releases**. **O APK não está incluído neste ZIP de código-fonte.** Veja `docs/PAIRING_QR.md` para segurança do QR.
 
 Opcional: configure os quatro Secrets de assinatura para gerar APK Release assinado e AAB. Ver `docs/APK_DOWNLOAD.md`. Preservar a mesma keystore entre builds é essencial para atualizações sem reinstalação.
 

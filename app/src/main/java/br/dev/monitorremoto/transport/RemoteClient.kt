@@ -92,6 +92,68 @@ object RemoteClient {
         }
     }
 
+    /** Lote pequeno de ícones reais, sem screenshots nem consulta a dados dos apps. */
+    fun appIcons(host: String, key: ByteArray, context: Context, method: String, packages: List<String>): JSONObject {
+        require(packages.size in 1..12 && packages.all { br.dev.monitorremoto.core.RemoteAppsPolicy.validPackage(it) })
+        return appsOperation(host, key, context, method, "appsIcons", JSONObject().put("packages", org.json.JSONArray(packages)))
+    }
+
+    fun appLaunch(host: String, key: ByteArray, context: Context, method: String, packageName: String): JSONObject {
+        require(br.dev.monitorremoto.core.RemoteAppsPolicy.validPackage(packageName))
+        return appsOperation(host, key, context, method, "appLaunch", JSONObject().put("package", packageName))
+    }
+
+    private fun appsOperation(host: String, key: ByteArray, context: Context, method: String,
+        operation: String, extra: JSONObject): JSONObject {
+        require(host.isNotBlank() && host.length <= 253 && '/' !in host && ':' !in host && ' ' !in host)
+        val request = JSONObject().put("v", WireProtocol.VERSION).put("op", operation)
+            .put("appVersion", AppVersion.NAME).put("ts", System.currentTimeMillis())
+            .put("clientId", SettingsStore.controllerId(context))
+            .put("clientName", listOf(Build.MANUFACTURER, Build.MODEL).joinToString(" ").take(72))
+            .put("accessMethod", method)
+        extra.keys().forEach { request.put(it, extra.get(it)) }
+        return Socket().use { socket ->
+            socket.connect(InetSocketAddress(host, WireProtocol.PORT), 4500)
+            socket.soTimeout = 9000
+            WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(key, request))
+            val result = WireProtocol.decode(key, WireProtocol.receive(socket.getInputStream(), 100 * 1024))
+            if (result.optString("op") == "versionMismatch") error(AppVersion.incompatibility(result.optString("appVersion")))
+            check(result.optString("op") == operation && result.optInt("v") == WireProtocol.VERSION &&
+                AppVersion.compatible(result.optString("appVersion"))) { "Resposta de aplicativo inválida." }
+            check(result.optBoolean("ok")) { result.optString("message", "Operação não autorizada.") }
+            result
+        }
+    }
+
+    /** Operações SAF autenticadas, sem comando de shell e restritas à árvore concedida. */
+    fun dataManage(host: String, key: ByteArray, context: Context, method: String,
+        action: String, path: List<String>, target: List<String> = emptyList(), name: String = ""): JSONObject {
+        require(br.dev.monitorremoto.core.RemoteManagePolicy.allowed(action, path, target, name))
+        return dataRequest(host, key, context, method, "dataManage", path, 0, 0, 0,
+            JSONObject().put("action", action).put("destination", org.json.JSONArray(target)).put("name", name))
+    }
+
+    fun dataRead(host: String, key: ByteArray, context: Context, method: String,
+        path: List<String>, size: Long, modified: Long, offset: Long): ByteArray {
+        val count = br.dev.monitorremoto.core.RemoteFilePolicy.nextFastLength(size, offset)
+        require(count > 0)
+        val result = dataRequest(host, key, context, method, "dataRead", path, size, modified, offset)
+        check(result.optLong("offset", -1) == offset && result.optLong("size", -1) == size &&
+            result.optLong("modified", -1) == modified) { "Arquivo mudou na origem." }
+        val bytes = Base64.decode(result.getString("bytes"), Base64.NO_WRAP)
+        check(bytes.size == count) { "Bloco de leitura incompleto." }
+        val actual = java.security.MessageDigest.getInstance("SHA-256").digest(bytes)
+            .joinToString("") { "%02x".format(it.toInt() and 255) }
+        check(actual == result.optString("sha256")) { "Falha de integridade do bloco." }
+        return bytes
+    }
+
+    fun dataUpload(host: String, key: ByteArray, context: Context, method: String,
+        op: String, path: List<String>, fields: JSONObject): JSONObject {
+        require(op in setOf("dataUploadStart", "dataUploadChunk", "dataUploadFinish", "dataUploadAbort", "dataUploadStatus"))
+        return dataRequest(host, key, context, method, op, path, 0, 0, 0, fields)
+    }
+
     /** Lista somente a árvore SAF autorizada localmente no telefone monitorado. */
     fun dataList(host: String, key: ByteArray, context: Context, method: String,
         path: List<String>): JSONObject = dataRequest(host, key, context, method, "dataList", path, 0L, 0L, 0L)
@@ -151,7 +213,8 @@ object RemoteClient {
     }
 
     private fun dataRequest(host: String, key: ByteArray, context: Context, method: String,
-        op: String, path: List<String>, size: Long, modified: Long, offset: Long): JSONObject {
+        op: String, path: List<String>, size: Long, modified: Long, offset: Long,
+        extra: JSONObject = JSONObject()): JSONObject {
         require(host.isNotBlank() && host.length <= 253 && !host.contains('/') &&
             !host.contains(':') && !host.contains(' '))
         require(br.dev.monitorremoto.core.RemoteFilePolicy.validPath(path)) { "Caminho inválido." }
@@ -163,12 +226,14 @@ object RemoteClient {
             .put("clientId", SettingsStore.controllerId(context))
             .put("clientName", listOf(Build.MANUFACTURER, Build.MODEL).joinToString(" ").take(72))
             .put("accessMethod", method)
-        if (op in setOf("dataChunk", "dataChunks", "dataHash")) request.put("size", size).put("modified", modified).put("offset", offset)
+        if (op in setOf("dataChunk", "dataChunks", "dataHash", "dataRead"))
+            request.put("size", size).put("modified", modified).put("offset", offset)
+        extra.keys().forEach { field -> request.put(field, extra.get(field)) }
         return Socket().use { socket ->
             socket.connect(InetSocketAddress(host, WireProtocol.PORT), 4500)
-            socket.soTimeout = 10_000
+            socket.soTimeout = if (op in setOf("dataHash", "dataUploadFinish")) 120_000 else 20_000
             WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(key, request))
-            val result = WireProtocol.decode(key, WireProtocol.receive(socket.getInputStream(), 180 * 1024))
+            val result = WireProtocol.decode(key, WireProtocol.receive(socket.getInputStream(), 520 * 1024))
             if (result.optString("op") == "versionMismatch") error(AppVersion.incompatibility(result.optString("appVersion")))
             check(result.optString("op") == op && result.optInt("v") == WireProtocol.VERSION &&
                 AppVersion.compatible(result.optString("appVersion"))) { "Resposta de arquivos inválida." }

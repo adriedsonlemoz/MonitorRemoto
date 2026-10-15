@@ -1,3 +1,24 @@
+# Monitor Remoto v0.1.0-alpha.79
+
+- Nova autorização local de leitura/escrita para a pasta SAF, separada, desligada por padrão.
+- Enviar arquivos para a pasta remota, criar pastas, renomear, copiar e mover dentro da árvore, mover para lixeira (quando o provedor permitir) e excluir com confirmação.
+- Seleção múltipla visível, menus com ícones e destino Downloads via MediaStore (Android 10+).
+- Download de até 2 GiB por arquivo/lote com blocos de 192 KiB, SHA-256 e medição de progresso/velocidade; upload em etapas com hash completo antes da publicação no monitorado.
+- Pausar/retomar apenas enquanto a tela de transferência permanece ativa. Nenhuma promessa de retomada após encerrar o app, de acesso à raiz Downloads/Android/data nem de velocidade medida.
+- Mesma versão alpha.79 exigida nos dois celulares. Build Android completo e testes reais pendentes.
+
+---
+
+# Monitor Remoto v0.1.0-alpha.78
+
+- Catálogo de aplicativos com ícones reais sob demanda em lotes pequenos, favoritos, filtros e paginação.
+- Abrir aplicativo usa tentativa normal somente com autorização local e interface monitorada visível; alternativamente é possível abrir por ADB autorizado.
+- Forçar parada não tem caminho por API normal; requer sessão ADB TLS, mesmo host, lista de pacotes permitidos e confirmação digitada. Bloqueadas paradas de componentes essenciais.
+- Energia e manutenção reorganizada, preservando bloqueio seguro e reinicialização ADB com confirmação; desligamento completo não foi adicionado.
+- Os dois celulares precisam utilizar a mesma alpha.78. Não há APK ou confirmação de compilação até o GitHub Actions executar :app:testDebugUnitTest :app:assembleDebug.
+
+---
+
 # Monitor Remoto v0.1.0-alpha.77
 
 ## Correção de compilação do workflow #72

@@ -203,6 +203,20 @@ private fun MainActivity.fillAppsSettings(layout: LinearLayout) {
             message("Lista de aplicativos autorizada para consulta autenticada.")
         }
     })
+    sectionGap(layout, 10)
+    val launchEnabled = SettingsStore.allowRemoteAppLaunch(this)
+    layout.addView(iconMenuRow(R.drawable.ic_phone,
+        "Permitir abrir aplicativos", if (launchEnabled) "Somente quando a tela do Monitor Remoto estiver aberta neste aparelho" else "Desativado. ADB exige autorização separada", badge = SettingsBadgeKind.forEnabled(launchEnabled)) {
+        if (launchEnabled) {
+            SettingsStore.setAllowRemoteAppLaunch(this, false)
+            message("Abertura remota por API Android desativada.")
+        } else showAppConfirm("Autorizar abertura remota?",
+            "O controlador pareado poderá solicitar que aplicativos sejam abertos somente enquanto o Monitor Remoto estiver visível neste aparelho. O Android pode restringir a abertura; o ADB continua separado.",
+            R.drawable.ic_phone, "Autorizar abertura") {
+            SettingsStore.setAllowRemoteAppLaunch(this, true)
+            message("Abertura remota autorizada com interface visível.")
+        }
+    })
 }
 
 private fun MainActivity.fillSmsSettings(layout: LinearLayout) {
@@ -721,20 +735,43 @@ private fun MainActivity.fillFileRecoverySettings(layout: LinearLayout) {
     val chosen = SettingsStore.sharedDataTree(this).isNotBlank()
     val active = br.dev.monitorremoto.core.SharedDataFolder.available(this)
     dialogIntro(layout, "No telefone que contém os arquivos, escolha uma pasta pelo seletor do Android. " +
-        "Apenas arquivos dessa pasta e subpastas poderão ser copiados por um aparelho pareado. " +
-        "O acesso fica desativado até essa autorização.")
+        "Leitura permite baixar; gerenciamento (escrita) permite também enviar, criar, copiar, mover, renomear ou apagar. " +
+        "A escrita fica DESLIGADA até ser autorizada separadamente neste aparelho.")
     layout.addView(iconMenuRow(R.drawable.ic_folder_download, "Pasta autorizada",
-        if (active) "Leitura ativada · toque para substituir" else if (chosen) "Pasta selecionada · serviço desativado ou permissão expirada" else "Nenhuma pasta ativa · toque para escolher", badge = SettingsBadgeKind.forEnabled(active)) {
+        if (active) "Leitura ativa · ${if (br.dev.monitorremoto.core.SharedDataFolder.writable(this)) "escrita ativa" else "escrita desativada"} · trocar pasta" else if (chosen) "Pasta selecionada · serviço desativado ou permissão expirada" else "Nenhuma pasta ativa · toque para escolher", badge = SettingsBadgeKind.forEnabled(active)) {
         showAppConfirm("Autorizar recuperação de arquivos?",
             "Você deverá selecionar pessoalmente uma pasta neste celular. " +
             "Controladores que possuem a chave de pareamento poderão listar e baixar os arquivos dessa pasta. " +
+            "Gerenciamento/remoção requer uma segunda autorização, desligada por padrão. " +
             "Não permite acessar pastas privadas de outros aplicativos, nem recuperar dados apagados. " +
             "Escolha apenas uma pasta com arquivos que deseja compartilhar.",
             R.drawable.ic_shield, "Escolher pasta") {
             startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or
-                    Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+                    Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
             }, 4321)
+        }
+    })
+    sectionGap(layout, 10)
+    val canWrite = br.dev.monitorremoto.core.SharedDataFolder.writable(this)
+    layout.addView(iconMenuRow(R.drawable.ic_edit, "Gerenciar arquivos remotamente",
+        if (canWrite) "ATIVADO · envio, renomeação, movimento e exclusão" else
+            "DESATIVADO · ativação local exige pasta com escrita concedida",
+        badge = SettingsBadgeKind.forEnabled(canWrite)) {
+        if (canWrite) {
+            br.dev.monitorremoto.core.SettingsStore.setAllowRemoteFileWrite(this, false)
+            message("Escrita remota desativada. Download permanece autorizado.")
+            render()
+        } else showAppConfirm("Permitir gerenciamento remoto?",
+            "Qualquer controlador com a chave de pareamento poderá ENVIAR, RENOMEAR, MOVER, COPIAR " +
+                "e EXCLUIR arquivos da pasta escolhida e suas subpastas. A exclusão pode ser definitiva. " +
+                "Não autorize pastas contendo arquivos sensíveis; controle individual por controlador ainda não existe.",
+            R.drawable.ic_shield, "Autorizar escrita") {
+            val authorized = contentResolver.persistedUriPermissions.any { permission ->
+                permission.uri.toString() == SettingsStore.sharedDataTree(this) && permission.isWritePermission
+            }
+            if (!authorized) message("O Android não concedeu escrita. Escolha a pasta novamente para solicitar a permissão.")
+            else { SettingsStore.setAllowRemoteFileWrite(this, true); render(); message("Gerenciamento remoto ativado.") }
         }
     })
     sectionGap(layout, 12)
@@ -750,8 +787,8 @@ private fun MainActivity.fillFileRecoverySettings(layout: LinearLayout) {
         }
     })
     sectionGap(layout, 12)
-    layout.addView(label("Limites desta etapa: arquivos individuais ou pastas (até 20 arquivos), máximo de 32 MiB por arquivo; " +
-        "150 itens por pasta; sem acesso ao armazenamento inteiro ou arquivos excluídos. " +
+    layout.addView(label("Limites: até 2 GiB por arquivo/lote, até 20 arquivos por lote e 150 itens por pasta. " +
+        "Escrita somente com opt-in local; Downloads raiz tem restrições do seletor Android. " +
         "A transferência exige o serviço Monitor Remoto ativo e a mesma versão nos dois aparelhos.",
         11.5f, muted = true))
 }
@@ -762,7 +799,7 @@ internal fun MainActivity.handleRecoveryPickerResult(resultCode: Int, data: Inte
         val outcome = runCatching {
             br.dev.monitorremoto.core.SharedDataFolder.authorize(this, selectedUri, data?.flags ?: 0)
         }
-        message(outcome.fold({ "Pasta compartilhada: leitura para aparelhos pareados." },
+        message(outcome.fold({ "Pasta compartilhada para leitura. Escrita remota continua desativada." },
             { "Não foi possível autorizar a pasta: ${it.message ?: "permissão recusada"}" }))
     } else message("Seleção cancelada: nenhuma pasta nova foi autorizada.")
 }

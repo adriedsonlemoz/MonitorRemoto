@@ -159,7 +159,7 @@ internal fun MainActivity.displayResult(root: JSONObject, fromCache: Boolean = f
         actionTile(R.drawable.ic_shield, "Bloquear", "Confirmação + PIN", enabled = true) {
             showRemoteLockDialog()
         },
-        actionTile(R.drawable.ic_settings, "Manutenção", "Reiniciar via ADB", enabled = true) {
+        actionTile(R.drawable.ic_settings, "Energia", "Bloqueio e manutenção", enabled = true) {
             showRemoteMaintenance()
         },
         actionTile(R.drawable.ic_pin, "Localização", "Consulta autorizada") {
@@ -180,7 +180,7 @@ private fun MainActivity.showRemoteMaintenance() {
     val selectedHost = br.dev.monitorremoto.core.SettingsStore.getRemoteHost(this)
     val name = currentDeviceTitle?.text?.toString().orEmpty().ifBlank { "Aparelho remoto" }
     val (wrapper, layout) = dialogWrapper()
-    layout.addView(iconSectionHeader(R.drawable.ic_settings, "Manutenção", "Ações autorizadas no aparelho remoto"))
+    layout.addView(iconSectionHeader(R.drawable.ic_settings, "Energia e Manutenção", "Ações autorizadas no aparelho remoto"))
     sectionGap(layout, 14)
     layout.addView(panel(14).apply {
         background = shape(fieldColor, 17)
@@ -189,6 +189,25 @@ private fun MainActivity.showRemoteMaintenance() {
         addView(infoChip("Requer ADB conectado"))
     })
     sectionGap(layout, 12)
+    layout.addView(label("Controles disponíveis", 12f, muted = true))
+    layout.addView(dialogCardRow(
+        title = "Bloquear tela",
+        subtitle = "Requer administrador e autorização no monitorado",
+        trailing = "›"
+    ) {
+        activeUiDialog?.dismiss()
+        showRemoteLockDialog()
+    })
+    sectionGap(layout, 8)
+    layout.addView(dialogCardRow(
+        title = "Acender tela",
+        subtitle = "Permissão local obrigatória; não desbloqueia",
+        trailing = "›"
+    ) {
+        activeUiDialog?.dismiss()
+        showAppNotice("Acender a tela", "A função está disponível em Ver tela, mediante autorização prévia no celular monitorado. O Monitor Remoto não remove PIN nem desbloqueia o Android.")
+    })
+    sectionGap(layout, 8)
     layout.addView(label("Disponível", 12f, muted = true))
     layout.addView(dialogCardRow(
         title = "Reiniciar normalmente",
@@ -206,7 +225,7 @@ private fun MainActivity.showRemoteMaintenance() {
         background = shape(fieldColor, 16)
         addView(iconSectionHeader(R.drawable.ic_info, "Antes de reiniciar"))
         addView(label("Se o celular não voltar a iniciar, ele poderá ficar inacessível sem o botão Power. A Depuração sem fios pode não voltar sozinha.", 12.5f, muted = true))
-        addView(label("Nenhum comando é enviado ao abrir este menu. A confirmação final é feita no ADB.", 12f, muted = true))
+        addView(label("Nenhum comando é enviado ao abrir este menu. O desligamento completo não é oferecido por segurança. A confirmação de reinicialização é feita no ADB.", 12f, muted = true))
     })
     showManagedDialog(AlertDialog.Builder(this)
         .setView(wrapper)

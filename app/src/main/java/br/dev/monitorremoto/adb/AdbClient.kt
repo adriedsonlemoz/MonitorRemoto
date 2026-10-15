@@ -51,6 +51,29 @@ class AdbClient(private val context: Context) {
             }
         }
     }
+    /** Apenas pacotes validados e duas ações fixas. ADB sempre exige sessão TLS ativa. */
+    fun executeAppAction(packageName: String, action: String): String {
+        val command = br.dev.monitorremoto.core.RemoteAppsPolicy.command(packageName, action)
+        check(!cancelled) { "Operação cancelada" }
+        val active = connection ?: error("Conecte primeiro")
+        check(connected()) { "ADB desconectado" }
+        active.open("shell:" + command).use { stream ->
+            stream.openInputStream().use { input ->
+                val buffer = ByteArray(1024)
+                val output = ByteArrayOutputStream()
+                while (output.size() < 4_096) {
+                    val n = input.read(buffer, 0, minOf(buffer.size, 4096 - output.size()))
+                    if (n < 0) break
+                    output.write(buffer, 0, n)
+                }
+                val result = output.toString("UTF-8")
+                if (result.contains("Error:", ignoreCase = true) || result.contains("Exception", ignoreCase = true))
+                    error(result.take(200))
+                return "ADB enviou ${when (action) { "stop" -> "parada"; "settings" -> "configurações"; else -> "abertura" }} para $packageName. Confirme o resultado no monitorado."
+            }
+        }
+    }
+
     /** Equivalente ao ADB reboot normal: serviço `reboot:`, sem modo recovery/poweroff. */
     fun requestNormalReboot() {
         check(!cancelled) { "Operação cancelada" }

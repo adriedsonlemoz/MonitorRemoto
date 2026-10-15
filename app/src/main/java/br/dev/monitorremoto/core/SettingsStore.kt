@@ -65,9 +65,15 @@ object SettingsStore {
     }
 
     /** Leitura sob demanda da lista de aplicativos com ícone de launcher; desativada por padrão. */
+    fun allowRemoteAppLaunch(context: Context) = prefs(context).getBoolean("remote_app_launch", false)
+    fun setAllowRemoteAppLaunch(context: Context, enabled: Boolean) =
+        prefs(context).edit().putBoolean("remote_app_launch", enabled).apply()
+
     fun shareInstalledApps(context: Context) = prefs(context).getBoolean("share_installed_apps", false)
-    fun setShareInstalledApps(context: Context, enabled: Boolean) =
-        prefs(context).edit().putBoolean("share_installed_apps", enabled).apply()
+    fun setShareInstalledApps(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean("share_installed_apps", enabled)
+            .apply { if (!enabled) putBoolean("remote_app_launch", false) }.apply()
+    }
 
     fun receiveSmsEvents(context: Context): Boolean = prefs(context).getBoolean("receive_sms_events", false)
     fun setReceiveSmsEvents(context: Context, value: Boolean) {
@@ -198,6 +204,12 @@ object SettingsStore {
         prefs(context).getString("shared_data_tree", "").orEmpty()
     fun setSharedDataTree(context: Context, uri: String) =
         prefs(context).edit().putString("shared_data_tree", uri).apply()
+
+    /** Apagamento/upload/renomeação somente após consentimento local independente da leitura. */
+    fun allowRemoteFileWrite(context: Context): Boolean =
+        prefs(context).getBoolean("remote_file_write", false)
+    fun setAllowRemoteFileWrite(context: Context, allowed: Boolean) =
+        prefs(context).edit().putBoolean("remote_file_write", allowed).apply()
 
     fun getRemoteHost(context: Context) = prefs(context).getString("remote_host", "").orEmpty()
     fun setRemoteHost(context: Context, host: String) = prefs(context).edit().putString("remote_host", host).apply()

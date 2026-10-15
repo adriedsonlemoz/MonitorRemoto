@@ -1,4 +1,4 @@
-# Arquitetura (0.1.0-alpha.77)
+# Arquitetura (0.1.0-alpha.79)
 
 ```text
 MONITORADO                                      CONTROLE
@@ -31,9 +31,9 @@ A captura usa `ImageReader` RGBA, `Bitmap` JPEG com largura máxima 540 px, taxa
 
 ## Distribuição e assinatura
 
-O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.77` e `versionCode=77`.
+O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.79` e `versionCode=79`.
 
-- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.77.apk`.
+- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.79.apk`.
 - `upload-artifact` sempre distribui um ZIP; GitHub Releases recebe o **arquivo APK direto**.
 - Com quatro Secrets, Gradle gera APK Release assinado e AAB. Sem Secrets, o arquivo é Debug de teste e não preserva necessariamente a assinatura entre execuções.
 - Releases são prévias, não substituem a futura revisão da Google Play e nem os ensaios reais.
@@ -287,3 +287,11 @@ O `RemotePhysicalControls`, propriedade lógica do `MonitorService`, mantém o a
 ## Notificação do monitorado (alpha.76)
 
 O serviço FGS `connectedDevice` mantém uma notificação `IMPORTANCE_LOW` com ícone monocromático. Um snapshot local dos estados dos módulos e acessos `AuthenticatedAccess.recent()` (expiração de 45 s) orienta as atualizações, deduplicadas. O estado apresentado não pressupõe socket TCP persistente. O nome informado pelo cliente não é uma identidade comprovada. `MonitorStatusActivity` abre apenas após toque do usuário e não é exportada. A notificação pública de tela bloqueada não mostra controladores nem módulo ativo.
+
+## Aplicativos remotos alpha.78
+
+`appsList` retorna o catálogo de launchers visíveis e último pacote observado sob autorização de uso (se concedida). `appsIcons` devolve até 12 miniaturas de ícones do PackageManager com limites de resolução e bytes. Os pacotes são validados e precisam pertencer à lista compartilhada. `appLaunch` só tenta abrir por API Android quando há monitoramento ativo, permissão local independente e MainActivity visível. O Android pode recusar a abertura. Para abertura via ADB e parada forçada, o controlador abre `AdbActivity` e conecta uma sessão ADB TLS separada. Somente três comandos fixos e pacotes validados são permitidos, confirmados por digitação. O Monitor Remoto não envia comando de desligamento completo e não opera ADB invisivelmente. Nenhum endpoint arbitrário de shell foi adicionado ao MonitorServer.
+
+## Árvore SAF gerenciada na alpha.79
+
+Somente o aparelho monitorado pode selecionar a árvore pelo ACTION_OPEN_DOCUMENT_TREE. A escrita exige permissão persistida de escrita mais segundo opt-in local. O servidor aceita dataManage com operações restritas (mkdir, rename, move, copy, delete, trash) e dataUploadStart/Chunk/Status/Finish/Abort. Todos seguem a autenticação AES-GCM e versão exata da porta existente. Todos os caminhos são relativos, resolvidos por filho e verificados contra ambiguidades. A API DocumentsContract decide o que o provedor efetivamente permite. Upload permanece em cache privado e não sobrescreve destino, com SHA-256 integral antes de disponibilizar arquivo. Arquivos podem ter até 2 GiB; a leitura dataRead usa até 192 KiB por requisição, hash de bloco e hash completo no fim. Downloads pode usar MediaStore somente no controlador em Android 10+. A cópia é vinculada à Activity, ainda sem serviço persistente de transferência.

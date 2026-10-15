@@ -97,6 +97,7 @@ class MonitorServer(private val context: Context) {
     @Synchronized fun stop() {
         running = false
         PairingSession.revoke()
+        br.dev.monitorremoto.core.RemoteUploadStore.clear()
         try { server?.close() } catch (_: Exception) { }
         workers.shutdownNow()
     }
@@ -107,7 +108,7 @@ class MonitorServer(private val context: Context) {
                 if (!SettingsStore.isMonitorEnabled(context)) return
                 socket.soTimeout = 4500
                 val permanentKey = SecretVault.load(context, SecretVault.MONITOR_KEY) ?: return
-                val encrypted = WireProtocol.receive(socket.getInputStream(), 16 * 1024)
+                val encrypted = WireProtocol.receive(socket.getInputStream(), 450 * 1024)
                 val envelope = JSONObject(String(encrypted, Charsets.UTF_8))
                 val nonce = envelope.getString("n")
                 val now = System.currentTimeMillis()
@@ -116,7 +117,7 @@ class MonitorServer(private val context: Context) {
                 val regular = runCatching { WireProtocol.decode(permanentKey, encrypted) }.getOrNull()
                 if (regular != null) {
                     if (regular.optInt("v") != WireProtocol.VERSION ||
-                        regular.optString("op") !in setOf("snapshot", "disconnect", "notificationReply", "smsReply", "screenFrame", "screenCapture", "remoteTouch", "audioChunk", "requestScreen", "videoFrame", "wakeScreen", "dataList", "dataChunk", "dataChunks", "dataHash", "appsList", "deviceControl", "cameraFrame", "cameraSwitch")) return
+                        regular.optString("op") !in setOf("snapshot", "disconnect", "notificationReply", "smsReply", "screenFrame", "screenCapture", "remoteTouch", "audioChunk", "requestScreen", "videoFrame", "wakeScreen", "dataList", "dataChunk", "dataChunks", "dataHash", "dataRead", "dataManage", "dataUploadStart", "dataUploadChunk", "dataUploadFinish", "dataUploadAbort", "dataUploadStatus", "appsList", "appsIcons", "appLaunch", "deviceControl", "cameraFrame", "cameraSwitch")) return
                     if (abs(now - regular.optLong("ts")) > 5 * 60 * 1000L) return
                     synchronized(seenNonces) {
                         // Retenção compatível com ±5 minutos de validade do envelope.
@@ -141,7 +142,7 @@ class MonitorServer(private val context: Context) {
                         WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(permanentKey, mismatch))
                         return
                     }
-                    if (regular.optString("op") in setOf("dataList", "dataChunk", "dataChunks", "dataHash")) {
+                    if (regular.optString("op") in setOf("dataList", "dataChunk", "dataChunks", "dataHash", "dataRead", "dataManage", "dataUploadStart", "dataUploadChunk", "dataUploadFinish", "dataUploadAbort", "dataUploadStatus")) {
                         val response = SharedDataFolder.handle(context, regular)
                         WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(permanentKey, response))
                         AuthenticatedAccess.authenticated(socket.inetAddress?.hostAddress.orEmpty(),
@@ -384,6 +385,34 @@ class MonitorServer(private val context: Context) {
                             regular.optString("clientId"), regular.optString("clientName"), regular.optString("accessMethod"))
                         return
                     }
+                    if (regular.optString("op") == "appsIcons") {
+                        val allowed = SettingsStore.isMonitorEnabled(context) && SettingsStore.shareInstalledApps(context)
+                        val packages = regular.optJSONArray("packages")
+                        val requested = if (packages != null && packages.length() in 1..12)
+                            (0 until packages.length()).map { packages.optString(it) } else emptyList()
+                        val icons = if (allowed && requested.isNotEmpty())
+                            InstalledAppsReader.iconBatch(context, requested) else JSONObject()
+                        val reply = JSONObject().put("v", WireProtocol.VERSION)
+                            .put("op", "appsIcons").put("appVersion", AppVersion.NAME)
+                            .put("ok", allowed && requested.isNotEmpty()).put("icons", icons)
+                        WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(permanentKey, reply))
+                        AuthenticatedAccess.authenticated(socket.inetAddress?.hostAddress.orEmpty(),
+                            regular.optString("clientId"), regular.optString("clientName"), regular.optString("accessMethod"))
+                        return
+                    }
+                    if (regular.optString("op") == "appLaunch") {
+                        val response = runCatching {
+                            br.dev.monitorremoto.core.RemoteAppLauncher.request(context, regular.optString("package"))
+                        }
+                        val reply = JSONObject().put("v", WireProtocol.VERSION)
+                            .put("op", "appLaunch").put("appVersion", AppVersion.NAME)
+                            .put("ok", response.isSuccess)
+                            .put("message", response.getOrNull() ?: response.exceptionOrNull()?.message?.take(180).orEmpty())
+                        WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(permanentKey, reply))
+                        AuthenticatedAccess.authenticated(socket.inetAddress?.hostAddress.orEmpty(),
+                            regular.optString("clientId"), regular.optString("clientName"), regular.optString("accessMethod"))
+                        return
+                    }
                     if (regular.optString("op") == "appsList") {
                         val authorized = SettingsStore.isMonitorEnabled(context) && SettingsStore.shareInstalledApps(context)
                         val response = JSONObject().put("v", WireProtocol.VERSION)
@@ -391,6 +420,8 @@ class MonitorServer(private val context: Context) {
                             .put("ok", authorized)
                             .put("message", if (authorized) "" else "Autorize Aplicativos instalados nas Configurações do monitorado.")
                             .put("items", if (authorized) InstalledAppsReader.launchable(context) else org.json.JSONArray())
+                            .put("lastObservedPackage", if (authorized)
+                                br.dev.monitorremoto.core.DeviceStateReader.snapshot(context).optString("lastForegroundPackage") else "")
                         WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(permanentKey, response))
                         AuthenticatedAccess.authenticated(socket.inetAddress?.hostAddress.orEmpty(),
                             regular.optString("clientId"), regular.optString("clientName"), regular.optString("accessMethod"))

@@ -180,6 +180,7 @@ class MainActivity : Activity() {
         super.onSaveInstanceState(outState)
     }
     override fun onResume() {
+        br.dev.monitorremoto.core.VisibleMonitorUi.changed(true)
         super.onResume()
         active = true
         AuthenticatedAccess.subscribe(incomingListener)
@@ -208,6 +209,7 @@ class MainActivity : Activity() {
         }, 800L)
     }
     override fun onPause() {
+        br.dev.monitorremoto.core.VisibleMonitorUi.changed(false)
         active = false
         if (mode == 4) {
             messagesRequestGeneration++

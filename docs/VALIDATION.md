@@ -1,3 +1,22 @@
+## Alpha.79 (15/10/2026)
+
+- `tools/check_distribution.py`: verificação estrutural de versionamento, permissões e endpoints, incluindo alpha.79.
+- Parser PSI Kotlin sobre 159 arquivos de produção/testes, sem erros sintáticos.
+- 16 checagens locais via kotlinc sobre `RemoteFilePolicy`, `RemoteBatchPolicy` e `RemoteManagePolicy`.
+- Validação de XML/JSON e integridade ZIP antes da entrega.
+- Ainda não foram executados `:app:testDebugUnitTest :app:assembleDebug` nem testes reais com dois Androids, com suporte SAF de cada provedor, MediaStore e rede Wi-Fi.
+- Retomada persistente e serviço foreground de cópia permanecem fora desta implementação.
+
+## Alpha.78 · gerenciamento de aplicativos e Energia (15/10/2026)
+
+- [x] `tools/check_distribution.py` aprovado para versionamento, consentimentos, ícones em lotes e limites ADB.
+- [x] Parser Kotlin PSI em fontes e testes; validações sintáticas não substituem compilação Android.
+- [x] Política de pacotes e ações ADB testada isoladamente em Kotlin/JVM.
+- [x] Novas operações `appsIcons` e `appLaunch` mantidas em canal autenticado AES-GCM; ADB continua em TLS separado, sem comando shell arbitrário do cliente.
+- [ ] Compilação real `:app:testDebugUnitTest :app:assembleDebug` ainda deve executar na CI.
+- [ ] Testar UI em dois aparelhos: ícones, favoritos, filtros, autorização local, ADB no mesmo host, comando confirmado, perda de sessão, proteção do app monitor.
+- [ ] Confirmar comportamento em Android 13–17, que pode bloquear abertura em segundo plano e serviço de ADB sem fio.
+
 ## Alpha.77 · correção de compilação do MonitorService (15/10/2026)
 
 - [x] Log original do workflow #72 analisado; erro `Unresolved reference 'lastControllerName'` em `MonitorService.kt:308`.
