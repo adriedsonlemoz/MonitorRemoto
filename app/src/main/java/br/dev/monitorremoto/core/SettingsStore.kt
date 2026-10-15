@@ -20,6 +20,13 @@ object SettingsStore {
         br.dev.monitorremoto.service.RemoteHealthScheduler.refresh(context)
     }
 
+    /** Perfil da sessão de localização, nunca inicia o GPS por si só. */
+    fun locationProfile(context: Context): String = prefs(context).getString("location_profile", "economico") ?: "economico"
+    fun setLocationProfile(context: Context, profile: String) {
+        require(profile in setOf("economico", "equilibrado", "preciso"))
+        prefs(context).edit().putString("location_profile", profile).apply()
+    }
+
     fun isMonitorEnabled(context: Context) = prefs(context).getBoolean("monitor_enabled", false)
     fun setMonitorEnabled(context: Context, enabled: Boolean) {
         val preferences = prefs(context)
@@ -30,6 +37,7 @@ object SettingsStore {
         if (!enabled) recordRecoveryEvent(context, "Monitoramento interrompido localmente")
         // Nunca reutilizar eventos da sessão anterior, mesmo com uma captura em trânsito.
         if (!enabled) {
+            br.dev.monitorremoto.service.LocationShareService.stop(context)
             br.dev.monitorremoto.capture.CameraFrameStore.stop()
             RemotePhysicalControls.stopSound()
             RemotePhysicalControls.stopOwnedTorch()

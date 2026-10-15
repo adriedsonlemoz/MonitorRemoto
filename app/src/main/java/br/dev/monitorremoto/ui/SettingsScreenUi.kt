@@ -41,6 +41,7 @@ internal fun MainActivity.renderSettingsModule() {
         "security" to "Segurança",
         "diagnostics" to "Diagnóstico",
         "health" to "Alertas e proteção",
+        "location" to "Localização",
         "news" to "Novidades",
         "about" to "Sobre"
     )
@@ -79,6 +80,8 @@ internal fun MainActivity.renderSettingsModule() {
             "Permissão Android e autorização local", "lock")
         settingsEntry(groupB, R.drawable.ic_power, "Serviço e recuperação",
             "Inicialização, retomada e funcionamento", "service")
+        settingsEntry(groupB, R.drawable.ic_pin, "Localização",
+            "Compartilhar GPS com início e parada local", "location")
         settingsEntry(groupB, R.drawable.ic_thermometer, "Alertas e proteção",
             "Bateria, temperatura e proteção térmica", "health")
         settingsEntry(groupB, R.drawable.ic_activity, "Diagnóstico",
@@ -111,6 +114,7 @@ internal fun MainActivity.renderSettingsModule() {
             "appearance" -> fillAppearanceSettings(page)
             "diagnostics" -> fillDiagnosticsSettings(page)
             "health" -> fillHealthSettings(page)
+            "location" -> fillLocationSettings(page)
             "news" -> fillVersionNewsSettings(page)
             "about" -> fillAboutSettings(page)
             else -> page.addView(label("Categoria não encontrada", 13f))
@@ -821,4 +825,77 @@ private fun MainActivity.requestHealthNotificationPermission() {
         checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
         requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 9268)
     }
+}
+
+/** O usuário ativa o FGS de localização pela tela visível do próprio monitorado. */
+internal fun MainActivity.fillLocationSettings(layout: LinearLayout) {
+    val active = br.dev.monitorremoto.service.LocationShareService.running
+    val profile = SettingsStore.locationProfile(this)
+    val hasPermission = br.dev.monitorremoto.core.LocationShareStore.hasPermission(this)
+    val enabled = br.dev.monitorremoto.core.LocationShareStore.locationEnabled(this)
+    dialogIntro(layout, "Compartilhe a localização apenas quando necessário. A sessão é visível na notificação do Android e continua com a tela apagada enquanto o sistema permitir.")
+    layout.addView(dialogMetricRow("Sessão", if (active) "Ativa" else "Desligada"))
+    layout.addView(dialogMetricRow("Permissão Android", if (hasPermission) "Concedida" else "Não autorizada"))
+    layout.addView(dialogMetricRow("Localização Android", if (enabled) "Ligada" else "Desligada"))
+    layout.addView(iconMenuRow(R.drawable.ic_pin, "Perfil de localização",
+        br.dev.monitorremoto.core.LocationSharePolicy.label(profile), actionLabel = "ALTERAR") {
+        if (active) {
+            showAppNotice("Sessão em andamento", "Pare a sessão antes de alterar o intervalo GPS.")
+        } else {
+            showManagedDialog(AlertDialog.Builder(this)
+                .setTitle("Intervalo de localização")
+                .setSingleChoiceItems(arrayOf("Econômico · 5 minutos", "Equilibrado · 60 segundos", "Preciso · 10 segundos"),
+                    listOf("economico", "equilibrado", "preciso").indexOf(profile)) { dialog, which ->
+                    SettingsStore.setLocationProfile(this, listOf("economico", "equilibrado", "preciso")[which])
+                    dialog.dismiss(); openSettingsSection("location")
+                })
+        }
+    })
+    sectionGap(layout, 10)
+    if (active) layout.addView(button("Parar compartilhamento", emphasis = true) {
+        br.dev.monitorremoto.service.LocationShareService.stop(this)
+        openSettingsSection("location")
+    }) else layout.addView(button("Iniciar compartilhamento", emphasis = true) {
+        startLocationSharingFromSettings()
+    })
+    if (!enabled) layout.addView(actionButton("Abrir localização do Android") {
+        startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+    })
+    sectionGap(layout, 7)
+    layout.addView(label("O controlador pode consultar apenas as posições desta sessão. Nenhum histórico é salvo. O GPS não pode ser ativado remotamente. Para exibir um mapa, o controlador usa um aplicativo de mapas instalado.", 11.5f, muted = true))
+}
+
+internal fun MainActivity.startLocationSharingFromSettings() {
+    if (!SettingsStore.isMonitorEnabled(this) || !MonitorService.isRunning) {
+        showAppNotice("Ative o monitoramento", "Inicie primeiro o serviço Monitorado neste aparelho.")
+        return
+    }
+    if (!br.dev.monitorremoto.core.LocationShareStore.hasPermission(this)) {
+        requestPermissions(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION), 9275)
+        return
+    }
+    if (android.os.Build.VERSION.SDK_INT >= 33 &&
+        checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+        requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 9276)
+        return
+    }
+    if (!br.dev.monitorremoto.core.LocationShareStore.locationEnabled(this)) {
+        showAppNotice("Localização desligada", "Ative a localização nas Configurações do Android e retorne para iniciar a sessão.")
+        return
+    }
+    try {
+        val intent = Intent(this, br.dev.monitorremoto.service.LocationShareService::class.java)
+            .setAction(br.dev.monitorremoto.service.LocationShareService.ACTION_START)
+        startForegroundService(intent)
+        message("Solicitação de compartilhamento enviada. Confira a notificação permanente.")
+        openSettingsSection("location")
+    } catch (error: Exception) {
+        message("Não foi possível iniciar a localização: ${error.message}")
+    }
+}
+
+internal fun MainActivity.onLocationPermissionsResult(requestCode: Int, results: IntArray) {
+    if (results.any { it == PackageManager.PERMISSION_GRANTED }) startLocationSharingFromSettings()
+    else message(if (requestCode == 9275) "Localização não autorizada; compartilhamento desligado."
+        else "Notificações não autorizadas; compartilhamento desligado.")
 }

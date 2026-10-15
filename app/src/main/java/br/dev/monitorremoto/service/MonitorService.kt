@@ -229,6 +229,8 @@ class MonitorService : Service() {
     }
 
     override fun onDestroy() {
+        // Localização nunca permanece ativa após perda do serviço principal.
+        LocationShareService.stop(this)
         br.dev.monitorremoto.core.DeviceStateReader.stop()
         serviceActive = false
         isServiceActive = false

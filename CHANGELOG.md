@@ -1,3 +1,12 @@
+## 0.1.0-alpha.75 (versionCode 75) | 15/10/2026
+
+- Localização: sessão GPS/rede opt-in iniciada somente no aparelho monitorado com permissões Android, notificação FGS `location` e ação Parar. Não inicia remotamente nem no boot.
+- Três perfis para economia de bateria: Econômico 300 s, Equilibrado 60 s e Preciso 10 s (intervalos mínimos, sujeição ao Android).
+- Última posição fica apenas em RAM, limitada a sessão ativa, com precisão reportada, origem, horário, idade e distinção entre leitura recente, antiga ou expirada. Não armazena trilha GPS.
+- Snapshot já autenticado com AES-GCM traz objeto `location`; controlador exibe coordenadas e estados de autorização, permite atualizar sob demanda, copiar ou abrir em aplicativo de mapas. Sem mapa interno neste ciclo.
+- Parar monitoramento encerra e limpa imediatamente a sessão; GPS exige permissões COARSE/FINE Android 12+ e FGS_LOCATION Android 14+.
+- Chave compartilhada permanece igual entre controladores pareados; não há revogação individual de localização. Compilação Gradle Android e testes reais pendentes.
+
 ## 0.1.0-alpha.74 (versionCode 74) | 15/10/2026
 
 - Interface: refinamento visual das telas de conexão e erro, com menor altura geral, paddings reduzidos e ações compactas no cabeçalho do aparelho remoto.

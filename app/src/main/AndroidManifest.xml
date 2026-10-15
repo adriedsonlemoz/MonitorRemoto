@@ -10,6 +10,8 @@
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <!-- SSID/RSSI somente com autorização local explícita de localização. -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <!-- Acesso ao uso precisa de autorização manual nas configurações especiais Android. -->
     <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" />
     <!-- Opcional: somente após autorização explícita no aparelho monitorado. -->
@@ -62,6 +64,7 @@
         <activity android:name=".ui.RemoteDetailsActivity" android:exported="false" />
         <activity android:name=".ui.RemoteCatalogActivity" android:exported="false" />
         <activity android:name=".ui.RemoteFilesActivity" android:exported="false" />
+        <activity android:name=".ui.RemoteLocationActivity" android:exported="false" />
 
         <activity
             android:name=".ui.IncomingAccessActivity"
@@ -101,6 +104,12 @@
             android:exported="false"
             android:foregroundServiceType="connectedDevice"
             android:stopWithTask="false" />
+
+        <!-- Apenas após início local explícito. Notificação permanente com ação Parar. -->
+        <service android:name=".service.LocationShareService"
+            android:exported="false"
+            android:stopWithTask="false"
+            android:foregroundServiceType="location" />
 
         <!-- Projeção de tela: consentimento MediaProjection por sessão, notificação e parada visível. -->
         <service

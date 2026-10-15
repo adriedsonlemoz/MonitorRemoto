@@ -1,4 +1,4 @@
-# Arquitetura (0.1.0-alpha.74)
+# Arquitetura (0.1.0-alpha.75)
 
 ```text
 MONITORADO                                      CONTROLE
@@ -31,9 +31,9 @@ A captura usa `ImageReader` RGBA, `Bitmap` JPEG com largura máxima 540 px, taxa
 
 ## Distribuição e assinatura
 
-O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.74` e `versionCode=74`.
+O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.75` e `versionCode=75`.
 
-- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.74.apk`.
+- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.75.apk`.
 - `upload-artifact` sempre distribui um ZIP; GitHub Releases recebe o **arquivo APK direto**.
 - Com quatro Secrets, Gradle gera APK Release assinado e AAB. Sem Secrets, o arquivo é Debug de teste e não preserva necessariamente a assinatura entre execuções.
 - Releases são prévias, não substituem a futura revisão da Google Play e nem os ensaios reais.
@@ -279,3 +279,7 @@ O `RemotePhysicalControls`, propriedade lógica do `MonitorService`, mantém o a
 - `RemoteHealthJobService` usa `JobScheduler.setPeriodic(15 min)` apenas com opt-in, aparelho salvo e conectividade disponível. Não há push nem conexão permanente; o Android pode adiar a execução por Doze/restrições OEM, e o trabalho não sobrevive a interrupção explícita do app.
 - Proteção térmica OFF por padrão: ao identificar status térmico severo/temperatura crítica, encerra `ScreenShareService`, revoga os quadros de câmera e a Activity local de câmera encerra sua captura. Não força encerramento de app externo, não reduz carregamento físico, não prova que Minha Câmera grava.
 - `VersionNewsUi` exibe as mudanças uma vez por versão na abertura, e a opção Configurações > Novidades permite rever manualmente.
+
+## Localização alpha.75
+
+`LocationShareService` é FGS `location` independente de `MonitorService` e iniciado somente com autorização local e Activity visível. Solicita `LocationManager` GPS/rede nos intervalos conservadores de `LocationSharePolicy`, mantém último fix válido apenas em RAM (`LocationShareStore`), notificação contínua com botão Parar e limpeza ao parar ou perder `MonitorService`. `MonitorServer` acrescenta `location` ao snapshot autenticado apenas enquanto a sessão estiver ativa e o monitoramento habilitado. `RemoteLocationActivity` consulta pelo `RemoteClient.snapshot`, não pode pedir que o GPS ligue; mostra estados, idade, precisão e abre URI `geo:` em aplicativo de mapas externo. Não existe trilha ou base geográfica offline embutida.

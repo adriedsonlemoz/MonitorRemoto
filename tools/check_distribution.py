@@ -16,7 +16,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.74" and code.group(1) == "74", "Versões incompatíveis"
+assert version == "0.1.0-alpha.75" and code.group(1) == "75", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -295,7 +295,7 @@ assert 'phoneNumberPermissionRequest ->' in main_ui
 assert 'SettingsStore.setSharePhoneNumber(this, false)' in ui
 assert 'R.drawable.ic_battery' in ui and 'R.drawable.ic_thermometer' in ui
 assert 'R.drawable.ic_folder_download' in ui and 'Recuperar dados' in ui
-assert 'Em breve' in ui and 'showRemoteDetailsDialog(root)' in ui
+assert 'Consulta autorizada' in ui and 'showRemoteDetailsDialog(root)' in ui
 assert 'Armazenamento' in details and 'Rede móvel e chip' in details and 'Sistema e hardware' in details
 assert 'Copiar resumo técnico' in details and 'FLAG_SECURE' in details
 assert len(list((root / 'app/src/main/res/drawable').glob('ic_*.xml'))) >= 25
@@ -1056,3 +1056,21 @@ assert '"healthAlerts"' in server and 'runCatching' in (root / 'app/src/main/jav
 assert '"Desconectar"' in (ui_root / 'ConnectionScreenUi.kt').read_text()
 assert 'ic_edit' in (ui_root / 'ConnectionScreenUi.kt').read_text()
 print('PASSOU: novidades únicas, renomeação, notificações, proteção térmica e compactação visual alpha.74.')
+
+# Alpha.75: localização exclusivamente por início local com sessão transparente.
+location_service = (root / 'app/src/main/java/br/dev/monitorremoto/service/LocationShareService.kt').read_text()
+location_store = (root / 'app/src/main/java/br/dev/monitorremoto/core/LocationShareStore.kt').read_text()
+location_ui = (ui_root / 'RemoteLocationActivity.kt').read_text()
+location_settings = (ui_root / 'SettingsScreenUi.kt').read_text()
+assert 'FOREGROUND_SERVICE_LOCATION' in manifest and 'ACCESS_COARSE_LOCATION' in manifest
+assert 'foregroundServiceType="location"' in manifest and 'LocationShareService' in manifest
+assert 'ACTION_STOP' in location_service and '.setOngoing(true)' in location_service
+assert 'SettingsStore.isMonitorEnabled(this)' in location_service and 'MonitorService.isRunning' in location_service
+assert 'LocationShareStore.stop()' in location_service and 'locationManager.removeUpdates(this)' in location_service
+assert 'LocationShareService.stop(context)' in settings and 'LocationShareService.stop(this)' in (root / 'app/src/main/java/br/dev/monitorremoto/service/MonitorService.kt').read_text()
+assert 'startLocationSharingFromSettings' in location_settings and 'ACCESS_COARSE_LOCATION' in location_settings
+assert 'LocationShareStore.snapshot(context)' in server and '"location"' in server
+assert 'RecentDevices.key(this, host)' in location_ui and 'RemoteClient.snapshot' in location_ui
+assert 'geo:$coords?q=$coords' in location_ui and 'locationEnabled' in location_store
+assert 'requestPermissions(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION), 9275)' in location_settings
+print('PASSOU: alpha.75, localização local autorizada, FGS, limpeza e consulta AES-GCM.')

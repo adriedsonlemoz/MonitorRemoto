@@ -162,8 +162,10 @@ internal fun MainActivity.displayResult(root: JSONObject, fromCache: Boolean = f
         actionTile(R.drawable.ic_settings, "Manutenção", "Reiniciar via ADB", enabled = true) {
             showRemoteMaintenance()
         },
-        actionTile(R.drawable.ic_pin, "Localização", "Em breve") {
-            showFeatureSoon("Localização", "A localização remota dependerá de permissão explícita no aparelho monitorado.")
+        actionTile(R.drawable.ic_pin, "Localização", "Consulta autorizada") {
+            startActivity(Intent(this, RemoteLocationActivity::class.java)
+                .putExtra(RemoteLocationActivity.EXTRA_HOST, br.dev.monitorremoto.core.SettingsStore.getRemoteHost(this))
+                .putExtra(RemoteLocationActivity.EXTRA_METHOD, "Chave salva"))
         },
     )
     addActionGrid(container, cards)

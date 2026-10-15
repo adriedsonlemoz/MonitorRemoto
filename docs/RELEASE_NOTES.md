@@ -1,21 +1,17 @@
-# Monitor Remoto v0.1.0-alpha.74
+# Monitor Remoto v0.1.0-alpha.75
 
-## Destaques
+## Localização remota autorizada
 
-- Visual mais compacto nas telas de conexão manual, erro por versões incompatíveis e copiar diagnóstico.
-- Botões de ação sem sombra inconsistente, incluindo o botão Limpar.
-- Componentes-base de diálogo, campos e badges compactados para manter a mesma linguagem visual da alpha.73 com menos altura e melhor aproveitamento do espaço.
-- Requer o mesmo APK alpha.74 em ambos aparelhos; compilação Android completa e testes em hardware continuam pendentes.
+1. Instale a alpha.75 nos dois aparelhos. No monitorado, ative o serviço e abra Configurações > Localização.
+2. Selecione um perfil, toque Iniciar compartilhamento e conceda localização (e notificações, quando pedidas). Ative localização no Android.
+3. Com a notificação de compartilhamento visível, no controlador toque Localização e Atualizar posição. A primeira correção pode demorar, especialmente em ambientes fechados.
+4. Para copiar coordenadas ou abrir em um aplicativo de mapas instalado, use as ações na tela do controlador. O mapa pode requerer dados offline baixados previamente ou acesso à internet.
+5. Para terminar, toque Parar compartilhamento no monitorado ou Parar localização na notificação. Parar o Monitor Remoto também encerra a sessão.
 
-
-
-**Diagnóstico do Minha Câmera e telemetria compacta:** painel Controle mostra o estado real do display (ligada, desligada ou ambiente, conforme o Android), bloqueio, indício de indisponibilidade da câmera e o último pacote em primeiro plano após acesso ao uso concedido localmente. A indicação de câmera ocupada **não confirma gravação**, pois o Monitor Remoto não tem integração de telemetria com Minha Câmera. Cartões de Bateria/Temperatura/Rede mais baixos; temperatura usa faixas orientativas coloridas e Wi-Fi apresenta SSID/RSSI quando o Android permite a leitura por permissão explícita de localização.
-
-**Recuperação SAF:** navega até 12 níveis de pasta e copia arquivos nesse nível; rejeita nomes duplicados ambíguos; permite copiar pasta com subpastas para uma nova pasta de destino (até 20 arquivos, 128 MiB no lote e 32 MiB por arquivo, 150 entradas por pasta, 200 itens no total); agrupa dois blocos criptografados de 48 KiB por consulta e confere hash SHA-256 de cada bloco e do arquivo integral na origem/destino. Retries curtos não substituem retomada após encerramento do processo, e a cópia continua vinculada à Activity. Pastas parciais são removidas em caso de falha quando o provedor permite.
-
-**Validação:** script de regressão e verificação sintática Kotlin; testes JVM puros da política e temperatura. **Ainda não compilada pelo Android Gradle Plugin nem testada em dois aparelhos**. Executar `:app:testDebugUnitTest :app:assembleDebug` na CI antes de instalar.
+**Segurança e limites:** nenhuma ativação remota silenciosa, histórico ou persistência de coordenadas. A localização enviada depende de sessão local e chave AES-GCM dos aparelhos pareados, sem autorização individual por controlador. Intervalos são mínimos e não garantem precisão/frequência; funcionamento com tela apagada depende das regras de FGS/bateria do Android. Dados de GPS não dependem de internet, mas a comunicação requer rede local/VPN. Build APK e teste físico pendentes.
 
 ---
+
 
 # Monitor Remoto v0.1.0-alpha.71
 

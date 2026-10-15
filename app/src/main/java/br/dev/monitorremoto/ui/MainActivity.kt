@@ -327,6 +327,7 @@ class MainActivity : Activity() {
             9268 -> {
                 message(if (granted) "Notificações de saúde autorizadas." else "Permissão de notificações negada; consulte alertas no painel.")
             }
+            9275, 9276 -> onLocationPermissionsResult(requestCode, grantResults)
             smsReadPermissionRequest -> {
                 SettingsStore.setShareSmsInbox(this, granted)
                 message(if (granted) "Leitura de SMS ativada no monitorado. Mensagens de autenticação serão filtradas."
