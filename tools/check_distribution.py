@@ -16,7 +16,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.79" and code.group(1) == "79", "Versões incompatíveis"
+assert version == "0.1.0-alpha.80" and code.group(1) == "80", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -1132,3 +1132,20 @@ assert 'confirmBatchDelete' in filesui and 'confirmBatchTrash' in filesui
 assert 'MediaStore.Downloads.EXTERNAL_CONTENT_URI' in filesui and 'PICK_UPLOADS' in filesui
 assert 'FAST_CHUNK_BYTES' in file_policy and 'RemoteClient.dataRead(' in filesui
 print('PASSOU: alpha.79, opt-in de escrita, CRUD SAF, uploads staged, Downloads e fast chunks.')
+
+# alpha.80: fluxo contínuo authenticated e sequencial, sem conexão por chunk.
+stream_server = (root / 'app/src/main/java/br/dev/monitorremoto/transport/MonitorServer.kt').read_text()
+stream_reader = (root / 'app/src/main/java/br/dev/monitorremoto/transport/StreamFrameReader.kt').read_text()
+shared_folder = (root / 'app/src/main/java/br/dev/monitorremoto/core/SharedDataFolder.kt').read_text()
+remote_client = (root / 'app/src/main/java/br/dev/monitorremoto/transport/RemoteClient.kt').read_text()
+remote_files = (root / 'app/src/main/java/br/dev/monitorremoto/ui/RemoteFilesActivity.kt').read_text()
+assert '"dataStream"' in stream_server and 'streamSlots.tryAcquire()' in stream_server
+assert 'SharedDataFolder.stream(context, regular)' in stream_server
+assert 'openInputStream(uri)' in shared_folder and 'fun stream(context:' in shared_folder
+assert 'WireProtocol.encode(permanentKey, message)' in stream_server
+assert 'StreamFrameReader(socket.getInputStream())' in remote_client
+assert 'offset + bytes.size.toLong() <= size' in remote_client
+assert 'frame.optString("sha256") == sha' in remote_client
+assert 'RemoteClient.dataStream(' in remote_files
+assert 'private val buffer = ByteArray(64 * 1024)' in stream_reader
+print('PASSOU: alpha.80, download SAF contínuo autenticado, integridade e enquadramento persistente.')

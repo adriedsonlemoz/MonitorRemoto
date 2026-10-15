@@ -42,6 +42,7 @@ import java.util.LinkedHashMap
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.Semaphore
 import kotlin.math.abs
 
 /** Porta única: consulta autenticada e pareamento QR temporário em canal AES-GCM. */
@@ -54,6 +55,8 @@ class MonitorServer(private val context: Context) {
         3, 3, 0L, TimeUnit.MILLISECONDS, ArrayBlockingQueue<Runnable>(12),
         ThreadPoolExecutor.AbortPolicy()
     )
+    // Não deixar transferências longas ocupar os três workers simultaneamente.
+    private val streamSlots = Semaphore(1, true)
     // Compartilhado entre instâncias: reiniciar o listener não reabre a janela de replay.
     private companion object {
         val seenNonces = LinkedHashMap<String, Long>()
@@ -117,7 +120,7 @@ class MonitorServer(private val context: Context) {
                 val regular = runCatching { WireProtocol.decode(permanentKey, encrypted) }.getOrNull()
                 if (regular != null) {
                     if (regular.optInt("v") != WireProtocol.VERSION ||
-                        regular.optString("op") !in setOf("snapshot", "disconnect", "notificationReply", "smsReply", "screenFrame", "screenCapture", "remoteTouch", "audioChunk", "requestScreen", "videoFrame", "wakeScreen", "dataList", "dataChunk", "dataChunks", "dataHash", "dataRead", "dataManage", "dataUploadStart", "dataUploadChunk", "dataUploadFinish", "dataUploadAbort", "dataUploadStatus", "appsList", "appsIcons", "appLaunch", "deviceControl", "cameraFrame", "cameraSwitch")) return
+                        regular.optString("op") !in setOf("snapshot", "disconnect", "notificationReply", "smsReply", "screenFrame", "screenCapture", "remoteTouch", "audioChunk", "requestScreen", "videoFrame", "wakeScreen", "dataList", "dataChunk", "dataChunks", "dataHash", "dataRead", "dataStream", "dataManage", "dataUploadStart", "dataUploadChunk", "dataUploadFinish", "dataUploadAbort", "dataUploadStatus", "appsList", "appsIcons", "appLaunch", "deviceControl", "cameraFrame", "cameraSwitch")) return
                     if (abs(now - regular.optLong("ts")) > 5 * 60 * 1000L) return
                     synchronized(seenNonces) {
                         // Retenção compatível com ±5 minutos de validade do envelope.
@@ -140,6 +143,32 @@ class MonitorServer(private val context: Context) {
                             .put("op", "versionMismatch")
                             .put("appVersion", AppVersion.NAME)
                         WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(permanentKey, mismatch))
+                        return
+                    }
+                    if (regular.optString("op") == "dataStream") {
+                        val responseBase = JSONObject().put("v", WireProtocol.VERSION)
+                            .put("op", "dataStream").put("appVersion", AppVersion.NAME)
+                        if (!streamSlots.tryAcquire()) {
+                            WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(permanentKey,
+                                responseBase.put("ok", false).put("message", "Há uma transferência ativa; tente novamente.")))
+                            return
+                        }
+                        try {
+                            socket.tcpNoDelay = true
+                            val output = java.io.BufferedOutputStream(socket.getOutputStream(), 64 * 1024)
+                            SharedDataFolder.stream(context, regular) { message ->
+                                WireProtocol.send(output, WireProtocol.encode(permanentKey, message))
+                            }
+                            output.flush()
+                            AuthenticatedAccess.authenticated(socket.inetAddress?.hostAddress.orEmpty(),
+                                regular.optString("clientId"), regular.optString("clientName"), regular.optString("accessMethod"))
+                        } catch (error: Exception) {
+                            runCatching { WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(permanentKey,
+                                responseBase.put("ok", false)
+                                    .put("message", (error.message ?: "Falha na leitura remota.").take(170)))) }
+                        } finally {
+                            streamSlots.release()
+                        }
                         return
                     }
                     if (regular.optString("op") in setOf("dataList", "dataChunk", "dataChunks", "dataHash", "dataRead", "dataManage", "dataUploadStart", "dataUploadChunk", "dataUploadFinish", "dataUploadAbort", "dataUploadStatus")) {

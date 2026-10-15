@@ -1,4 +1,4 @@
-# Arquitetura (0.1.0-alpha.79)
+# Arquitetura (0.1.0-alpha.80)
 
 ```text
 MONITORADO                                      CONTROLE
@@ -31,9 +31,9 @@ A captura usa `ImageReader` RGBA, `Bitmap` JPEG com largura máxima 540 px, taxa
 
 ## Distribuição e assinatura
 
-O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.79` e `versionCode=79`.
+O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.80` e `versionCode=80`.
 
-- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.79.apk`.
+- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.80.apk`.
 - `upload-artifact` sempre distribui um ZIP; GitHub Releases recebe o **arquivo APK direto**.
 - Com quatro Secrets, Gradle gera APK Release assinado e AAB. Sem Secrets, o arquivo é Debug de teste e não preserva necessariamente a assinatura entre execuções.
 - Releases são prévias, não substituem a futura revisão da Google Play e nem os ensaios reais.
@@ -295,3 +295,7 @@ O serviço FGS `connectedDevice` mantém uma notificação `IMPORTANCE_LOW` com 
 ## Árvore SAF gerenciada na alpha.79
 
 Somente o aparelho monitorado pode selecionar a árvore pelo ACTION_OPEN_DOCUMENT_TREE. A escrita exige permissão persistida de escrita mais segundo opt-in local. O servidor aceita dataManage com operações restritas (mkdir, rename, move, copy, delete, trash) e dataUploadStart/Chunk/Status/Finish/Abort. Todos seguem a autenticação AES-GCM e versão exata da porta existente. Todos os caminhos são relativos, resolvidos por filho e verificados contra ambiguidades. A API DocumentsContract decide o que o provedor efetivamente permite. Upload permanece em cache privado e não sobrescreve destino, com SHA-256 integral antes de disponibilizar arquivo. Arquivos podem ter até 2 GiB; a leitura dataRead usa até 192 KiB por requisição, hash de bloco e hash completo no fim. Downloads pode usar MediaStore somente no controlador em Android 10+. A cópia é vinculada à Activity, ainda sem serviço persistente de transferência.
+
+## Streaming de arquivos grandes (alpha.80)
+
+Operação autenticada `dataStream` exige mesma versão e credencial existente. O servidor resolve a árvore SAF uma vez, confere tamanho e data informados, abre o arquivo por `ContentResolver.openInputStream()` apenas uma vez e envia mensagens AES-GCM sequenciais com offset crescente e até 192 KiB de dados Base64 por quadro, finalizando com digest SHA-256 criptografado. O cliente usa um leitor de quadros LF persistente, valida sequência e tamanho, atualiza destino incrementalmente e confere o digest completo antes de publicar. Encerramentos incompletos deixam erro e descartam cópia parcial. A conexão mantém um worker por download (limite de 1), separado dos pedidos curtos. Acesso continua restrito à árvore SAF autorizada, sem ADB/root ou permissões novas. Upload ainda usa requisições por chunk; pausa não sobrevive ao encerramento da Activity. Não é streaming H.264 e não há conexão TCP permanentemente aberta fora da transferência ativa.

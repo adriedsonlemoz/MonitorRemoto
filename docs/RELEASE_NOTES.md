@@ -1,3 +1,13 @@
+# Monitor Remoto v0.1.0-alpha.80
+
+- Download SAF contínuo via `dataStream`, em um único socket autenticado, sem reabrir documento a cada 192 KiB.
+- Frames AES-256-GCM separados, limites de tamanho e deslocamento, verificação SHA-256 final e limpeza do destino em caso de falha.
+- Atualização do tempo decorrido/restante para formato legível; módulos e permissões da alpha.79 preservados.
+- Não há retomada de download após fechar aplicativo nem otimização equivalente de upload nesta versão.
+- Mesma versão alpha.80 obrigatória nos dois celulares; build Android e testes de velocidade reais pendentes.
+
+---
+
 # Monitor Remoto v0.1.0-alpha.79
 
 - Nova autorização local de leitura/escrita para a pasta SAF, separada, desligada por padrão.

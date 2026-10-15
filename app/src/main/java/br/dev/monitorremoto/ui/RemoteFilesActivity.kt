@@ -860,29 +860,27 @@ class RemoteFilesActivity : Activity() {
         val output = contentResolver.openOutputStream(destination, "wt") ?: error("Android não autorizou o destino.")
         output.use { stream ->
             var written = 0L
-            val digest = java.security.MessageDigest.getInstance("SHA-256")
             var lastBucket = -1L
-            while (written < size) {
-                check(!cancel.get()) { "Transferência cancelada." }
-                check(SettingsStore.getRemoteHost(applicationContext) == host) { "O aparelho selecionado mudou." }
-                while (paused.get()) { check(!cancel.get()); Thread.sleep(150L) }
-                val bytes = fetchLargeChunkWithRetry(secret, source, size, modified, written)
-                check(bytes.isNotEmpty() && bytes.size <= RemoteFilePolicy.FAST_CHUNK_BYTES)
-                stream.write(bytes)
-                digest.update(bytes)
-                written += bytes.size
-                val bucket = (written * 100 / size) / 5
-                if (bucket != lastBucket || written == size) {
-                    lastBucket = bucket
-                    onProgress(written, size)
-                }
-            }
+            RemoteClient.dataStream(host, secret, applicationContext, method, source, size, modified,
+                beforeNext = {
+                    check(!cancel.get()) { "Transferência cancelada." }
+                    check(SettingsStore.getRemoteHost(applicationContext) == host) { "O aparelho selecionado mudou." }
+                    while (paused.get()) {
+                        check(!cancel.get()) { "Transferência cancelada." }
+                        Thread.sleep(150L)
+                    }
+                }, onChunk = { bytes ->
+                    stream.write(bytes)
+                    written += bytes.size
+                    val bucket = written * 100 / size
+                    if (bucket != lastBucket || written == size) {
+                        lastBucket = bucket
+                        onProgress(written, size)
+                    }
+                })
             stream.flush()
             check(written == size) { "Cópia incompleta." }
             check(!cancel.get()) { "Transferência cancelada." }
-            val expected = RemoteClient.dataHash(host, secret, applicationContext, method, source, size, modified)
-            val actual = digest.digest().joinToString("") { "%02x".format(it.toInt() and 255) }
-            check(expected == actual) { "Integridade final diferente da origem; arquivo descartado." }
         }
     }
 
@@ -924,6 +922,12 @@ class RemoteFilesActivity : Activity() {
         add(horizontal(pause, button("Cancelar") { cancel.set(true); paused.set(false); status.text = "Cancelando…" }))
     }
 
+    private fun formatDuration(seconds: Long): String = when {
+        seconds >= 3600L -> "%dh%02dmin".format(seconds / 3600L, (seconds % 3600L) / 60L)
+        seconds >= 60L -> "%dmin%02ds".format(seconds / 60L, seconds % 60L)
+        else -> "${seconds}s"
+    }
+
     private fun updateProgress(done: Long, total: Long, title: String) {
         if (total <= 0L) return
         val now = SystemClock.elapsedRealtime()
@@ -934,8 +938,8 @@ class RemoteFilesActivity : Activity() {
         val remain = if (bytesPerSecond > 0L) (total - done) / bytesPerSecond else 0L
         currentTransferBar?.progress = (done * 1000L / total).toInt()
         currentTransferInfo?.text = "$title · ${done * 100 / total}% · ${formatBytes(done)} / ${formatBytes(total)}\n" +
-            "${formatBytes(bytesPerSecond)}/s · ${elapsed / 1000}s decorridos · " +
-            if (bytesPerSecond > 0L) "~${remain}s restantes" else "estimando tempo…"
+            "${formatBytes(bytesPerSecond)}/s · ${formatDuration(elapsed / 1000)} decorridos · " +
+            if (bytesPerSecond > 0L) "~${formatDuration(remain)} restantes" else "estimando tempo…"
     }
 
     private fun fetchLargeChunkWithRetry(secret: ByteArray, source: List<String>, size: Long,

@@ -213,6 +213,57 @@ object SharedDataFolder {
             (error.message ?: "Falha de leitura no Android.").take(170)) }
     }
 
+    /** Transferência sequencial autenticada. Resolve a árvore e abre o conteúdo uma única vez.
+     * Cada bloco (e o SHA final) é um envelope AES-GCM independente criado no servidor.
+     * Nenhum ID de documento vindo da rede é aceito como caminho de acesso.
+     */
+    fun stream(context: Context, request: JSONObject, emit: (JSONObject) -> Unit) {
+        require(available(context)) { "Compartilhamento de arquivos não autorizado." }
+        val tree = tree(context) ?: error("Pasta remota não selecionada.")
+        val parts = path(request)
+        require(parts.isNotEmpty()) { "Selecione um arquivo para copiar." }
+        val node = resolve(context, tree, parts)
+        check(!node.folder && node.size in 1..RemoteFilePolicy.MAX_FILE_BYTES) {
+            "Arquivo não permitido ou acima de 2 GiB."
+        }
+        check(request.optLong("size", -1L) == node.size &&
+            request.optLong("modified", -1L) == node.modified) { "Arquivo mudou desde a listagem." }
+        val uri = DocumentsContract.buildDocumentUriUsingTree(tree, node.id)
+        val digest = MessageDigest.getInstance("SHA-256")
+        val buffer = ByteArray(RemoteFilePolicy.FAST_CHUNK_BYTES)
+        var transferred = 0L
+        context.contentResolver.openInputStream(uri)?.use { raw ->
+            java.io.BufferedInputStream(raw, 64 * 1024).use { input ->
+                while (transferred < node.size) {
+                    check(available(context) && !Thread.currentThread().isInterrupted) {
+                        "Compartilhamento encerrado durante a cópia."
+                    }
+                    val count = minOf(buffer.size.toLong(), node.size - transferred).toInt()
+                    var got = 0
+                    while (got < count) {
+                        val n = input.read(buffer, got, count - got)
+                        check(n > 0) { "Arquivo mudou ou terminou antes do esperado." }
+                        got += n
+                    }
+                    digest.update(buffer, 0, count)
+                    emit(JSONObject().put("v", 1).put("op", "dataStream")
+                        .put("appVersion", br.dev.monitorremoto.transport.AppVersion.NAME)
+                        .put("ok", true).put("offset", transferred)
+                        .put("bytes", Base64.encodeToString(buffer, 0, count, Base64.NO_WRAP)))
+                    transferred += count
+                }
+                // Se o arquivo cresceu, recusar a assinatura final de um prefixo parcial.
+                check(input.read() == -1) { "Arquivo cresceu durante a transferência." }
+            }
+        } ?: error("Provedor não permitiu a leitura sequencial do documento.")
+        check(transferred == node.size) { "Leitura incompleta." }
+        emit(JSONObject().put("v", 1).put("op", "dataStream")
+            .put("appVersion", br.dev.monitorremoto.transport.AppVersion.NAME)
+            .put("ok", true).put("done", true).put("size", node.size)
+            .put("modified", node.modified)
+            .put("sha256", digest.digest().joinToString("") { "%02x".format(it.toInt() and 255) }))
+    }
+
     /** Mutação SAF restrita a caminhos relativos e somente com permissão explícita de escrita. */
     private fun manage(context: Context, tree: Uri, request: JSONObject, parts: List<String>,
         response: JSONObject): JSONObject {

@@ -1,3 +1,12 @@
+## Alpha.80 (15/10/2026)
+
+- `tools/check_distribution.py`: aprovado, inclusive operação autenticada `dataStream`, leitor de quadros persistente e SHA-256 final.
+- Parser PSI Kotlin executado sobre 161 arquivos de produção e testes: nenhum erro sintático.
+- Teste Kotlin/JVM independente de `StreamFrameReader`: mensagens consecutivas no mesmo buffer, quadro de 340 KB, erro ao encontrar EOF sem delimitador, bloqueio de mensagem acima do limite e fluxo simulado de 128 MiB em centenas de quadros: passou.
+- As quatro regressões também foram incluídas em `StreamFrameReaderTest` (JUnit) para o GitHub Actions.
+- `dataStream` reabre o arquivo apenas no início da cópia, não por bloco. Dados e SHA final autenticados por AES-GCM. Um único socket é mantido durante um download; uploads permanecem inalterados.
+- Testes de desempenho, compilação Gradle/Android e comportamento do provedor SAF em celulares reais ainda **pendentes**. A rede da captura anterior mostrou 381 KiB/s na alpha.79, mas não é benchmark da alpha.80.
+
 ## Alpha.79 (15/10/2026)
 
 - `tools/check_distribution.py`: verificação estrutural de versionamento, permissões e endpoints, incluindo alpha.79.

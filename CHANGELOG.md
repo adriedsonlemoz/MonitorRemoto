@@ -1,3 +1,11 @@
+## 0.1.0-alpha.80 (versionCode 80) | 15/10/2026
+
+- Corrigido o gargalo principal no download SAF de vídeos grandes: a alpha.79 reabria uma conexão TCP, resolvia a árvore SAF e reabria o arquivo a cada 192 KiB (aproximadamente 4000 requisições para um vídeo de 749 MiB). A alpha.80 usa operação `dataStream` autenticada por AES-GCM e **uma conexão / uma abertura sequencial do arquivo por download**.
+- O servidor transmite quadros independentes cifrados, limitados a 192 KiB de dados, com offset validado no receptor, verificação SHA-256 do conteúdo completo e descarte do arquivo de destino se a sessão terminar incorretamente.
+- Novo leitor incremental de frames LF, com buffer mantido entre mensagens, evitando perda de bytes pré-lidos e processamento desnecessário por socket. Apenas uma transferência contínua é admitida simultaneamente para poupar o aparelho monitorado.
+- Revogar a pasta ou parar o monitoramento interrompe a próxima leitura. Pausa/cancelamento seguem restritos à Activity; upload mantém protocolo anterior. Tempo restante agora mostrado em minutos/horas.
+- Testes locais de enquadramento, política e verificação estática; compilação Android e throughput com dois aparelhos pendentes. Não prometer ganho quantitativo sem medição.
+
 ## 0.1.0-alpha.79 (versionCode 79) | 15/10/2026
 
 - Recuperar dados: interface compactada com menu de ícones, seleção por checkboxes para arquivos e pastas, selecionar todos, seleção em lote para baixar/mover/copiar/excluir e informações de arquivo mais completas.
