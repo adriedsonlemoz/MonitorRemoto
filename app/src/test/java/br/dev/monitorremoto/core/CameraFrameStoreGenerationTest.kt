@@ -116,4 +116,17 @@ class CameraFrameStoreGenerationTest {
         } finally { CameraFrameStore.stop() }
     }
 
+    /** Regressão workflow 62: não depende do SystemClock mockado pelo android.jar JVM. */
+    @Test fun relogioMonotonicoNaoExigeRuntimeAndroidNosTestes() {
+        CameraFrameStore.stop()
+        try {
+            val token = CameraFrameStore.begin("Traseira")
+            assertFalse(CameraFrameStore.hasRecentViewer())
+            CameraFrameStore.viewerPing()
+            assertTrue(CameraFrameStore.hasRecentViewer())
+            CameraFrameStore.publish(token, jpeg)
+            assertTrue(CameraFrameStore.frameAgeMs() >= 0L)
+            assertArrayEquals(jpeg, CameraFrameStore.status(0L).jpeg)
+        } finally { CameraFrameStore.stop() }
+    }
 }

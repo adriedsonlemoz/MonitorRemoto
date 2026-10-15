@@ -1,3 +1,10 @@
+## 0.1.0-alpha.67 (versionCode 67)
+
+- **Correção de testes reais do GitHub Actions #62:** `:app:compileDebugKotlin` completou, mas `:app:testDebugUnitTest` terminou com 105 testes executados e cinco `CameraFrameStoreGenerationTest` falhando por `RuntimeException` ao chamar `SystemClock.elapsedRealtime()` (stub Android em JUnit local).
+- `CameraFrameStore` substitui apenas suas leituras temporais por relógio monotônico baseado em `System.nanoTime()` relativo ao início do processo, com valor positivo e sem dependências de APIs Android no teste JVM. Preservadas expiração de quadros e demanda, limites entre solicitações, consentimento e isolamento de sessões.
+- Verificador estático cobre a regressão, versionamento e documentação sincronizados. Nenhuma permissão, comando ADB, endpoint ou funcionalidade adicionada.
+- Os testes isolados locais não substituem novo `:app:testDebugUnitTest :app:assembleDebug` no GitHub Actions; dispositivo físico ainda pendente.
+
 ## 0.1.0-alpha.66 (versionCode 66)
 
 - **Correção de compilação** do workflow GitHub Actions **Gerar APK e Release #61** (`:app:compileDebugKotlin`): em `CameraShareActivity.kt:83`, atribuição de `TextureView` incompatível com `TextureView.SurfaceTextureListener?` dentro de `apply`.

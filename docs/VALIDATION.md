@@ -1,3 +1,14 @@
+## Alpha.67 — correção da suíte JUnit do workflow 62 (15/10/2026)
+
+- [x] ZIP de logs da execução 62 analisado (105 testes, 5 falhas em `CameraFrameStoreGenerationTest`), `:app:compileDebugKotlin` passou com avisos não fatais.
+- [x] Causa raiz: `CameraFrameStore` chamava `SystemClock.elapsedRealtime()` a partir de teste JVM sem implementação real de API Android.
+- [x] Correção: tempo monotônico relativo ao processo em `System.nanoTime()` com sentinela positivo; limites de validade, token por sessão e opt-in local continuam. Adicionado teste explícito de regressão sem `SystemClock`.
+- [x] Versionamento sequencial 0.1.0-alpha.67 / versionCode 67, README, AGENTS, changelog, notas e arquitetura sincronizados.
+- [x] 23 testes isolados Kotlin/JVM de `CameraFrameStoreGenerationTest`, `CameraRemoteSwitchPolicyTest` e `CameraStreamPolicyTest` executados com classes de asserção JUnit compatíveis, sem android.jar. Incluem as cinco falhas anteriores e a nova regressão; **não equivalem** ao Gradle do Android.
+- [x] Verificador estrutural, XMLs, YAML e integridade ZIP conferidos localmente.
+- [ ] **Reexecutar** `:app:testDebugUnitTest :app:assembleDebug` no GitHub Actions após publicar alpha.67. Suíte Gradle completa não disponível localmente.
+- [ ] Testes reais Camera2, segurança e latência em dois telefones continuam pendentes.
+
 ## Alpha.66 — correção do workflow 61 (15/10/2026)
 
 - [x] **Falha confirmada no GitHub Actions**: `drilemoz/MonitorRemoto`, execução `38685307320`, número 61, tentativa 2, `:app:compileDebugKotlin`. Compilador reportou `CameraShareActivity.kt:83:70 Assignment type mismatch: actual type is 'TextureView', but 'TextureView.SurfaceTextureListener?' was expected`.

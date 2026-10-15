@@ -1,12 +1,21 @@
 package br.dev.monitorremoto.capture
 
-import android.os.SystemClock
 import br.dev.monitorremoto.core.CameraStreamPolicy
 import br.dev.monitorremoto.core.CameraRemoteSwitchPolicy
 
 /** Quadros JPEG voláteis de uma Activity de câmera VISÍVEL no monitorado. Sem start remoto. */
 object CameraFrameStore {
     data class Frame(val sequence: Long, val lens: String, val jpeg: ByteArray)
+    // Relógio monotônico do próprio processo. SystemClock.elapsedRealtime() é
+    // um stub nos testes JUnit locais do Android e lança RuntimeException;
+    // System.nanoTime() funciona também no JVM sem android.jar.
+    // A origem própria garante valor positivo para o sentinela 0L (ausência
+    // de visualizador/frame) e não expõe tempo do sistema em rede.
+    // Sessões ativas são encerradas ao pausar a Activity e ao parar o serviço.
+    private val clockOriginNs = System.nanoTime()
+    private fun monotonicMs(): Long =
+        ((System.nanoTime() - clockOriginNs) / 1_000_000L).coerceAtLeast(0L) + 1L
+
     private var current: Frame? = null
     private var receivedAt = 0L
     private var sequence = 0L
@@ -51,12 +60,12 @@ object CameraFrameStore {
     }
 
     @Synchronized fun viewerPing() {
-        if (activeLens != null) lastViewerRequestAt = SystemClock.elapsedRealtime()
+        if (activeLens != null) lastViewerRequestAt = monotonicMs()
     }
 
     @Synchronized fun hasRecentViewer(): Boolean =
         activeLens != null && CameraStreamPolicy.hasRecentViewer(
-            lastViewerRequestAt, SystemClock.elapsedRealtime())
+            lastViewerRequestAt, monotonicMs())
 
     /** Evita estado misto se a câmera for fechada/trocada durante a consulta. */
     @Synchronized fun status(afterSequence: Long): Status {
@@ -77,7 +86,7 @@ object CameraFrameStore {
 
     /** Apenas enfileira pedido para a Activity local. Não abre Camera2 no servidor. */
     @Synchronized fun requestRemoteSwitch(expectedSession: Long, targetLens: String): Boolean {
-        val now = SystemClock.elapsedRealtime()
+        val now = monotonicMs()
         if (!CameraRemoteSwitchPolicy.accept(remoteSwitchAllowed, activeLens, targetLens,
                 session, expectedSession, pendingSwitch != null,
                 hasRecentViewer(), lastSwitchRequestedAt, now)) return false
@@ -101,12 +110,12 @@ object CameraFrameStore {
         if (!CameraStreamPolicy.validFrame(bytes)) return
         sequence++
         current = Frame(sequence, lens, bytes.copyOf())
-        receivedAt = SystemClock.elapsedRealtime()
+        receivedAt = monotonicMs()
     }
 
     @Synchronized fun frameAgeMs(): Long =
         if (activeLens == null || receivedAt == 0L) -1L
-        else (SystemClock.elapsedRealtime() - receivedAt).coerceAtLeast(0L)
+        else (monotonicMs() - receivedAt).coerceAtLeast(0L)
 
     @Synchronized fun snapshot(): Frame? {
         if (frameAgeMs() !in 0..CameraStreamPolicy.MAX_FRAME_AGE_MS) return null

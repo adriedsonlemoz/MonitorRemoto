@@ -16,7 +16,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.66" and code.group(1) == "66", "Versões incompatíveis"
+assert version == "0.1.0-alpha.67" and code.group(1) == "67", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -965,3 +965,15 @@ assert 'RemoteClient.cameraSwitch(' in camera_viewer and 'response.optBoolean("r
 assert 'CameraRemoteSwitchPolicyTest.kt' in str(root / 'app/src/test/java/br/dev/monitorremoto/core/CameraRemoteSwitchPolicyTest.kt')
 assert (root / 'app/src/test/java/br/dev/monitorremoto/core/CameraRemoteSwitchPolicyTest.kt').is_file()
 print('PASSOU: alpha.65, opt-in local temporário, token de sessão, allowlist, revogação e confirmação posterior')
+
+# Regressão alpha.67: os testes JUnit :app:testDebugUnitTest do workflow #62
+# falhavam em cinco métodos de CameraFrameStoreGenerationTest porque
+# android.os.SystemClock não é implementado no android.jar de testes locais.
+frame_source = (root / 'app/src/main/java/br/dev/monitorremoto/capture/CameraFrameStore.kt').read_text(encoding='utf-8')
+assert 'import android.os.SystemClock' not in frame_source and 'SystemClock.elapsedRealtime()' not in re.sub(r'//[^\n]*', '', frame_source), 'Relógio Android não deve ser invocado pelo frame store testado na JVM'
+assert 'System.nanoTime()' in frame_source and 'clockOriginNs' in frame_source and '.coerceAtLeast(0L) + 1L' in frame_source, 'Relógio monotônico positivo ausente'
+assert 'lastViewerRequestAt = monotonicMs()' in frame_source
+assert 'receivedAt = monotonicMs()' in frame_source
+assert 'nowMs - lastRequestAtMs <=' in (root / 'app/src/main/java/br/dev/monitorremoto/core/CameraStreamPolicy.kt').read_text(), 'Expiração de visualizador não preservada'
+assert (root / 'app/src/test/java/br/dev/monitorremoto/core/CameraFrameStoreGenerationTest.kt').is_file(), 'Testes de frame store ausentes'
+print('PASSOU: alpha.67, relógio monotônico compatível com JVM e expiração preservada')
