@@ -1,4 +1,4 @@
-# Monitor Remoto 0.1.0-alpha.76
+# Monitor Remoto 0.1.0-alpha.77
 # Convenções permanentes do projeto Monitor Remoto
 
 - Toda alteração de código incrementa sequencialmente `versionCode` e `versionName` (ex.: `0.1.0-alpha.8` -> `0.1.0-alpha.9`). Sincronizar tela, README, CHANGELOG, RELEASE_NOTES e documentação.
@@ -21,7 +21,7 @@
 - Alpha.10: manter tema **claro padrão**, as opções da engrenagem, janela Conectar, botão de atualização compacto, lista de até 5 aparelhos recentes e os dados do Controle no topo. Não reintroduzir formulário longo na tela principal.
 - Credenciais por dispositivo usam `RecentDevices` + `SecretVault.profileKeyName`, com migração única da alpha.9. Não reaproveitar `CONTROLLER_KEY` antigo para IPs novos nem gravar segredo em preferências sem criptografia. Esquecer apaga o segredo correspondente.
 - Respostas HTTP/TCP não são conexão persistente. Exibir "Conectado" apenas após consulta autenticada bem-sucedida e "Sem resposta" após erro. Não inventar tempos de atualização.
-- Próxima versão sequencial: `0.1.0-alpha.77`, `versionCode 77`.
+- Próxima versão sequencial: `0.1.0-alpha.78`, `versionCode 78`.
 
 - Alpha.15: preservar a seleção Conectar → QR/Manual/Salvos, confirmação do QR antes de parear, cartões salvos com três ações e o scanner em Activity com tema Dialog.
 
@@ -152,3 +152,5 @@
 
 
 - Alpha.76: ícone do app deve ser adaptativo, com escudo e notificação monocromática própria. O MonitorService apresenta apenas acessos autenticamente consultados nos 45 segundos anteriores como **acessos recentes**, nunca conexões permanentes. Nomes de controladores são autodeclarados e jamais podem ser apresentados como identidade verificada; tela bloqueada usa versão pública genérica. Estado dos módulos deve vir de ScreenFrameStore, CameraFrameStore, LocationShareService/Store e preferências reais. Atualizações da notificação precisam ser deduplicadas, sem reiniciar FGS ou alertar repetidamente. Ações Parar e Detalhes devem continuar funcionais. Sem alteração de protocolos/permissões. Próxima alpha.77.
+
+- Alpha.77: logs do workflow GitHub Actions #72, `:app:compileDebugKotlin`, revelaram referência inexistente `lastControllerName` no `MonitorService.onDestroy()`, após refatoração da notificação na alpha.76. Remover somente essa atribuição; manter `lastControllerSeenMs = 0L` e `AuthenticatedAccess.clear()`. `tools/check_distribution.py` deve impedir retorno da referência inexistente. Sem mudar política de autenticação, notificações, GPS, privacidade, criptografia ou permissões. Build Gradle completo deve ser validado em CI antes de declarar APK. Próxima alpha.78.

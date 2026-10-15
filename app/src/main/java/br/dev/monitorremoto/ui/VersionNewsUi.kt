@@ -15,10 +15,11 @@ internal fun MainActivity.showVersionNews() {
     layout.addView(iconSectionHeader(R.drawable.ic_info, "Novidades · ${AppVersion.NAME}", "Bem-vindo à atualização"))
     sectionGap(layout, 10)
     val entries = listOf(
+        "Correção de compilação" to "Ajuste no encerramento do serviço após o erro detectado no workflow #72.",
         "Ícone de escudo" to "Identidade visual própria no launcher e nas notificações do Android.",
         "Notificação inteligente" to "Estado do serviço, acessos recentes e módulos ativos com atualizações discretas.",
         "Detalhes do serviço" to "Tela dedicada com horários das consultas; nomes de controladores são autodeclarados.",
-        "Privacidade" to "Tela bloqueada sem nomes ou detalhes de acesso. Instale alpha.76 nos dois aparelhos."
+        "Privacidade" to "Tela bloqueada sem nomes ou detalhes de acesso. Instale alpha.77 nos dois aparelhos."
     )
     entries.forEach { (title, details) ->
         layout.addView(dialogCardRow(title, details, ""))

@@ -1,3 +1,15 @@
+# Monitor Remoto v0.1.0-alpha.77
+
+## Correção de compilação do workflow #72
+
+- Corrigido `MonitorService.kt:308`: removida uma atribuição a `lastControllerName` após a variável ter sido retirada na atualização anterior.
+- A limpeza dos últimos acessos, a notificação inteligente com escudo, as ações Parar/Detalhes e a localização continuam preservadas.
+- Verificador estrutural agora rejeita a referência obsoleta; não há mudanças de permissões ou transporte.
+- Atualize **os dois celulares** para a mesma alpha.77 depois de confirmar a compilação no GitHub Actions.
+- **Pendente:** executar `:app:testDebugUnitTest :app:assembleDebug` na CI e testar a notificação no aparelho.
+
+---
+
 # Monitor Remoto v0.1.0-alpha.76
 
 ## Notificação inteligente e identidade visual

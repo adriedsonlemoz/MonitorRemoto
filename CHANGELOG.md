@@ -1,3 +1,10 @@
+## 0.1.0-alpha.77 (versionCode 77) | 15/10/2026
+
+- Correção de compilação do workflow GitHub Actions **Gerar APK e Release #72**: `:app:compileDebugKotlin` falhava em `MonitorService.kt:308:9` por referência inexistente `lastControllerName`.
+- Removida somente a atribuição obsoleta em `onDestroy()`. Preservadas a limpeza de `lastControllerSeenMs`, as notificações, o registro de acessos autenticados, a localização e a parada explícita.
+- Adicionada verificação de regressão em `tools/check_distribution.py`, sincronizados `versionName` e `versionCode` com README, CHANGELOG, AGENTS, ARCHITECTURE, RELEASE_NOTES e tela Novidades.
+- Sem alterações de protocolo, segurança ou permissões. Ainda é necessário rodar `:app:testDebugUnitTest :app:assembleDebug` na CI para confirmar o APK.
+
 ## 0.1.0-alpha.76 (versionCode 76) | 15/10/2026
 
 - Notificação principal do serviço passa a apresentar o estado do servidor, acessos autenticados recentes (expiração de 45 segundos) e módulos ativos: localização, tela, câmera e alertas. Não considera consultas TCP uma conexão permanente.

@@ -16,7 +16,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.76" and code.group(1) == "76", "Versões incompatíveis"
+assert version == "0.1.0-alpha.77" and code.group(1) == "77", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -1090,3 +1090,10 @@ assert 'LocationShareService.running' in notice and 'ScreenFrameStore.sharing' i
 assert 'CameraFrameStore.isActive()' in notice and 'MonitorNotificationPolicy.headline' in status_ui
 assert 'Conectado' not in policy and 'Aguardando controlador' in policy and 'acessos recentes' in policy
 print('PASSOU: alpha.76, ícones, notificação com estados reais, ações, privacidade e deduplicação.')
+
+# Alpha.77: erro real do workflow #72, compilação :app:compileDebugKotlin.
+# A variável lastControllerName foi removida na alpha.76, mas onDestroy ainda a referenciava.
+assert 'lastControllerName' not in notice, "Referência obsoleta lastControllerName em MonitorService"
+assert 'lastControllerSeenMs = 0L' in notice, "Limpeza do registro de último acesso removida"
+assert 'AuthenticatedAccess.clear()' in notice, "Limpeza de acessos autenticados removida"
+print('PASSOU: alpha.77, onDestroy sem símbolo inexistente e estado de acesso limpo.')

@@ -305,7 +305,6 @@ class MonitorService : Service() {
         foregroundStarted = false
         lastNotificationSignature = null
         lastControllerSeenMs = 0L
-        lastControllerName = ""
         serviceActive = false
         isServiceActive = false
         if (!stoppedExplicitly && SettingsStore.isMonitorEnabled(this)) {

@@ -1,3 +1,10 @@
+## Alpha.77 · correção de compilação do MonitorService (15/10/2026)
+
+- [x] Log original do workflow #72 analisado; erro `Unresolved reference 'lastControllerName'` em `MonitorService.kt:308`.
+- [x] Referência residual removida; limpeza de último acesso e de acessos autenticados preservadas.
+- [x] Versionamento e arquivos de distribuição sincronizados; regressão estrutural acrescentada.
+- [ ] Compilação Gradle e testes instrumentados reais ainda precisam de nova execução da CI.
+
 ## Alpha.73 · painel, novidades e proteção térmica (15/10/2026)
 
 - [x] Partiu da alpha.72 preservando criptografia, emparelhamento e cópia de arquivos.
