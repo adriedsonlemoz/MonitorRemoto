@@ -114,7 +114,7 @@ class MonitorServer(private val context: Context) {
                 val regular = runCatching { WireProtocol.decode(permanentKey, encrypted) }.getOrNull()
                 if (regular != null) {
                     if (regular.optInt("v") != WireProtocol.VERSION ||
-                        regular.optString("op") !in setOf("snapshot", "disconnect", "notificationReply", "smsReply", "screenFrame", "screenCapture", "remoteTouch", "audioChunk", "requestScreen", "videoFrame", "wakeScreen", "dataList", "dataChunk", "appsList", "deviceControl")) return
+                        regular.optString("op") !in setOf("snapshot", "disconnect", "notificationReply", "smsReply", "screenFrame", "screenCapture", "remoteTouch", "audioChunk", "requestScreen", "videoFrame", "wakeScreen", "dataList", "dataChunk", "appsList", "deviceControl", "cameraFrame")) return
                     if (abs(now - regular.optLong("ts")) > 5 * 60 * 1000L) return
                     synchronized(seenNonces) {
                         // Retenção compatível com ±5 minutos de validade do envelope.
@@ -279,6 +279,25 @@ class MonitorServer(private val context: Context) {
                             .put("ok", bytes != null).put("sharing", ScreenFrameStore.sharing)
                         if (bytes != null) reply.put("jpeg", Base64.encodeToString(bytes, Base64.NO_WRAP))
                         WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(permanentKey, reply))
+                        AuthenticatedAccess.authenticated(socket.inetAddress?.hostAddress.orEmpty(),
+                            regular.optString("clientId"), regular.optString("clientName"), regular.optString("accessMethod"))
+                        return
+                    }
+                    if (regular.optString("op") == "cameraFrame") {
+                        // A câmera só transmite quando CameraShareActivity está visível no monitorado.
+                        val active = br.dev.monitorremoto.capture.CameraFrameStore.isActive() &&
+                            SettingsStore.isMonitorEnabled(context)
+                        val frame = if (active) br.dev.monitorremoto.capture.CameraFrameStore.snapshot() else null
+                        val response = JSONObject().put("v", WireProtocol.VERSION)
+                            .put("op", "cameraFrame").put("appVersion", AppVersion.NAME)
+                            .put("active", active)
+                            .put("lens", if (active) br.dev.monitorremoto.capture.CameraFrameStore.lens() else JSONObject.NULL)
+                            .put("frameAgeMs", if (active) br.dev.monitorremoto.capture.CameraFrameStore.frameAgeMs() else -1L)
+                        if (frame != null) {
+                            response.put("sequence", frame.sequence)
+                                .put("jpeg", Base64.encodeToString(frame.jpeg, Base64.NO_WRAP))
+                        }
+                        WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(permanentKey, response))
                         AuthenticatedAccess.authenticated(socket.inetAddress?.hostAddress.orEmpty(),
                             regular.optString("clientId"), regular.optString("clientName"), regular.optString("accessMethod"))
                         return

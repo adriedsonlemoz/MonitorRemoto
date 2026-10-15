@@ -1,3 +1,9 @@
+## Alpha.62 · módulo de câmera visível e JPEG autenticado (15/10/2026)
+
+- Política de streaming JPEG, expiração e limite de payload com testes JVM, verificador estrutural e integridade ZIP.
+- Não existe operação de rede para iniciar a câmera; acesso somente depois da abertura local e permissão Android.
+- **Ainda não validados**: build Android completo, Camera2 físico, alternância de lentes, rotacionar, fechar ao bloquear a tela, concorrência com leitor QR/flash, latência/consumo real, salvamento de foto e rede em dois aparelhos.
+
 ## Alpha.61 · bloqueio remoto (15/10/2026)
 
 - [x] Código fonte da alpha.60 preservado e versionCode/versionName incrementados.

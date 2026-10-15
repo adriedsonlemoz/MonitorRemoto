@@ -1,3 +1,10 @@
+## 0.1.0-alpha.62 (versionCode 62)
+
+- Módulo inicial de câmeras: Activity local de Camera2 com prévia visível, consentimento explícito e permissão CAMERA, alternância frontal/traseira exclusivamente local e interrupção ao sair da tela.
+- Controlador: novo cartão **Câmeras** com visualizador JPEG via polling autenticado AES-GCM `cameraFrame` (sem start remoto) e salvar foto manualmente no controlador (MediaStore Android 10+, SAF Android 8/9).
+- JPEG YUV_420_888 limitado a 110 KB, máximo um quadro convertido por segundo, RAM volátil, expiração 3 segundos; sem áudio, vídeo gravado, serviços de captura em segundo plano, ADB livre ou permissões novas.
+- Corrigida proteção contra callbacks de câmera obsoletos ao alternar/fechar; documentação, versões e testes atualizados. Build Android/compatibilidade e latência nos celulares reais pendentes.
+
 ## 0.1.0-alpha.61 (versionCode 61)
 
 - Bloqueio remoto restrito por `DevicePolicyManager.lockNow`, política única `force-lock`, administrador habilitado manualmente no sistema, PIN/senha/padrão já configurados e autorização local independente OFF por padrão.

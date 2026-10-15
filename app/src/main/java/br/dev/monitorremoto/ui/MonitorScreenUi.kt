@@ -103,6 +103,21 @@ internal fun MainActivity.renderMonitor() {
             }
         })
         content.addView(shareCard)
+        gap(9)
+        val cameraCard = panel(12)
+        cameraCard.addView(label("Câmera compartilhada", 14f, strong = true))
+        cameraCard.addView(label(if (br.dev.monitorremoto.capture.CameraFrameStore.isActive())
+            "● Câmera ativa · interrompa na tela de prévia"
+            else "Desativada · somente após abertura local e permissão Android", 11f, muted = true))
+        sectionGap(cameraCard, 5)
+        cameraCard.addView(actionButton("Abrir câmera neste aparelho", emphasis = false) {
+            showAppConfirm("Compartilhar câmera ao vivo?",
+                "A câmera ficará aberta somente enquanto a tela de câmera estiver visível neste telefone. Um controlador pareado poderá ver quadros JPEG da câmera frontal ou traseira. Não há áudio ou gravação no monitorado. Voltar ou bloquear a tela interrompe a captura.",
+                confirmText = "Abrir câmera") {
+                startActivity(Intent(this, CameraShareActivity::class.java))
+            }
+        })
+        content.addView(cameraCard)
     }
     gap(12)
     if (enabled && running) renderIncomingAccess()

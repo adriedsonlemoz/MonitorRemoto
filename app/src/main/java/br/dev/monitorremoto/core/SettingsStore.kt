@@ -18,6 +18,7 @@ object SettingsStore {
         if (!enabled) recordRecoveryEvent(context, "Monitoramento interrompido localmente")
         // Nunca reutilizar eventos da sessão anterior, mesmo com uma captura em trânsito.
         if (!enabled) {
+            br.dev.monitorremoto.capture.CameraFrameStore.stop()
             RemotePhysicalControls.stopSound()
             RemotePhysicalControls.stopOwnedTorch()
         }

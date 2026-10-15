@@ -70,6 +70,12 @@ internal fun MainActivity.displayResult(root: JSONObject, fromCache: Boolean = f
                 putExtra(RemoteScreenActivity.EXTRA_METHOD, remoteConnection.method)
             })
         },
+        actionTile(R.drawable.ic_remote_camera, "Câmeras", "Ao vivo · início local", enabled = true) {
+            startActivity(Intent(this, RemoteCameraActivity::class.java).apply {
+                putExtra(RemoteCameraActivity.EXTRA_HOST, br.dev.monitorremoto.core.SettingsStore.getRemoteHost(this@displayResult))
+                putExtra(RemoteCameraActivity.EXTRA_METHOD, remoteConnection.method)
+            })
+        },
         actionTile(R.drawable.ic_bell, "Tocar som", "Localizar · até 30 s", enabled = true) {
             showRemotePhysicalDialog(sound = true)
         },

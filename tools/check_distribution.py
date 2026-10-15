@@ -16,7 +16,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.61" and code.group(1) == "61", "Versões incompatíveis"
+assert version == "0.1.0-alpha.62" and code.group(1) == "62", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -884,3 +884,23 @@ assert 'showRemoteLockDialog()' in ui59 and 'Digite BLOQUEAR' in lock_ui
 assert 'remoteConnection.deviceControl(host, action, 0, confirmation)' in lock_ui
 assert 'Bloqueio remoto' in settings60
 print('PASSOU: alpha.61, DeviceAdmin apenas force-lock, opt-in local e confirmação digitada')
+
+# Alpha.62: câmera não pode ser iniciada por comando remoto nem em background.
+camera_local = (ui_root / 'CameraShareActivity.kt').read_text(encoding='utf-8')
+camera_viewer = (ui_root / 'RemoteCameraActivity.kt').read_text(encoding='utf-8')
+camera_store = (root / 'app/src/main/java/br/dev/monitorremoto/capture/CameraFrameStore.kt').read_text(encoding='utf-8')
+camera_codec = (root / 'app/src/main/java/br/dev/monitorremoto/capture/CameraImageCodec.kt').read_text(encoding='utf-8')
+assert 'CameraShareActivity' in manifest and 'RemoteCameraActivity' in manifest
+assert 'FOREGROUND_SERVICE_CAMERA' not in manifest and 'foregroundServiceType="camera"' not in manifest
+assert 'cameraFrame' in server and 'CameraFrameStore.snapshot()' in server
+assert '"cameraFrame"' in (root / 'app/src/main/java/br/dev/monitorremoto/transport/RemoteClient.kt').read_text()
+assert 'startActivity(Intent(this, CameraShareActivity::class.java))' in (ui_root / 'MonitorScreenUi.kt').read_text()
+assert 'showAppConfirm("Compartilhar câmera ao vivo?"' in (ui_root / 'MonitorScreenUi.kt').read_text()
+assert 'override fun onPause()' in camera_local and 'closeCamera()' in camera_local
+assert 'CameraFrameStore.stop()' in camera_local and 'CameraFrameStore.stop()' in settings
+assert 'CameraFrameStore.begin(' in camera_local and 'ImageReader.newInstance' in camera_local
+assert 'YuvImage(' in camera_codec and 'plane.rowStride' in camera_codec and 'plane.pixelStride' in camera_codec
+assert 'MAX_FRAME_BYTES = 110_000' in (root / 'app/src/main/java/br/dev/monitorremoto/core/CameraStreamPolicy.kt').read_text()
+assert 'fun saveStill()' in camera_viewer and 'RemoteImageSaver.save(' in camera_viewer
+assert 'fun requestFrame()' in camera_viewer and 'onPause()' in camera_viewer
+print('PASSOU: alpha.62, câmera visível, JPEG em RAM, câmera sem ativação remota ou FGS')

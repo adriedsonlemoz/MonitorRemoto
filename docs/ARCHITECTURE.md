@@ -1,4 +1,4 @@
-# Arquitetura (0.1.0-alpha.61)
+# Arquitetura (0.1.0-alpha.62)
 
 ```text
 MONITORADO                                      CONTROLE
@@ -31,9 +31,9 @@ A captura usa `ImageReader` RGBA, `Bitmap` JPEG com largura máxima 540 px, taxa
 
 ## Distribuição e assinatura
 
-O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.61` e `versionCode=61`.
+O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.62` e `versionCode=62`.
 
-- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.61.apk`.
+- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.62.apk`.
 - `upload-artifact` sempre distribui um ZIP; GitHub Releases recebe o **arquivo APK direto**.
 - Com quatro Secrets, Gradle gera APK Release assinado e AAB. Sem Secrets, o arquivo é Debug de teste e não preserva necessariamente a assinatura entre execuções.
 - Releases são prévias, não substituem a futura revisão da Google Play e nem os ensaios reais.
@@ -237,3 +237,7 @@ O painel Controller apresenta texto secundário em seu cartão de bateria e um i
 O `RemoteClient.deviceControl` envia somente `status`, `soundStart`, `soundStop`, `torchOn` ou `torchOff` pelo `WireProtocol` AES-GCM, com chave de pareamento, nonce, timestamp e exigência de `AppVersion` exata. A resposta contém `ok`, mensagem e `status`. `DeviceControlPolicy` fecha allowlist e tempos permitidos. `MonitorServer` revalida as duas autorizações locais do `SettingsStore` a cada comando; a consulta de status não altera hardware.
 
 O `RemotePhysicalControls`, propriedade lógica do `MonitorService`, mantém o alarme ToneGenerator e o callback Camera2. O som para no limite escolhido, na revogação ou no encerramento do serviço. TorchCallback é a fonte de estado; `setTorchMode()` não confirma imediatamente que o flash mudou. O servidor não abre câmera nem transmite fotos, não altera volume e não tenta ignorar Não Perturbe. Controles novos ficam na página **Configurações > Som e lanterna**, padrão desativado. Build Android e testes físicos pendentes.
+
+## Câmeras locais e JPEG remoto (alpha.62)
+
+`CameraShareActivity` só abre Camera2 em foreground visível no monitorado com CAMERA autorizada; fecha ao sair. Prévia TextureView + ImageReader YUV_420_888 compartilham uma CameraCaptureSession. `CameraImageCodec` respeita os strides e gera JPEG de no máximo 110 KB a até um quadro/s, volátil por 3 segundos em `CameraFrameStore`. Um request autenticado AES-GCM `cameraFrame` no `MonitorServer` retorna estado e, se disponível, JPEG recente. `RemoteCameraActivity` só consulta enquanto visível, descarta respostas antigas e salva manualmente. Não inicia câmera via rede, nem FGS/background, nem H.264, áudio ou gravação.

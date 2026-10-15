@@ -1,3 +1,14 @@
+# Monitor Remoto v0.1.0-alpha.62
+
+## Câmera remota JPEG com consentimento no monitorado
+
+- Inicie localmente **Modo monitorado > Abrir câmera neste aparelho**. A câmera abre somente com tela visível e permissão Android CAMERA. Voltar/pausar fecha e apaga quadros temporários.
+- Controlador: cartão **Câmeras**, visualização JPEG de até 1 quadro/s, indicador de sessão ativa e foto salva por ação manual; troca frontal/traseira é feita localmente no monitorado.
+- Rede e autenticação do aplicativo preservadas, com nova consulta de leitura `cameraFrame` limitada. Sem gravação, áudio, abertura silenciosa, ADB arbitrário ou novo FGS de câmera.
+- **Pendente**: build APK completo no CI e testes Android reais; API câmera, rotação, bloqueio de tela, fabricantes, redes e desempenho variam.
+
+---
+
 # Monitor Remoto v0.1.0-alpha.61
 
 ## Bloqueio remoto com duplo consentimento

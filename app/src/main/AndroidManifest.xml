@@ -4,7 +4,7 @@
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
     <uses-permission android:name="android.permission.INTERNET" />
-    <!-- Solicitada somente ao abrir o leitor QR; câmera não transmite imagens. -->
+    <!-- Solicitada no leitor QR ou na Activity local de câmera compartilhada. -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- Opcional: somente após autorização explícita no aparelho monitorado. -->
@@ -45,6 +45,9 @@
         android:supportsRtl="true">
 
         <!-- Camera2 local; nenhuma Activity de câmera externa ou componente exportado. -->
+        <!-- Câmera só funciona com Activity visível. Nenhum serviço de câmera em background. -->
+        <activity android:name=".ui.CameraShareActivity" android:exported="false" />
+        <activity android:name=".ui.RemoteCameraActivity" android:exported="false" />
         <activity android:name=".ui.AdbActivity" android:exported="false" />
         <activity
             android:name=".ui.QrScanActivity"

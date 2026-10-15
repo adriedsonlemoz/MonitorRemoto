@@ -1,6 +1,14 @@
 # Monitor Remoto
 
-**v0.1.0-alpha.61 / versionCode 61** · Android 8.0+ · Kotlin 2.2.21 · AGP 8.13.2 · Gradle 8.13
+**v0.1.0-alpha.62 / versionCode 62** · Android 8.0+ · Kotlin 2.2.21 · AGP 8.13.2 · Gradle 8.13
+
+## Câmera remota JPEG com início local (alpha.62)
+
+- No **aparelho monitorado** (monitoramento ativo), abra **Modo monitorado > Abrir câmera neste aparelho**, confirme a explicação e conceda a permissão Câmera solicitada pelo Android. A prévia local indica que a câmera está transmitindo; fechar a Activity, usar Voltar ou bloquear a tela interrompe a captura e remove os quadros da RAM.
+- No controlador pareado, abra o cartão **Câmeras** para acompanhar JPEG de baixa taxa (alvo máximo **1 quadro/segundo**, sem promessa de latência). Os quadros via Camera2 são consultados pela operação `cameraFrame` já cifrada por AES-GCM e por versão exata; não há nova porta ou comando ADB.
+- A câmera frontal/traseira é escolhida **localmente no monitorado** pela tecla Trocar câmera. O controlador **não pode abrir a câmera à distância**, alternar sua lente ou ativar captura oculta. **Salvar foto** salva um quadro recente somente após toque explícito no controlador; nenhuma imagem é salva automaticamente no monitorado.
+- A imagem é limitada a 110 KB, permanece somente em RAM e expira após 3 segundos. Não há microfone, gravação de vídeos, áudio, câmera em segundo plano, nova permissão invasiva ou serviço de câmera no manifesto.
+- Limitações: JPEG de prévia sem correção automática da orientação/espelhamento em todos os fabricantes; não é streaming H.264 de câmera. Câmera ocupada/ausente, permissão negada ou saída da tela encerram a visualização. **Build Android completo e testes em dois dispositivos pendentes**.
 
 ## Bloquear aparelho remoto (alpha.61)
 
@@ -12,7 +20,7 @@
 
 ## Controle remoto de som e lanterna (alpha.60)
 
-- Acesse **Configurações > Som e lanterna** no **celular monitorado**. Ambas as autorizações vêm desativadas e devem ser concedidas separadamente no aparelho. O monitoramento precisa continuar ativo, os dois dispositivos pareados e instalados na mesma alpha.60.
+- Acesse **Configurações > Som e lanterna** no **celular monitorado**. Ambas as autorizações vêm desativadas e devem ser concedidas separadamente no aparelho. O monitoramento precisa continuar ativo, os dois dispositivos pareados e instalados na mesma versão do aplicativo.
 - No painel do controlador, **Tocar som** abre opções de 5, 10, 20 ou 30 segundos, Iniciar/Interromper e Atualizar estado. Usa bipes temporários pelo volume ALARME, sem forçar o volume. Modo silencioso, Não Perturbe e configurações do fabricante podem impedir audição.
 - **Lanterna** usa a câmera traseira com flash, `CameraManager.setTorchMode()` e `TorchCallback`. A permissão Câmera do Android pode ser exigida; veja a permissão nas configurações do app no aparelho monitorado. Se câmera/flash estiverem ocupados ou ausentes, o app exibe falha e não inventa estado. A confirmação do estado pode atrasar.
 - Desativar permissão de som ou monitoramento local encerra alerta. Desativar a permissão de lanterna ou parar o serviço tenta desligar a lanterna **ligada pelo Monitor Remoto**, sem se apropriar de flash iniciado por outro aplicativo. Se o processo morrer inesperadamente, o Android poderá desligá-la por conta própria, mas não há garantia em todos os fabricantes.
@@ -263,7 +271,7 @@ A Home, o Modo Monitorado, a escolha de conexão, os submenus de Configurações
 
 ## Como utilizar
 
-1. Execute GitHub Actions > **Gerar APK e Release** > Run workflow. Para baixar **APK sem ZIP**, use Releases > `v0.1.0-alpha.61` > Assets > **`MonitorRemoto-v0.1.0-alpha.61.apk`**. Em Actions > Artifacts, um APK de contingência (quando presente) continua vindo em ZIP por comportamento padrão do GitHub. Instale o mesmo APK nos dois aparelhos.
+1. Execute GitHub Actions > **Gerar APK e Release** > Run workflow. Para baixar **APK sem ZIP**, use Releases > `v0.1.0-alpha.62` > Assets > **`MonitorRemoto-v0.1.0-alpha.62.apk`**. Em Actions > Artifacts, um APK de contingência (quando presente) continua vindo em ZIP por comportamento padrão do GitHub. Instale o mesmo APK nos dois aparelhos.
 2. No telefone secundário: na nova **Home**, toque em **Monitorar este aparelho**; autorize a notificação de serviço e ative o monitoramento. Em Configurações, conceda apenas as permissões necessárias e selecione os aplicativos cujas notificações deseja compartilhar.
 3. Na página Monitorado, toque no cartão **Gerar QR**. Escolha o IP privado acessível. O QR expira em 2 minutos e é válido para um único pareamento.
 4. No telefone principal: na **Home**, toque em **Conectar novo aparelho > QR Code**, aponte a câmera na janela compacta e confirme os dados do aparelho antes do pareamento. Para um aparelho salvo, use **Aparelhos anteriores > Conectar**. A digitação manual de IP e chave continua disponível.
@@ -290,7 +298,7 @@ Requer Android SDK API 36, Java 17, Gradle 8.13. O repositório ainda não inclu
 gradle :app:testDebugUnitTest :app:assembleDebug
 ```
 
-APK local de teste: `app/build/outputs/apk/debug/app-debug.apk`. O workflow copia esse arquivo ou o Release assinado como **`MonitorRemoto-v0.1.0-alpha.61.apk`**. Baixe diretamente na aba GitHub **Releases**. **O APK não está incluído neste ZIP de código-fonte.** Veja `docs/PAIRING_QR.md` para segurança do QR.
+APK local de teste: `app/build/outputs/apk/debug/app-debug.apk`. O workflow copia esse arquivo ou o Release assinado como **`MonitorRemoto-v0.1.0-alpha.62.apk`**. Baixe diretamente na aba GitHub **Releases**. **O APK não está incluído neste ZIP de código-fonte.** Veja `docs/PAIRING_QR.md` para segurança do QR.
 
 Opcional: configure os quatro Secrets de assinatura para gerar APK Release assinado e AAB. Ver `docs/APK_DOWNLOAD.md`. Preservar a mesma keystore entre builds é essencial para atualizações sem reinstalação.
 
