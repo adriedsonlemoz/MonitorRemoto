@@ -1,4 +1,4 @@
-# Monitor Remoto 0.1.0-alpha.83
+# Monitor Remoto 0.1.0-alpha.84
 # Convenções permanentes do projeto Monitor Remoto
 
 - Toda alteração de código incrementa sequencialmente `versionCode` e `versionName` (ex.: `0.1.0-alpha.8` -> `0.1.0-alpha.9`). Sincronizar tela, README, CHANGELOG, RELEASE_NOTES e documentação.
@@ -21,7 +21,7 @@
 - Alpha.10: manter tema **claro padrão**, as opções da engrenagem, janela Conectar, botão de atualização compacto, lista de até 5 aparelhos recentes e os dados do Controle no topo. Não reintroduzir formulário longo na tela principal.
 - Credenciais por dispositivo usam `RecentDevices` + `SecretVault.profileKeyName`, com migração única da alpha.9. Não reaproveitar `CONTROLLER_KEY` antigo para IPs novos nem gravar segredo em preferências sem criptografia. Esquecer apaga o segredo correspondente.
 - Respostas HTTP/TCP não são conexão persistente. Exibir "Conectado" apenas após consulta autenticada bem-sucedida e "Sem resposta" após erro. Não inventar tempos de atualização.
-- Próxima versão sequencial: `0.1.0-alpha.84`, `versionCode 84`.
+- Próxima versão sequencial: `0.1.0-alpha.85`, `versionCode 85`.
 
 - Alpha.15: preservar a seleção Conectar → QR/Manual/Salvos, confirmação do QR antes de parear, cartões salvos com três ações e o scanner em Activity com tema Dialog.
 
@@ -166,3 +166,5 @@
 - Alpha.82: integra a alpha.81 de transferência binária já publicada com o mapa interno (não sobrescrever uma linha paralela). Tiles OSM só com opt-in local por aparelho, cache e atribuição, nunca bulk/offline. Nova consulta periódica não inicia GPS; não alterar autenticação/versão exata, parar ao sair da Activity. Nova versão sequencial alpha.83.
 
 - Alpha.83: o endpoint `photoTake` requer par autorizado AES-GCM, versão exata e PhotoReadyService armada antes da captura via `RemotePhotoSetupActivity` visível no monitorado. Câmera Camera2 JPEG única sem stream e sem armazenamento remoto, notificação pública com ação Parar, OFF após parada, reinício/force-stop, NUNCA iniciar por boot/polling ou request remota. Não tentar contornar while-in-use do Android 14+, nem prometer resposta após furto sem VPN/LAN e serviço ativo. Próxima alpha.84.
+
+- Alpha.84: UI da câmera no controlador segue tema, tem status de captura, zoom local, botões Salvar/Compartilhar (compartilhar salva foto local somente após toque), decodificação de prévia em escala e no worker. A foto única e o opt-in pré-armado no monitorado continuam idênticos; não introduzir auto-save, histórico oculto, câmera iniciada remotamente, novas permissões ou polling de vídeo. Controle de salvar, compartilhar e lens não deve disparar segundo pedido enquanto captura em andamento. Testes Android e em aparelhos permanecem pendentes. Próxima alpha.85.

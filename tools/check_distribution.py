@@ -16,7 +16,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.83" and code.group(1) == "83", "Versões incompatíveis"
+assert version == "0.1.0-alpha.84" and code.group(1) == "84", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -912,7 +912,7 @@ assert 'FOREGROUND_SERVICE_CAMERA' in manifest and 'foregroundServiceType="camer
 assert 'android:name=".service.PhotoReadyService"' in manifest and 'android:exported="false"' in manifest
 assert 'android:name=".ui.RemotePhotoSetupActivity"' in manifest and 'android:exported="false"' in manifest
 assert 'android:name=".ui.RemotePhotoActivity"' in manifest
-assert 'startForegroundService(intent)' in photo_setup and 'requestPermissions(arrayOf(Manifest.permission.CAMERA)' in photo_setup
+assert ('startForegroundService(request)' in photo_setup or 'startForegroundService(intent)' in photo_setup) and 'requestPermissions(arrayOf(Manifest.permission.CAMERA)' in photo_setup
 assert 'PhotoReadyService.stop(context)' in settings
 assert 'PhotoReadyService.stop(this)' in (root / 'app/src/main/java/br/dev/monitorremoto/service/MonitorService.kt').read_text()
 assert 'PhotoReadyService.take(lens)' in server and '"photoTake"' in server
@@ -1194,3 +1194,18 @@ assert 'setOngoing(true)' in photo_service and '"Parar câmera remota"' in photo
 assert 'PhotoReadyService.armed' in (ui_root / 'MonitorScreenUi.kt').read_text()
 assert 'val lens = regular.optString("lens", "")' in server
 print('PASSOU: alpha.83 foto JPEG única, botão no controlador, notificação e parada local.')
+
+# Alpha.84: preservar foto JPEG única e consentimento; mudanças só na interface/controlador.
+photo_ui = (ui_root / 'RemotePhotoActivity.kt').read_text()
+photo_setup = (ui_root / 'RemotePhotoSetupActivity.kt').read_text()
+photo_zoom = (ui_root / 'PhotoZoomView.kt').read_text()
+preview_policy = (root / 'app/src/main/java/br/dev/monitorremoto/core/PhotoPreviewPolicy.kt').read_text()
+assert 'PhotoReadyService' not in photo_ui and 'RemoteClient.takePhoto(' in photo_ui
+assert 'ScaleGestureDetector' in photo_zoom and 'GestureDetector' in photo_zoom
+assert 'PhotoPreviewPolicy.sampleSize' in photo_ui and 'Bitmap.Config.RGB_565' in photo_ui
+assert 'Intent.ACTION_SEND' in photo_ui and 'FLAG_GRANT_READ_URI_PERMISSION' in photo_ui
+assert 'RemoteImageSaver.save(' in photo_ui and 'isEnabled = armed' in photo_setup
+assert 'startForegroundService(request)' in photo_setup and 'PhotoReadyService.stop(this)' in photo_setup
+assert 'MAX_PREVIEW_EDGE = 1600' in preview_policy
+assert (root / 'app/src/test/java/br/dev/monitorremoto/core/PhotoPreviewPolicyTest.kt').exists()
+print('PASSOU: alpha.84 foto UI, zoom, compartilhamento explícito, amostragem de prévia, consentimento e parada.')

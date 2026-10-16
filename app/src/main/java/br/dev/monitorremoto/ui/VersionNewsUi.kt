@@ -15,11 +15,11 @@ internal fun MainActivity.showVersionNews() {
     layout.addView(iconSectionHeader(R.drawable.ic_info, "Novidades · ${AppVersion.NAME}", "Bem-vindo à atualização"))
     sectionGap(layout, 10)
     val entries = listOf(
-        "Mapa integrado de localização" to "Marcador, precisão estimada, zoom, arrastar e centralizar no controlador.",
-        "Acompanhar posição" to "Consultas opcionais de 15, 30, 60 ou 300 s com a tela aberta.",
-        "Mapa online com permissão" to "Blocos OSM somente se você permitir para este aparelho; cache dos locais vistos.",
-        "GPS intermediário" to "Novo perfil local de 30 segundos além dos intervalos existentes.",
-        "Transferência binária preservada" to "Mantidas as melhorias da alpha.81 em upload/download e gerenciamento de arquivos."
+        "Foto remota redesenhada" to "Tema claro/escuro, progresso do disparo, identificação do aparelho e dados da foto recebida.",
+        "Ampliar fotografia" to "Use dois dedos, arraste ou toque duas vezes; botão Ajustar imagem restaura o zoom.",
+        "Salvar e compartilhar" to "Salve a foto na galeria ou compartilhe; nenhuma foto é salva automaticamente.",
+        "Preparação mais clara" to "Estado da sessão no monitorado, notificação visível e botão Parar.",
+        "Recursos preservados" to "Mapa, recuperação de arquivos, transferência binária e câmera ao vivo continuam disponíveis."
     )
     entries.forEach { (title, details) ->
         layout.addView(dialogCardRow(title, details, ""))

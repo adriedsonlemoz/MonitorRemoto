@@ -1,3 +1,11 @@
+## 0.1.0-alpha.84 (versionCode 84) | 16/10/2026
+
+- Fotografia remota recebeu tema claro/escuro, barra de progresso, estado contextual, identificação do aparelho, prévia ampliável com pinça/arraste/duplo toque e metadados reais.
+- Compartilhar foto via Android Sharesheet após salvamento explícito; salvar uma segunda vez não cria cópia duplicada. Nenhum salvamento automático ou acesso adicional ao monitorado.
+- Decodificação da prévia JPEG feita fora da thread principal com amostragem limitada a 1600 px por dimensão, preservando bytes originais para salvar.
+- Tela de armamento ganhou cartões, estado atualizado a cada segundo e botão de parada coerente com a sessão. Nenhuma alteração em autorização, protocolo ou fotografia em segundo plano.
+- Adicionado teste para cálculo de amostragem de foto; build Android e testes visuais no Redmi A3/controlador ainda pendentes.
+
 ## 0.1.0-alpha.83 (versionCode 83) | 16/10/2026
 
 - Novo modo de foto real JPEG única por Camera2 com lente traseira/frontal, sem streaming ou miniaturas em loop.
@@ -7,7 +15,7 @@
 - Limite de JPEG transmitido 320 KiB, timeout 12 s, rate limit 2 s; autorização de pareamento compartilhada entre controladores.
 - Android build e ensaios físicos pendentes.
 
-## 0.1.0-alpha.83 (versionCode 82) | 15/10/2026
+## 0.1.0-alpha.82 (versionCode 82) | 15/10/2026
 
 - Implementado mapa interno nativo no módulo Localização: coordenadas cifradas já autorizadas, precisão, zoom, arrastar, centralizar e seguir aparelho.
 - Consulta opcional pelo controlador a cada 15/30/60/300 segundos só enquanto a tela estiver aberta; sessão GNSS segue consentimento local independente.

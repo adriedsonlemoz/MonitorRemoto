@@ -1,3 +1,12 @@
+# Monitor Remoto v0.1.0-alpha.84 · Foto remota: visual e recursos
+
+- Redesenhada a tela Fotografia remota: tema claro/escuro do app, estado de carregamento, identificação do monitorado, última foto e informações efetivas de resolução, bytes e duração.
+- Prévia permite zoom por dois dedos, arrastar e toque duplo; a imagem usada na prévia é decodificada no worker em tamanho limitado, preservando o JPEG integral apenas em memória para salvar.
+- Adicionados Compartilhar foto e Salvar na galeria; compartilhar requer toque e cria uma cópia visível na galeria no Android 10+. Em Android 8/9 é utilizado o seletor de destino. Não salva automaticamente sem solicitação.
+- Tela de Preparar foto remota reorganizada em cartões com instruções, estado atualizado periodicamente e ação Parar ativa somente durante sessão.
+- Nenhuma mudança nas permissões de câmera, AES-GCM, exigência de versão exata, limites de JPEG, modo pré-armado ou regras do Android para câmera em segundo plano.
+- Ainda requer compilação Android pelo GitHub Actions e testes físicos.
+
 # Monitor Remoto v0.1.0-alpha.83 · Foto remota sob demanda
 
 - Novo modo de foto real JPEG única por Camera2 com lente traseira/frontal, sem streaming ou miniaturas em loop.
