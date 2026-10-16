@@ -148,24 +148,46 @@ class MonitorServer(private val context: Context) {
                     if (regular.optString("op") == "dataStream") {
                         val responseBase = JSONObject().put("v", WireProtocol.VERSION)
                             .put("op", "dataStream").put("appVersion", AppVersion.NAME)
+                        // A resposta inicial ainda usa JSON cifrado: falhas de versão, limite
+                        // e protocolo são legíveis sem tentar interpretar bytes como arquivo.
+                        val challenge = runCatching {
+                            FastFileStream.challengeBytes(regular.getString("streamNonce"))
+                        }.getOrElse {
+                            WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(permanentKey,
+                                responseBase.put("ok", false).put("message", "Desafio inválido.")))
+                            return
+                        }
                         if (!streamSlots.tryAcquire()) {
                             WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(permanentKey,
                                 responseBase.put("ok", false).put("message", "Há uma transferência ativa; tente novamente.")))
                             return
                         }
+                        var acknowledged = false
+                        val output = java.io.BufferedOutputStream(socket.getOutputStream(), 128 * 1024)
                         try {
-                            socket.tcpNoDelay = true
-                            val output = java.io.BufferedOutputStream(socket.getOutputStream(), 64 * 1024)
-                            SharedDataFolder.stream(context, regular) { message ->
-                                WireProtocol.send(output, WireProtocol.encode(permanentKey, message))
+                            socket.tcpNoDelay = false // grandes blocos aproveitam agregação TCP
+                            WireProtocol.send(output, WireProtocol.encode(permanentKey,
+                                responseBase.put("ok", true)))
+                            acknowledged = true
+                            val digest = SharedDataFolder.stream(context, regular) { bytes, count, offset ->
+                                FastFileStream.send(output, permanentKey, challenge,
+                                    FastFileStream.DATA, offset, bytes, count)
                             }
+                            FastFileStream.send(output, permanentKey, challenge,
+                                FastFileStream.DONE, regular.getLong("size"), digest)
                             output.flush()
                             AuthenticatedAccess.authenticated(socket.inetAddress?.hostAddress.orEmpty(),
                                 regular.optString("clientId"), regular.optString("clientName"), regular.optString("accessMethod"))
                         } catch (error: Exception) {
-                            runCatching { WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(permanentKey,
-                                responseBase.put("ok", false)
-                                    .put("message", (error.message ?: "Falha na leitura remota.").take(170)))) }
+                            runCatching {
+                                val message = (error.message ?: "Falha na leitura remota.").take(100)
+                                if (acknowledged) {
+                                    FastFileStream.send(output, permanentKey, challenge,
+                                        FastFileStream.ERROR, 0L, message.toByteArray(Charsets.UTF_8))
+                                    output.flush()
+                                } else WireProtocol.send(output, WireProtocol.encode(permanentKey,
+                                    responseBase.put("ok", false).put("message", message)))
+                            }
                         } finally {
                             streamSlots.release()
                         }

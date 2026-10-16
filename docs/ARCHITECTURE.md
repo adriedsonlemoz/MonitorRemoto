@@ -1,4 +1,4 @@
-# Arquitetura (0.1.0-alpha.80)
+# Arquitetura (0.1.0-alpha.82)
 
 ```text
 MONITORADO                                      CONTROLE
@@ -31,9 +31,9 @@ A captura usa `ImageReader` RGBA, `Bitmap` JPEG com largura máxima 540 px, taxa
 
 ## Distribuição e assinatura
 
-O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.80` e `versionCode=80`.
+O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.82` e `versionCode=82`.
 
-- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.80.apk`.
+- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.82.apk`.
 - `upload-artifact` sempre distribui um ZIP; GitHub Releases recebe o **arquivo APK direto**.
 - Com quatro Secrets, Gradle gera APK Release assinado e AAB. Sem Secrets, o arquivo é Debug de teste e não preserva necessariamente a assinatura entre execuções.
 - Releases são prévias, não substituem a futura revisão da Google Play e nem os ensaios reais.
@@ -299,3 +299,13 @@ Somente o aparelho monitorado pode selecionar a árvore pelo ACTION_OPEN_DOCUMEN
 ## Streaming de arquivos grandes (alpha.80)
 
 Operação autenticada `dataStream` exige mesma versão e credencial existente. O servidor resolve a árvore SAF uma vez, confere tamanho e data informados, abre o arquivo por `ContentResolver.openInputStream()` apenas uma vez e envia mensagens AES-GCM sequenciais com offset crescente e até 192 KiB de dados Base64 por quadro, finalizando com digest SHA-256 criptografado. O cliente usa um leitor de quadros LF persistente, valida sequência e tamanho, atualiza destino incrementalmente e confere o digest completo antes de publicar. Encerramentos incompletos deixam erro e descartam cópia parcial. A conexão mantém um worker por download (limite de 1), separado dos pedidos curtos. Acesso continua restrito à árvore SAF autorizada, sem ADB/root ou permissões novas. Upload ainda usa requisições por chunk; pausa não sobrevive ao encerramento da Activity. Não é streaming H.264 e não há conexão TCP permanentemente aberta fora da transferência ativa.
+
+## Transporte binário de download (alpha.81)
+
+O `dataStream` exige a versão exata nos dois celulares. O pedido inicial continua JSON AES-GCM e inclui um desafio aleatório de 16 bytes (`streamNonce`). O servidor retorna um ACK JSON AES-GCM; após aprovação, transmite registros binários com prefixo uint32 (big-endian), nonce de 12 bytes e ciphertext AES-GCM + tag. Cada plaintext traz tipo (DATA=1, DONE=2, ERROR=3), offset uint64 e dados de até 192 KiB. O AAD contém domínio específico e desafio da solicitação; nenhuma resposta anterior pode ser reutilizada em outro download. O cliente rejeita sequência/limite incorreto, erros, arquivos truncados e digest SHA-256 final divergente. O servidor abre a árvore SAF uma vez e usa 1 slot de stream. No fim o destino só é publicado se todo o arquivo chegar corretamente. O ACK precisa ser lido sem buffering privado que anteciparia quadros binários. Upload ainda usa JSON/Base64 e sockets por bloco; não reivindicar aceleração para upload.
+
+A UI de recuperação usa insets para barras do sistema e estima taxa de cópia observada em uma janela móvel; leitura do destino SAF, processamento AES e tráfego Wi-Fi podem todos limitar a vazão. Testes instrumentados e benchmark são pendentes.
+
+## Mapa interno alpha.82
+
+O renderer `RemoteMapView` recebe exclusivamente coordenadas retornadas por `RemoteClient.snapshot` autorizado, com Web Mercator puro em `MapProjection`. Blocos online OSM são requisitados apenas se a pessoa autorizar no controlador para aquele aparelho, e só na região visível, cacheados no armazenamento privado local; não há download preventivo de áreas ou sincronização para terceiros. Consulta periódica opcional encerra em `Activity.onPause`, sem iniciar GPS remoto; GNSS requer sessão no monitorado.

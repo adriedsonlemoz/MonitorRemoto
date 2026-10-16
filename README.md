@@ -1,8 +1,10 @@
 # Monitor Remoto
 
-**v0.1.0-alpha.80 / versionCode 80** · Android 8.0+ · Kotlin 2.2.21 · AGP 8.13.2 · Gradle 8.13
+**v0.1.0-alpha.82 / versionCode 82** · Android 8.0+ · Kotlin 2.2.21 · AGP 8.13.2 · Gradle 8.13
 
-**Novidades alpha.80:** otimizado o download de arquivos grandes: novo streaming por um único socket autenticado AES-GCM, abertura sequencial única da origem SAF e blocos de até 192 KiB; SHA-256 ponta a ponta após conclusão. Antes, cada bloco exigia nova conexão e nova resolução/reabertura do documento, causando baixíssima vazão em vídeos grandes. O Android controla a velocidade real; medir nos aparelhos. A pausa continua somente com a Activity aberta, uploads seguem o modo anterior e as permissões da pasta não foram ampliadas. **Build Android ainda pendente.**
+**Novidades alpha.82:** módulo Localização com mapa interno nativo, posição remota obtida do snapshot cifrado, precisão, zoom, centralizar/seguir e consultas automáticas opcionais. Blocos OpenStreetMap somente com autorização por aparelho pareado, cache dos blocos visualizados e atribuição; sem download de áreas offline nem histórico. Perfil GPS intermediário de 30 segundos ativado somente pelo próprio monitorado. **Mantém integralmente o trabalho da alpha.81 de UI e transferência binária.** Build Android e teste físico pendentes.
+
+**Novidades alpha.81:** tela Recuperar dados redesenhada com informações grandes e separadas, área superior corrigida para barras do Android e leitura de taxa em janela móvel. Download SAF agora usa quadros **binários** com AES-256-GCM por bloco, desafio específico por sessão e SHA-256 completo, eliminando a dupla codificação Base64/JSON da alpha.80. Ainda é um socket e um arquivo SAF aberto por vez. **Velocidade não medida em aparelhos nem build Android validado nesta entrega**; uploads, autorização local, limites e pausa só nesta Activity seguem como antes.
 
 **Novidades alpha.79:** Recuperar dados passa a oferecer gerenciamento autorizado da árvore SAF: upload em lotes via cache privado e validação SHA-256, criar pastas, renomear, mover/copy (quando permitido pelo provedor), lixeira interna opcional e exclusão com confirmação. A permissão de escrita é independente da leitura e desligada por padrão. Seleção mostra checkboxes e barra persistente; menu usa ícones, Downloads pode receber arquivos pelo MediaStore (Android 10+), arquivos de até 2 GiB e blocos de leitura de 192 KiB com velocidade e previsão. Pausar/retomar só vale enquanto a tela está aberta; não existe retomada persistente após terminar o processo. Aplicativos com a chave de pareamento compartilham os mesmos direitos de escrita concedidos localmente. **Build Android e dispositivos físicos pendentes.**
 
@@ -303,7 +305,7 @@ A Home, o Modo Monitorado, a escolha de conexão, os submenus de Configurações
 
 ## Como utilizar
 
-1. Execute GitHub Actions > **Gerar APK e Release** > Run workflow. Para baixar **APK sem ZIP**, use Releases > `v0.1.0-alpha.80` > Assets > **`MonitorRemoto-v0.1.0-alpha.80.apk`**. Em Actions > Artifacts, um APK de contingência (quando presente) continua vindo em ZIP por comportamento padrão do GitHub. Instale o mesmo APK nos dois aparelhos.
+1. Execute GitHub Actions > **Gerar APK e Release** > Run workflow. Para baixar **APK sem ZIP**, use Releases > `v0.1.0-alpha.82` > Assets > **`MonitorRemoto-v0.1.0-alpha.82.apk`**. Em Actions > Artifacts, um APK de contingência (quando presente) continua vindo em ZIP por comportamento padrão do GitHub. Instale o mesmo APK nos dois aparelhos.
 2. No telefone secundário: na nova **Home**, toque em **Monitorar este aparelho**; autorize a notificação de serviço e ative o monitoramento. Em Configurações, conceda apenas as permissões necessárias e selecione os aplicativos cujas notificações deseja compartilhar.
 3. Na página Monitorado, toque no cartão **Gerar QR**. Escolha o IP privado acessível. O QR expira em 2 minutos e é válido para um único pareamento.
 4. No telefone principal: na **Home**, toque em **Conectar novo aparelho > QR Code**, aponte a câmera na janela compacta e confirme os dados do aparelho antes do pareamento. Para um aparelho salvo, use **Aparelhos anteriores > Conectar**. A digitação manual de IP e chave continua disponível.
@@ -330,7 +332,7 @@ Requer Android SDK API 36, Java 17, Gradle 8.13. O repositório ainda não inclu
 gradle :app:testDebugUnitTest :app:assembleDebug
 ```
 
-APK local de teste: `app/build/outputs/apk/debug/app-debug.apk`. O workflow copia esse arquivo ou o Release assinado como **`MonitorRemoto-v0.1.0-alpha.80.apk`**. Baixe diretamente na aba GitHub **Releases**. **O APK não está incluído neste ZIP de código-fonte.** Veja `docs/PAIRING_QR.md` para segurança do QR.
+APK local de teste: `app/build/outputs/apk/debug/app-debug.apk`. O workflow copia esse arquivo ou o Release assinado como **`MonitorRemoto-v0.1.0-alpha.82.apk`**. Baixe diretamente na aba GitHub **Releases**. **O APK não está incluído neste ZIP de código-fonte.** Veja `docs/PAIRING_QR.md` para segurança do QR.
 
 Opcional: configure os quatro Secrets de assinatura para gerar APK Release assinado e AAB. Ver `docs/APK_DOWNLOAD.md`. Preservar a mesma keystore entre builds é essencial para atualizações sem reinstalação.
 

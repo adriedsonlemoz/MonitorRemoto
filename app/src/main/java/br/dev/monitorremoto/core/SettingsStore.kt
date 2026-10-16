@@ -23,7 +23,7 @@ object SettingsStore {
     /** Perfil da sessão de localização, nunca inicia o GPS por si só. */
     fun locationProfile(context: Context): String = prefs(context).getString("location_profile", "economico") ?: "economico"
     fun setLocationProfile(context: Context, profile: String) {
-        require(profile in setOf("economico", "equilibrado", "preciso"))
+        require(profile in setOf("economico", "equilibrado", "intermediario", "preciso"))
         prefs(context).edit().putString("location_profile", profile).apply()
     }
 

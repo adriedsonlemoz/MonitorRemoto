@@ -4,20 +4,24 @@ package br.dev.monitorremoto.core
 object LocationSharePolicy {
     const val ECONOMICO = "economico"
     const val EQUILIBRADO = "equilibrado"
+    const val INTERMEDIARIO = "intermediario"
     const val PRECISO = "preciso"
     fun intervalMs(profile: String): Long = when (profile) {
         PRECISO -> 10_000L
         EQUILIBRADO -> 60_000L
+        INTERMEDIARIO -> 30_000L
         else -> 300_000L
     }
     fun minDistanceM(profile: String): Float = when (profile) {
         PRECISO -> 5f
         EQUILIBRADO -> 15f
+        INTERMEDIARIO -> 10f
         else -> 40f
     }
     fun label(profile: String): String = when (profile) {
         PRECISO -> "Preciso · 10 s"
         EQUILIBRADO -> "Equilibrado · 60 s"
+        INTERMEDIARIO -> "Intermediário · 30 s"
         else -> "Econômico · 5 min"
     }
     fun coordinatesValid(lat: Double, lon: Double): Boolean =

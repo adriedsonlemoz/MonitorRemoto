@@ -5,6 +5,8 @@ import android.app.AlertDialog
 import android.content.Intent
 import android.content.res.Configuration
 import android.graphics.Color
+import android.content.res.ColorStateList
+import android.text.TextUtils
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
@@ -65,10 +67,20 @@ class RemoteFilesActivity : Activity() {
     private val cancel = AtomicBoolean(false)
     private val paused = AtomicBoolean(false)
     private var writeAllowed = false
-    private var currentTransferInfo: TextView? = null
+    private var currentTransferName: TextView? = null
+    private var currentTransferStage: TextView? = null
+    private var currentTransferPercent: TextView? = null
+    private var currentTransferAmount: TextView? = null
+    private var currentTransferSpeed: TextView? = null
+    private var currentTransferEta: TextView? = null
+    private var currentTransferElapsed: TextView? = null
     private var currentTransferBar: ProgressBar? = null
     private var progressStartedAt = 0L
     private var lastProgressAt = 0L
+    private var pausedSinceAt = 0L
+    private var lastTransferItem = ""
+    private var lastTransferBytes = 0L
+    private val speedSamples = java.util.ArrayDeque<Pair<Long, Long>>()
     private var chooseDownloads = false
     private var key: ByteArray? = null
     private var entries = listOf<JSONObject>()
@@ -163,7 +175,17 @@ class RemoteFilesActivity : Activity() {
         @Suppress("DEPRECATION")
         window.decorView.systemUiVisibility = if (dark) 0 else
             View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
-        frame = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(backgroundColor) }
+        frame = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(backgroundColor)
+            // Android 15/16 pode desenhar sob a barra de status (edge-to-edge).
+            // Respeitar insets impede que o título encoste no relógio/notificações.
+            setOnApplyWindowInsetsListener { view, insets ->
+                @Suppress("DEPRECATION")
+                view.setPadding(0, insets.systemWindowInsetTop, 0, insets.systemWindowInsetBottom)
+                insets
+            }
+        }
         val scroll = ScrollView(this).apply { isFillViewport = true; clipToPadding = false }
         content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -181,6 +203,7 @@ class RemoteFilesActivity : Activity() {
             leftMargin = dp(16); rightMargin = dp(16); bottomMargin = dp(10)
         })
         setContentView(frame)
+        frame.requestApplyInsets()
         if (host.isBlank() || key == null) showProblem("Conecte primeiro um aparelho pareado para recuperar arquivos.")
         else listFolder()
     }
@@ -192,14 +215,20 @@ class RemoteFilesActivity : Activity() {
     private fun screenShell() {
         content.removeAllViews()
         val top = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        top.addView(button("‹", action = { goBack() }), LinearLayout.LayoutParams(dp(52), dp(48)))
+        top.addView(button("‹", action = { goBack() }).apply {
+            textSize = 22f; contentDescription = "Voltar"
+        }, LinearLayout.LayoutParams(dp(52), dp(52)))
         top.addView(LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             addView(label("Recuperar dados", 22f, true))
             addView(label(deviceTitle(), 12f).apply { setTextColor(muted); maxLines = 1 })
         }, LinearLayout.LayoutParams(0, -2, 1f).apply { leftMargin = dp(10) })
-        top.addView(button("?", action = { showHelp() }).apply { contentDescription = "Ajuda sobre arquivos compartilhados" }, LinearLayout.LayoutParams(dp(48), dp(48)))
-        top.addView(button("↻", action = { if (!copying) listFolder() }).apply { contentDescription = "Atualizar lista" }, LinearLayout.LayoutParams(dp(48), dp(48)).apply { leftMargin = dp(8) })
+        top.addView(button("?", action = { showHelp() }).apply {
+            textSize = 19f; contentDescription = "Ajuda sobre arquivos compartilhados"
+        }, LinearLayout.LayoutParams(dp(48), dp(52)))
+        top.addView(button("↻", action = { if (!copying) listFolder() }).apply {
+            textSize = 19f; contentDescription = "Atualizar lista"
+        }, LinearLayout.LayoutParams(dp(48), dp(52)).apply { leftMargin = dp(8) })
         add(top, 15)
         status = label("", 13f).apply { setTextColor(muted) }
         add(status, 9)
@@ -860,7 +889,8 @@ class RemoteFilesActivity : Activity() {
         val output = contentResolver.openOutputStream(destination, "wt") ?: error("Android não autorizou o destino.")
         output.use { stream ->
             var written = 0L
-            var lastBucket = -1L
+            var lastPostedAt = 0L
+            onProgress(0L, size)
             RemoteClient.dataStream(host, secret, applicationContext, method, source, size, modified,
                 beforeNext = {
                     check(!cancel.get()) { "Transferência cancelada." }
@@ -872,9 +902,9 @@ class RemoteFilesActivity : Activity() {
                 }, onChunk = { bytes ->
                     stream.write(bytes)
                     written += bytes.size
-                    val bucket = written * 100 / size
-                    if (bucket != lastBucket || written == size) {
-                        lastBucket = bucket
+                    val now = SystemClock.elapsedRealtime()
+                    if (written == size || now - lastPostedAt >= 250L) {
+                        lastPostedAt = now
                         onProgress(written, size)
                     }
                 })
@@ -904,22 +934,100 @@ class RemoteFilesActivity : Activity() {
         throw failure ?: IllegalStateException("Sem resposta do monitorado.")
     }
 
+    /** Painel de transferência com hierarquia legível mesmo em telas pequenas.
+     * Métricas separadas, sem comprimir nome, velocidade e ETA numa linha de 12 sp.
+     */
     private fun showTransferPanel(title: String) {
-        status.text = title
-        progressStartedAt = SystemClock.elapsedRealtime(); lastProgressAt = 0L
-        currentTransferBar = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
-            max = 1000; progress = 0
+        status.text = "Transferência protegida • rede local"
+        progressStartedAt = 0L
+        lastProgressAt = 0L
+        pausedSinceAt = 0L
+        lastTransferItem = ""
+        lastTransferBytes = 0L
+        speedSamples.clear()
+
+        val card = panel().apply { setPadding(dp(18), dp(18), dp(18), dp(18)) }
+        val heading = label("PROGRESSO DA CÓPIA", 13f, true).apply { setTextColor(accent) }
+        card.addView(heading)
+        currentTransferStage = label("Preparando a transferência", 14f).apply {
+            setTextColor(muted)
+        }.also { card.addView(it) }
+        currentTransferName = label(title, 18f, true).apply {
+            maxLines = 2
+            ellipsize = TextUtils.TruncateAt.END
+            setPadding(0, dp(12), 0, dp(16))
+        }.also { card.addView(it) }
+
+        val progressRow = LinearLayout(this).apply {
+            gravity = Gravity.BOTTOM
+            orientation = LinearLayout.HORIZONTAL
         }
-        add(currentTransferBar!!, 6)
-        currentTransferInfo = label("Calculando velocidade real…", 12f).apply { setTextColor(muted) }
-        add(currentTransferInfo!!)
-        val pause = button("Pausar") { }
+        currentTransferPercent = label("0%", 34f, true).also {
+            progressRow.addView(it, LinearLayout.LayoutParams(-2, -2))
+        }
+        currentTransferAmount = label("Aguardando dados", 14f).apply {
+            gravity = Gravity.END or Gravity.BOTTOM
+            setTextColor(muted)
+        }.also { progressRow.addView(it, LinearLayout.LayoutParams(0, -2, 1f)) }
+        card.addView(progressRow)
+        currentTransferBar = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
+            max = 1000
+            progress = 0
+            progressTintList = ColorStateList.valueOf(accent)
+            progressBackgroundTintList = ColorStateList.valueOf(softColor)
+        }.also {
+            card.addView(it, LinearLayout.LayoutParams(-1, dp(14)).apply {
+                topMargin = dp(12)
+                bottomMargin = dp(14)
+            })
+        }
+
+        fun metric(caption: String, value: String, setter: (TextView) -> Unit) =
+            LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(dp(12), dp(14), dp(10), dp(14))
+                background = rounded(softColor, 14, false)
+                addView(label(caption, 13f).apply { setTextColor(muted) })
+                addView(label(value, 21f, true).also(setter))
+            }
+        val figures = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        figures.addView(metric("Velocidade", "Calculando…") { currentTransferSpeed = it },
+            LinearLayout.LayoutParams(0, -2, 1f))
+        figures.addView(metric("Tempo restante", "Calculando…") { currentTransferEta = it },
+            LinearLayout.LayoutParams(0, -2, 1f).apply { leftMargin = dp(10) })
+        card.addView(figures)
+        currentTransferElapsed = label("Tempo decorrido: 0s", 14f).apply {
+            setTextColor(muted)
+            setPadding(0, dp(15), 0, 0)
+        }.also { card.addView(it) }
+        add(card, 16)
+
+        val pause = button("Pausar") { }.apply { textSize = 16f; minHeight = dp(58) }
         pause.setOnClickListener {
+            val now = SystemClock.elapsedRealtime()
             paused.set(!paused.get())
             pause.text = if (paused.get()) "Retomar" else "Pausar"
-            currentTransferInfo?.text = if (paused.get()) "Pausada nesta tela" else "Retomando…"
+            if (paused.get()) {
+                pausedSinceAt = now
+                currentTransferStage?.text = "Pausada pelo usuário"
+                currentTransferSpeed?.text = "Pausada"
+                currentTransferEta?.text = "Pausada"
+            } else {
+                pausedSinceAt = 0L
+                speedSamples.clear() // não misturar tempo pausado ao cálculo de vazão
+                speedSamples.addLast(now to lastTransferBytes)
+                currentTransferStage?.text = "Retomando cópia…"
+            }
         }
-        add(horizontal(pause, button("Cancelar") { cancel.set(true); paused.set(false); status.text = "Cancelando…" }))
+        val stop = button("Cancelar") {
+            cancel.set(true); paused.set(false)
+            status.text = "Cancelando transferência…"
+            currentTransferStage?.text = "Cancelamento solicitado"
+        }.apply { textSize = 16f; minHeight = dp(58) }
+        add(horizontal(pause, stop), 12)
+        add(label("A cópia só é validada após conferir a integridade do arquivo.", 14f).apply {
+            setTextColor(muted)
+        }, 8)
     }
 
     private fun formatDuration(seconds: Long): String = when {
@@ -929,17 +1037,50 @@ class RemoteFilesActivity : Activity() {
     }
 
     private fun updateProgress(done: Long, total: Long, title: String) {
-        if (total <= 0L) return
+        if (total <= 0L || !copying || cancel.get()) return
         val now = SystemClock.elapsedRealtime()
-        if (now - lastProgressAt < 400 && done != total) return
+        if (lastTransferItem != title || done < lastTransferBytes) {
+            progressStartedAt = now
+            lastProgressAt = 0L
+            lastTransferItem = title
+            speedSamples.clear()
+            speedSamples.addLast(now to done)
+        }
+        lastTransferBytes = done
+        if (now - lastProgressAt < 400L && done != total) return
         lastProgressAt = now
-        val elapsed = (now - progressStartedAt).coerceAtLeast(1000L)
-        val bytesPerSecond = done * 1000L / elapsed
-        val remain = if (bytesPerSecond > 0L) (total - done) / bytesPerSecond else 0L
+        val fileNumber = Regex("^(\\d+)/(\\d+) · (.*)$").matchEntire(title)
+        val name = fileNumber?.groupValues?.get(3) ?: title
+        currentTransferStage?.text = when {
+            paused.get() -> "Pausada pelo usuário"
+            fileNumber != null -> "Arquivo ${fileNumber.groupValues[1]} de ${fileNumber.groupValues[2]}"
+            else -> "Recebendo arquivo do aparelho remoto"
+        }
+        currentTransferName?.text = name
         currentTransferBar?.progress = (done * 1000L / total).toInt()
-        currentTransferInfo?.text = "$title · ${done * 100 / total}% · ${formatBytes(done)} / ${formatBytes(total)}\n" +
-            "${formatBytes(bytesPerSecond)}/s · ${formatDuration(elapsed / 1000)} decorridos · " +
-            if (bytesPerSecond > 0L) "~${formatDuration(remain)} restantes" else "estimando tempo…"
+        currentTransferPercent?.text = "${done * 100L / total}%"
+        currentTransferAmount?.text = "${formatBytes(done)} / ${formatBytes(total)}"
+        val elapsed = ((now - progressStartedAt).coerceAtLeast(0L) / 1000L)
+        currentTransferElapsed?.text = "Tempo decorrido: ${formatDuration(elapsed)}"
+        if (paused.get()) {
+            currentTransferSpeed?.text = "Pausada"
+            currentTransferEta?.text = "Pausada"
+            return
+        }
+        speedSamples.addLast(now to done)
+        while (speedSamples.size > 2 && now - speedSamples.first().first > 5000L)
+            speedSamples.removeFirst()
+        val first = speedSamples.first()
+        val spanMs = now - first.first
+        val bytesPerSecond = if (spanMs >= 500L && done > first.second)
+            (done - first.second) * 1000L / spanMs else 0L
+        val remain = if (bytesPerSecond > 0L) (total - done) / bytesPerSecond else 0L
+        currentTransferSpeed?.text = if (bytesPerSecond > 0L) "${formatBytes(bytesPerSecond)}/s" else "Calculando…"
+        currentTransferEta?.text = when {
+            done >= total -> "Verificando…"
+            bytesPerSecond > 0L -> "~${formatDuration(remain)}"
+            else -> "Calculando…"
+        }
     }
 
     private fun fetchLargeChunkWithRetry(secret: ByteArray, source: List<String>, size: Long,
@@ -1026,7 +1167,12 @@ class RemoteFilesActivity : Activity() {
                     val step = completed
                     main.post { if (!isDestroyed && !isFinishing) {
                         currentTransferBar?.progress = step * 1000 / names.size
-                        currentTransferInfo?.text = "$step/${names.size} concluídos · $name"
+                        currentTransferStage?.text = "Operação $step de ${names.size}"
+                        currentTransferName?.text = name
+                        currentTransferPercent?.text = "${step * 100 / names.size}%"
+                        currentTransferAmount?.text = "$step / ${names.size} itens"
+                        currentTransferSpeed?.text = "Concluindo…"
+                        currentTransferEta?.text = "Por etapas"
                     } }
                 }
             }

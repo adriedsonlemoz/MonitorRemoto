@@ -7,6 +7,7 @@ class LocationSharePolicyTest {
     @Test fun perfisRespeitamIntervalos() {
         assertEquals(300_000L, LocationSharePolicy.intervalMs("economico"))
         assertEquals(60_000L, LocationSharePolicy.intervalMs("equilibrado"))
+        assertEquals(30_000L, LocationSharePolicy.intervalMs("intermediario"))
         assertEquals(10_000L, LocationSharePolicy.intervalMs("preciso"))
         assertEquals(300_000L, LocationSharePolicy.intervalMs("invalido"))
     }

@@ -1,4 +1,4 @@
-# Monitor Remoto 0.1.0-alpha.80
+# Monitor Remoto 0.1.0-alpha.82
 # Convenções permanentes do projeto Monitor Remoto
 
 - Toda alteração de código incrementa sequencialmente `versionCode` e `versionName` (ex.: `0.1.0-alpha.8` -> `0.1.0-alpha.9`). Sincronizar tela, README, CHANGELOG, RELEASE_NOTES e documentação.
@@ -21,7 +21,7 @@
 - Alpha.10: manter tema **claro padrão**, as opções da engrenagem, janela Conectar, botão de atualização compacto, lista de até 5 aparelhos recentes e os dados do Controle no topo. Não reintroduzir formulário longo na tela principal.
 - Credenciais por dispositivo usam `RecentDevices` + `SecretVault.profileKeyName`, com migração única da alpha.9. Não reaproveitar `CONTROLLER_KEY` antigo para IPs novos nem gravar segredo em preferências sem criptografia. Esquecer apaga o segredo correspondente.
 - Respostas HTTP/TCP não são conexão persistente. Exibir "Conectado" apenas após consulta autenticada bem-sucedida e "Sem resposta" após erro. Não inventar tempos de atualização.
-- Próxima versão sequencial: `0.1.0-alpha.81`, `versionCode 81`.
+- Próxima versão sequencial: `0.1.0-alpha.82`, `versionCode 82`.
 
 - Alpha.15: preservar a seleção Conectar → QR/Manual/Salvos, confirmação do QR antes de parear, cartões salvos com três ações e o scanner em Activity com tema Dialog.
 
@@ -160,3 +160,7 @@
 - Alpha.79: SharedDataFolder.writable requer permissão persistida READ+WRITE mais SettingsStore.allowRemoteFileWrite opt-in OFF por padrão. Somente operações allowlist dataManage/dataUpload* cifradas e caminhos relativos resolvidos dentro da árvore SAF. Não estender a raízes Download, Android/data ou pastas privadas. Upload usa arquivo em cache privado com digest SHA-256 e não sobrescreve nomes; abortar/apagar estágio após fim e limpar ao parar serviço. Operações destrutivas exigem confirmação no controlador; a chave compartilhada não individualiza permissões. Pausar só enquanto Activity existe; retomada persistente e FGS de transferência ainda não implementadas. Arquivos de até 2 GiB; leitura em blocos de 192 KiB, sem alegar ganho medido nem compilação/hardware validados. Próxima versão alpha.80.
 
 - Alpha.80: download SAF `dataStream` mantém uma única sessão TCP autenticada, enviando mensagens AES-GCM por blocos de até 192 KiB com offset e SHA-256 final. Não reabrir o SAF por chunk nem recriar o socket. Limitar fluxos longos simultâneos; recusar caminho fora da árvore e copiar sem acesso permitido. O novo StreamFrameReader conserva bytes pré-lidos entre frames e lança EOF quando a transferência interrompe; sempre rejeitar parcial sem digest final. Upload ainda é separado e limitado, e pausas vinculadas à Activity não são retomadas após fechar o app. Build Android e teste de throughput reais ainda necessários. Próxima alpha.81.
+
+- Alpha.81: download `dataStream` recebe ACK JSON autenticado e quadros binários AES-GCM do `FastFileStream`, removendo duas camadas de Base64; cada quadro usa nonce aleatório, desafio de 16 bytes por sessão no AAD, offset sequencial, limites de tamanho e digest SHA-256 final. Não simplificar para TCP puro nem dispensar integridade. Arquivo SAF e socket únicos, apenas uma transferência em paralelo. Tela de cópia maior e com insets do Android; atualizar métricas sem exigir evento por byte nem carregar arquivo todo. Pausa vinculada à tela, sem resume persistente. Novos tests FastFileStreamTest. Não alegar aceleração numérica nem APK até testes/CI. Próxima alpha.82.
+
+- Alpha.82: integra a alpha.81 de transferência binária já publicada com o mapa interno (não sobrescrever uma linha paralela). Tiles OSM só com opt-in local por aparelho, cache e atribuição, nunca bulk/offline. Nova consulta periódica não inicia GPS; não alterar autenticação/versão exata, parar ao sair da Activity. Nova versão sequencial alpha.83.

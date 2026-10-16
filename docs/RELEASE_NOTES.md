@@ -1,3 +1,22 @@
+# Monitor Remoto v0.1.0-alpha.82
+
+- Localização agora tem mapa interno de blocos, precisão, centralizar, seguir, arrastar, zoom e mapa externo.
+- Intervalos de consulta 15/30/60/300 segundos opcionais no controlador e perfil GPS intermediário 30 s no monitorado.
+- Sem divulgação automática da área do mapa: carregar blocos online OSM exige opt-in específico a cada aparelho. Cache local das áreas vistas; sem download offline de áreas inteiras.
+- Código da alpha.81 já presente no Drive (UI de transferência binária) incorporado, preservando funcionalidades de arquivos.
+- Necessário instalar o mesmo APK alpha.82 em ambos celulares. Build Android e ensaios em dispositivos reais ainda pendentes.
+
+---
+
+# Monitor Remoto v0.1.0-alpha.81
+
+- Transferência de arquivos: protocolo binário autenticado por AES-GCM por quadro em um único TCP, removendo JSON/Base64 duplicado. SHA-256 final e desafio exclusivo da sessão preservam integridade e evitam replay cruzado.
+- Tela Recuperar dados redesenhada com fontes maiores, porcentagem destacada, velocidade, previsão, bytes e nome de arquivo separados. Barra de status respeitada em Android edge-to-edge.
+- Não se afirma aumento de taxa antes de medir no mesmo Wi-Fi, armazenamento e arquivo. Upload permanece em blocos e download não retoma após fechar a tela.
+- Atualizar os dois aparelhos para alpha.81. Build APK e testes físicos continuam pendentes.
+
+---
+
 # Monitor Remoto v0.1.0-alpha.80
 
 - Download SAF contínuo via `dataStream`, em um único socket autenticado, sem reabrir documento a cada 192 KiB.

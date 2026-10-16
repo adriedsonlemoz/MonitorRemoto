@@ -881,9 +881,9 @@ internal fun MainActivity.fillLocationSettings(layout: LinearLayout) {
         } else {
             showManagedDialog(AlertDialog.Builder(this)
                 .setTitle("Intervalo de localização")
-                .setSingleChoiceItems(arrayOf("Econômico · 5 minutos", "Equilibrado · 60 segundos", "Preciso · 10 segundos"),
-                    listOf("economico", "equilibrado", "preciso").indexOf(profile)) { dialog, which ->
-                    SettingsStore.setLocationProfile(this, listOf("economico", "equilibrado", "preciso")[which])
+                .setSingleChoiceItems(arrayOf("Econômico · 5 minutos", "Equilibrado · 60 segundos", "Intermediário · 30 segundos", "Preciso · 10 segundos"),
+                    listOf("economico", "equilibrado", "intermediario", "preciso").indexOf(profile)) { dialog, which ->
+                    SettingsStore.setLocationProfile(this, listOf("economico", "equilibrado", "intermediario", "preciso")[which])
                     dialog.dismiss(); openSettingsSection("location")
                 })
         }
@@ -899,7 +899,7 @@ internal fun MainActivity.fillLocationSettings(layout: LinearLayout) {
         startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
     })
     sectionGap(layout, 7)
-    layout.addView(label("O controlador pode consultar apenas as posições desta sessão. Nenhum histórico é salvo. O GPS não pode ser ativado remotamente. Para exibir um mapa, o controlador usa um aplicativo de mapas instalado.", 11.5f, muted = true))
+    layout.addView(label("O controlador pode consultar apenas as posições desta sessão. Nenhum histórico é salvo. O GPS não pode ser ativado remotamente. O controlador possui mapa interno com carregamento online opcional e saída para aplicativos externos.", 11.5f, muted = true))
 }
 
 internal fun MainActivity.startLocationSharingFromSettings() {

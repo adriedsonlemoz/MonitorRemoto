@@ -1,3 +1,15 @@
+## Alpha.82 (15/10/2026)
+
+- Verificador estrutural inclui manutenção da transferência binária da alpha.81 e o mapa da alpha.82.
+- Projeção Web Mercator e perfis testados por JVM com 49 verificações; sintaxe Kotlin, XML e ZIP verificados.
+- Compilação real Android/Gradle e testes físicos ainda pendentes. Mapas online pedem consentimento explícito por aparelho; nenhum prefetch/offline em massa.
+
+## Alpha.81 (15/10/2026)
+
+- Mudança do `dataStream` de JSON/Base64 duplo para quadros binários AES-GCM por sessão, mantendo ACK autenticado, acesso SAF e SHA-256 integral.
+- Validador estrutural e testes JVM do FastFileStream (integridade AES, desafio por sessão, limites, truncamento, múltiplos quadros e ACK) a executar/registrar; ver resultado da entrega.
+- Sem Android SDK/AGP disponível no ambiente, `:app:testDebugUnitTest :app:assembleDebug` continua pendente em GitHub Actions, assim como medição de vazão no mesmo Wi-Fi com dois Androids.
+
 ## Alpha.80 (15/10/2026)
 
 - `tools/check_distribution.py`: aprovado, inclusive operação autenticada `dataStream`, leitor de quadros persistente e SHA-256 final.

@@ -16,7 +16,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.80" and code.group(1) == "80", "Versões incompatíveis"
+assert version == "0.1.0-alpha.82" and code.group(1) == "82", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -1133,19 +1133,37 @@ assert 'MediaStore.Downloads.EXTERNAL_CONTENT_URI' in filesui and 'PICK_UPLOADS'
 assert 'FAST_CHUNK_BYTES' in file_policy and 'RemoteClient.dataRead(' in filesui
 print('PASSOU: alpha.79, opt-in de escrita, CRUD SAF, uploads staged, Downloads e fast chunks.')
 
-# alpha.80: fluxo contínuo authenticated e sequencial, sem conexão por chunk.
+# alpha.81: ACK JSON autenticado, desafio por sessão e framing binário AES-GCM.
 stream_server = (root / 'app/src/main/java/br/dev/monitorremoto/transport/MonitorServer.kt').read_text()
-stream_reader = (root / 'app/src/main/java/br/dev/monitorremoto/transport/StreamFrameReader.kt').read_text()
+stream_wire = (root / 'app/src/main/java/br/dev/monitorremoto/transport/FastFileStream.kt').read_text()
 shared_folder = (root / 'app/src/main/java/br/dev/monitorremoto/core/SharedDataFolder.kt').read_text()
 remote_client = (root / 'app/src/main/java/br/dev/monitorremoto/transport/RemoteClient.kt').read_text()
 remote_files = (root / 'app/src/main/java/br/dev/monitorremoto/ui/RemoteFilesActivity.kt').read_text()
-assert '"dataStream"' in stream_server and 'streamSlots.tryAcquire()' in stream_server
-assert 'SharedDataFolder.stream(context, regular)' in stream_server
-assert 'openInputStream(uri)' in shared_folder and 'fun stream(context:' in shared_folder
-assert 'WireProtocol.encode(permanentKey, message)' in stream_server
-assert 'StreamFrameReader(socket.getInputStream())' in remote_client
-assert 'offset + bytes.size.toLong() <= size' in remote_client
-assert 'frame.optString("sha256") == sha' in remote_client
-assert 'RemoteClient.dataStream(' in remote_files
-assert 'private val buffer = ByteArray(64 * 1024)' in stream_reader
-print('PASSOU: alpha.80, download SAF contínuo autenticado, integridade e enquadramento persistente.')
+assert 'streamSlots.tryAcquire()' in stream_server and 'SharedDataFolder.stream(context, regular)' in stream_server
+assert 'FastFileStream.send(output, permanentKey, challenge' in stream_server
+assert 'WireProtocol.send(output, WireProtocol.encode(permanentKey,' in stream_server, 'ACK não autenticado'
+assert 'fun stream(context:' in shared_folder and 'openInputStream(uri)' in shared_folder
+assert 'Base64.encodeToString(buffer, 0, count' not in shared_folder[shared_folder.index('fun stream(context:'):], 'Stream antigo retornou'
+assert 'GCMParameterSpec(128, nonce)' in stream_wire and 'updateAAD(challenge)' in stream_wire
+assert 'freshChallenge()' in remote_client and 'FastFileStream.readAck(raw)' in remote_client
+assert 'FastFileStream.receive(input, key, challenge)' in remote_client
+assert 'MessageDigest.isEqual(digest.digest(), frame.payload)' in remote_client
+assert 'check(frame.offset == offset)' in remote_client and 'offset + frame.payload.size.toLong() <= size' in remote_client
+assert 'RemoteClient.dataStream(' in remote_files and 'currentTransferPercent' in remote_files
+assert 'currentTransferInfo' not in remote_files
+assert (root / 'app/src/test/java/br/dev/monitorremoto/transport/FastFileStreamTest.kt').exists()
+print('PASSOU: alpha.81, framing binário AES-GCM, desafio anti-replay, SHA-256 e UI de recuperação.')
+
+# Alpha.82: mapa incorporado à alpha.81 de transferência binária.
+map_ui = (ui_root / 'RemoteMapView.kt').read_text()
+projection = (root / 'app/src/main/java/br/dev/monitorremoto/core/MapProjection.kt').read_text()
+location_ui = (ui_root / 'RemoteLocationActivity.kt').read_text()
+assert 'tile.openstreetmap.org' in map_ui and 'User-Agent' in map_ui
+assert '© OpenStreetMap contributors' in location_ui
+assert 'tiles_online_allowed_' in location_ui and 'getBoolean(tileConsentKey, false)' in location_ui
+assert 'setPosition(lat, lon, accuracy)' in location_ui and 'LocationSharePolicy.coordinatesValid' in location_ui
+assert 'onPause()' in location_ui and 'main.removeCallbacks(ticker)' in location_ui
+assert 'RecentDevices.key(this, host)' in location_ui and 'RemoteClient.snapshot' in location_ui
+assert 'MapProjection.normalizedTileX' in map_ui and 'fun metersPerPixel' in projection
+assert 'INTERMEDIARIO -> 30_000L' in (root / 'app/src/main/java/br/dev/monitorremoto/core/LocationSharePolicy.kt').read_text()
+print('PASSOU: alpha.82, mapa interno, tiles opt-in por aparelho, intervalo local e perfil GPS intermediário.')

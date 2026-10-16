@@ -1,3 +1,20 @@
+## 0.1.0-alpha.82 (versionCode 82) | 15/10/2026
+
+- Implementado mapa interno nativo no módulo Localização: coordenadas cifradas já autorizadas, precisão, zoom, arrastar, centralizar e seguir aparelho.
+- Consulta opcional pelo controlador a cada 15/30/60/300 segundos só enquanto a tela estiver aberta; sessão GNSS segue consentimento local independente.
+- Tiles online OpenStreetMap ativados por consentimento específico ao aparelho, desativados por padrão, apenas viewport visível, atribuição e cache local das áreas acessadas; sem prefetch ou download de áreas offline.
+- Perfil intermediário GPS de 30 segundos/10 m liberado no monitorado quando não há sessão ativa.
+- Alterações do ramo alpha.81 com UI de transferência e streaming binário foram preservadas e incorporadas, evitando perda de dados por duas revisões alpha.81 paralelas.
+- Testes Kotlin puros e verificador estrutural; compilação Android/Gradle e testes reais permanecem pendentes.
+
+## 0.1.0-alpha.81 (versionCode 81) | 15/10/2026
+
+- Tela Recuperar dados inteiramente refeita durante cópia: porcentagem 34 sp, arquivo 18 sp, blocos de velocidade e ETA 21 sp, bytes, arquivo do lote e tempo decorrido em campos independentes. Ações Pausar/Retomar e Cancelar ampliadas; insets de sistema evitam sobreposição com barra de status.
+- Gargalo de serialização identificado na alpha.80: vídeo era Base64 dentro de JSON e depois novamente Base64 para o envelope cifrado. Download `dataStream` agora usa ACK JSON autenticado e **quadros binários** AES-256-GCM com comprimento limitado, nonce aleatório por quadro, desafio novo no AAD por transferência, offset estrito e SHA-256 final.
+- Uma conexão TCP e uma abertura SAF por download permanecem; quadros de até 192 KiB, 1 stream simultâneo. Elimina a expansão do tráfego pelo Base64 duplo, mas **ganho real não medido** e pode haver limitação pelo Wi-Fi/SAF/CPU.
+- Progresso atualizado por tempo, não apenas por 1% de arquivo; estimativa de velocidade em janela móvel e reinício de amostras após pausa/mudança de arquivo. Envio e ações por lote seguem com o protocolo anterior.
+- Novo teste JVM do transporte para múltiplos frames, autenticação, replay, truncamento, limite e leitura do ACK. Sem novas permissões, sem retomada persistente ou alterações de consentimento. Build Android e teste entre dois aparelhos pendentes.
+
 ## 0.1.0-alpha.80 (versionCode 80) | 15/10/2026
 
 - Corrigido o gargalo principal no download SAF de vídeos grandes: a alpha.79 reabria uma conexão TCP, resolvia a árvore SAF e reabria o arquivo a cada 192 KiB (aproximadamente 4000 requisições para um vídeo de 749 MiB). A alpha.80 usa operação `dataStream` autenticada por AES-GCM e **uma conexão / uma abertura sequencial do arquivo por download**.

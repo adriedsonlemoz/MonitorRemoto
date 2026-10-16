@@ -148,9 +148,9 @@ object RemoteClient {
         return bytes
     }
 
-    /** Um único socket, um único arquivo aberto no monitorado e AES-GCM por quadro.
-     * Confere ordem, limites e SHA final antes de considerar o arquivo válido.
-     * A escrita acontece via callback para não manter o vídeo inteiro na RAM.
+    /** Download binário autenticado sobre TCP contínuo, sem Base64 duplo.
+     * ACK JSON autenticado valida versão antes dos quadros binários. Cada quadro
+     * usa AES-256-GCM com desafio desta sessão; SHA-256 final recusa parciais.
      */
     fun dataStream(host: String, key: ByteArray, context: Context, method: String,
         path: List<String>, size: Long, modified: Long,
@@ -158,8 +158,11 @@ object RemoteClient {
         require(host.isNotBlank() && host.length <= 253 && '/' !in host && ':' !in host && ' ' !in host)
         require(br.dev.monitorremoto.core.RemoteFilePolicy.validPath(path) && path.isNotEmpty() &&
             size in 1..br.dev.monitorremoto.core.RemoteFilePolicy.MAX_FILE_BYTES)
+        val fresh = FastFileStream.freshChallenge()
+        val challenge = FastFileStream.challengeBytes(fresh)
         val request = JSONObject().put("v", WireProtocol.VERSION).put("op", "dataStream")
             .put("appVersion", AppVersion.NAME).put("ts", System.currentTimeMillis())
+            .put("streamNonce", fresh)
             .put("path", org.json.JSONArray(path)).put("size", size).put("modified", modified)
             .put("clientId", SettingsStore.controllerId(context))
             .put("clientName", listOf(Build.MANUFACTURER, Build.MODEL).joinToString(" ").take(72))
@@ -167,33 +170,37 @@ object RemoteClient {
         Socket().use { socket ->
             socket.connect(InetSocketAddress(host, WireProtocol.PORT), 4500)
             socket.soTimeout = 45_000
-            socket.tcpNoDelay = true
             WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(key, request))
-            val reader = StreamFrameReader(socket.getInputStream())
+            // Não usar WireProtocol.receive aqui: seu buffer privado poderia consumir
+            // antecipadamente os primeiros bytes binários e descartar o excedente.
+            val raw = socket.getInputStream()
+            val ack = WireProtocol.decode(key, FastFileStream.readAck(raw))
+            if (ack.optString("op") == "versionMismatch")
+                error(AppVersion.incompatibility(ack.optString("appVersion")))
+            check(ack.optString("op") == "dataStream" && ack.optInt("v") == WireProtocol.VERSION &&
+                AppVersion.compatible(ack.optString("appVersion"))) { "Resposta de transferência inválida." }
+            check(ack.optBoolean("ok")) { ack.optString("message", "Cópia remota recusada.") }
+            val input = java.io.BufferedInputStream(raw, 256 * 1024)
             val digest = java.security.MessageDigest.getInstance("SHA-256")
             var offset = 0L
             while (true) {
                 beforeNext()
-                val frame = WireProtocol.decode(key, reader.receive(520 * 1024))
-                if (frame.optString("op") == "versionMismatch")
-                    error(AppVersion.incompatibility(frame.optString("appVersion")))
-                check(frame.optString("op") == "dataStream" && frame.optInt("v") == WireProtocol.VERSION &&
-                    AppVersion.compatible(frame.optString("appVersion"))) { "Resposta de transferência inválida." }
-                check(frame.optBoolean("ok")) { frame.optString("message", "Cópia remota recusada.") }
-                if (frame.optBoolean("done")) {
-                    check(offset == size && frame.optLong("size", -1L) == size &&
-                        frame.optLong("modified", -1L) == modified) { "Tamanho remoto alterado." }
-                    val sha = digest.digest().joinToString("") { "%02x".format(it.toInt() and 255) }
-                    check(frame.optString("sha256") == sha) { "SHA-256 final diferente da origem." }
+                val frame = FastFileStream.receive(input, key, challenge)
+                if (frame.type == FastFileStream.ERROR)
+                    error(String(frame.payload, Charsets.UTF_8).take(170))
+                check(frame.offset == offset) { "Bloco fora de ordem." }
+                if (frame.type == FastFileStream.DONE) {
+                    check(offset == size &&
+                        java.security.MessageDigest.isEqual(digest.digest(), frame.payload)) {
+                        "SHA-256 final diferente da origem ou arquivo incompleto."
+                    }
                     return
                 }
-                check(frame.optLong("offset", -1L) == offset) { "Bloco fora de ordem." }
-                val bytes = Base64.decode(frame.getString("bytes"), Base64.NO_WRAP)
-                check(bytes.isNotEmpty() && bytes.size <= br.dev.monitorremoto.core.RemoteFilePolicy.FAST_CHUNK_BYTES &&
-                    offset + bytes.size.toLong() <= size) { "Bloco remoto inválido." }
-                digest.update(bytes)
-                onChunk(bytes)
-                offset += bytes.size
+                check(frame.type == FastFileStream.DATA &&
+                    offset + frame.payload.size.toLong() <= size) { "Bloco remoto inválido." }
+                digest.update(frame.payload)
+                onChunk(frame.payload)
+                offset += frame.payload.size
             }
         }
     }
