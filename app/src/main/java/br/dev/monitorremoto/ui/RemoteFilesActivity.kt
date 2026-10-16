@@ -40,6 +40,11 @@ import br.dev.monitorremoto.core.RemoteManagePolicy
 import br.dev.monitorremoto.core.SettingsStore
 import br.dev.monitorremoto.core.RemoteOperationHistory
 import br.dev.monitorremoto.core.RemoteOperationHistoryPolicy
+import br.dev.monitorremoto.core.RemoteDownloadResume
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
+import android.os.StatFs
 import br.dev.monitorremoto.transport.RemoteClient
 import org.json.JSONObject
 import java.text.DateFormat
@@ -86,6 +91,7 @@ class RemoteFilesActivity : Activity() {
     private var chooseDownloads = false
     private var key: ByteArray? = null
     private var entries = listOf<JSONObject>()
+    private var partialIds = emptySet<String>()
     private val selected = linkedSetOf<String>()
     private var selecting = false
     private var gridMode = false
@@ -172,6 +178,8 @@ class RemoteFilesActivity : Activity() {
         host = intent.getStringExtra(EXTRA_HOST).orEmpty()
         method = intent.getStringExtra(EXTRA_METHOD).orEmpty().ifBlank { "Chave salva" }
         key = RecentDevices.key(this, host)
+        // Checkpoints são arquivos privados do aplicativo e não entram no backup.
+        runCatching { RemoteDownloadResume.cleanup(RemoteDownloadResume.folder(noBackupFilesDir)) }
         window.statusBarColor = backgroundColor
         window.navigationBarColor = backgroundColor
         @Suppress("DEPRECATION")
@@ -234,6 +242,7 @@ class RemoteFilesActivity : Activity() {
         add(top, 8)
         add(horizontal(
             button("◷ Histórico") { showHistory() },
+            button("↻ Parciais") { showPartialDownloads() },
             button("ⓘ Ajuda") { showHelp() }
         ), 8)
         status = label("", 13f).apply { setTextColor(muted) }
@@ -274,7 +283,7 @@ class RemoteFilesActivity : Activity() {
             addView(label("Arquivos compartilhados", 19f, true))
             addView(label("A pasta é escolhida no monitorado. Download requer leitura; envio, criação, movimentação e exclusão requerem autorização EXTRA de escrita, desligada por padrão.", 14f))
             addView(label("Para autorizar: no monitorado, abra Monitor Remoto → Configurações → Arquivos e recuperação → Escolher pasta.", 14f))
-            addView(label("Até 2 GiB por arquivo/lote, 20 arquivos por lote, 150 itens por pasta. A transferência pausa apenas enquanto esta tela existir, e é cancelada ao fechá-la. Downloads pode ser usado como destino direto no Android 10+. Exclusão remota pode ser definitiva.", 12f).apply { setTextColor(muted) })
+            addView(label("Até 2 GiB por arquivo/lote e 20 arquivos em lote. Ao copiar para Downloads (Android 10+), uma interrupção preserva blocos privados por até 7 dias; ao selecionar o mesmo arquivo, o app retoma automaticamente. Outros destinos SAF não oferecem retomada persistente. Fechar esta tela interrompe a rede; nenhuma transferência continua escondida. Exclusão remota pode ser definitiva.", 12f).apply { setTextColor(muted) })
         }
         AlertDialog.Builder(this).setView(body).setPositiveButton("Entendi", null).show()
     }
@@ -333,6 +342,11 @@ class RemoteFilesActivity : Activity() {
                 .apply { setTextColor(muted) })
         }
         add(crumb, 7)
+        val partials = runCatching { RemoteDownloadResume.list(RemoteDownloadResume.folder(noBackupFilesDir), host) }.getOrDefault(emptyList())
+        partialIds = partials.map { it.id }.toSet()
+        if (partials.isNotEmpty()) {
+            add(button("↻ ${partials.size} download(s) interrompido(s) · tocar para gerenciar") { showPartialDownloads() }, 7)
+        }
         if (writeAllowed) add(horizontal(
             button("⬆ Enviar") { pickUploadFiles() },
             button("＋ Nova pasta") { askNewFolder() }
@@ -494,7 +508,12 @@ class RemoteFilesActivity : Activity() {
         val info = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         info.addView(label(name + if (duplicated) " ⚠ nome repetido" else "", 14f, true).apply { maxLines = 2 })
         info.addView(label(if (folder) "Pasta" else entrySize(item), 12f).apply { setTextColor(muted) })
-        if (!folder) info.addView(label(entryDate(item), 11f).apply { setTextColor(muted); maxLines = 1 })
+        if (!folder) {
+            info.addView(label(entryDate(item), 11f).apply { setTextColor(muted); maxLines = 1 })
+            if (hasPartial(item)) info.addView(label("↻ Download interrompido · retomar em ⋮", 11f, true).apply {
+                setTextColor(accent); maxLines = 1
+            })
+        }
         box.addView(info, if (grid) LinearLayout.LayoutParams(-1, -2) else LinearLayout.LayoutParams(0, -2, 1f))
         if (!grid) box.addView(button(if (chosen) "✓" else "⋮") {
             if (selecting) toggleSelection(item) else openActions(item)
@@ -520,6 +539,11 @@ class RemoteFilesActivity : Activity() {
         queryText = ""
         listFolder()
     }
+    private fun hasPartial(item: JSONObject): Boolean = !item.optBoolean("folder") &&
+        item.optLong("size", -1L) in 1..RemoteFilePolicy.MAX_FILE_BYTES &&
+        partialIds.contains(RemoteDownloadResume.id(host, path + item.optString("name"),
+            item.optLong("size", -1L), item.optLong("modified", -1L)))
+
     /** Menu nativo do aplicativo, com ícones e ações contextualizadas. */
     private fun openActions(item: JSONObject) {
         val name = item.optString("name")
@@ -557,7 +581,8 @@ class RemoteFilesActivity : Activity() {
             option(android.R.drawable.ic_menu_save, "Baixar pasta e subpastas") { chooseFolderDestination(name) }
         } else {
             option(android.R.drawable.ic_menu_save, "Baixar neste celular") { chooseDestination(item, path) }
-            option(android.R.drawable.ic_menu_save, "Salvar em Downloads") { saveDownloads(item) }
+            option(android.R.drawable.ic_menu_save,
+                if (hasPartial(item)) "↻ Retomar em Downloads" else "Salvar em Downloads") { saveDownloads(item) }
             option(android.R.drawable.ic_menu_view, "Baixar e visualizar") { saveDownloads(item, "view") }
             option(android.R.drawable.ic_menu_share, "Baixar e compartilhar") { saveDownloads(item, "share") }
         }
@@ -1357,54 +1382,124 @@ class RemoteFilesActivity : Activity() {
         }
     }
 
-    private fun copyBatchDownloads(items: List<JSONObject>) {
-        if (Build.VERSION.SDK_INT < 29 || copying || items.isEmpty() ||
-            items.any { it.optBoolean("folder") } ||
-            !RemoteBatchPolicy.eligible(items.map { it.optLong("size", -1) })) {
-            status.text = "Escolha até 20 arquivos com tamanho conhecido e total de até 2 GiB."; return
+    /** Mostra cópias parciais de Downloads. Nunca armazena segredo ou caminho remoto em texto. */
+    private fun showPartialDownloads() {
+        val folder = runCatching { RemoteDownloadResume.folder(noBackupFilesDir) }.getOrElse {
+            status.text = "Não foi possível consultar cópias parciais: ${it.message}"; return
         }
-        copying = true; cancel.set(false); paused.set(false); ++generation
-        screenShell(); showTransferPanel("Baixando ${items.size} para Downloads")
-        thread(name = "MonitorRemoto-downloads-batch") {
-            var finished = 0
-            val outcome = runCatching {
-                items.forEachIndexed { index, item ->
-                    check(!cancel.get())
-                    val name = item.optString("name")
-                    val mime = item.optString("mime").takeIf { '/' in it } ?: "application/octet-stream"
-                    val values = ContentValues().apply {
-                        put(MediaStore.MediaColumns.DISPLAY_NAME, name)
-                        put(MediaStore.MediaColumns.MIME_TYPE, mime)
-                        put(MediaStore.MediaColumns.RELATIVE_PATH, "Download/Monitor Remoto")
-                        put(MediaStore.MediaColumns.IS_PENDING, 1)
-                    }
-                    val target = contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
-                        ?: error("Não foi possível criar arquivo em Downloads.")
-                    try {
-                        transferTo(target, item, path + name) { done, total ->
-                            main.post { if (!isFinishing && !isDestroyed)
-                                updateProgress(done, total, "${index + 1}/${items.size} · $name") }
-                        }
-                        val published = contentResolver.update(target, ContentValues().apply {
-                            put(MediaStore.MediaColumns.IS_PENDING, 0)
-                        }, null, null)
-                        check(published == 1) { "Não foi possível publicar $name em Downloads." }
-                        finished++
-                    } catch (e: Exception) { runCatching { contentResolver.delete(target, null, null) }; throw e }
-                }
+        val partials = RemoteDownloadResume.list(folder, host)
+        if (partials.isEmpty()) {
+            AlertDialog.Builder(this).setTitle("Downloads interrompidos")
+                .setMessage("Nenhuma cópia pendente neste controlador. Para retomar, navegue até o mesmo arquivo remoto e escolha Salvar em Downloads.")
+                .setPositiveButton("Fechar", null).show()
+            return
+        }
+        val names = partials.map { item -> "${item.name}\n${formatBytes(item.bytes)} de ${formatBytes(item.total)}" }.toTypedArray()
+        AlertDialog.Builder(this).setTitle("Downloads interrompidos")
+            .setItems(names) { _, which ->
+                val item = partials[which]
+                AlertDialog.Builder(this).setTitle(item.name)
+                    .setMessage("Retomar: abra a pasta remota que contém o arquivo e selecione Salvar em Downloads. O nome, tamanho e a data da origem devem coincidir.\n\nApagar remove apenas os blocos temporários privados deste controlador, não o arquivo remoto.")
+                    .setNegativeButton("Cancelar", null)
+                    .setPositiveButton("Apagar parcial") { _, _ ->
+                        if (copying) { status.text = "Aguarde a transferência terminar."; return@setPositiveButton }
+                        RemoteDownloadResume.discard(folder, item.id)
+                        status.text = "Cópia parcial apagada deste controlador."
+                    }.show()
             }
-            logOperation("download", outcome.isSuccess, finished, items.size)
-            main.post { if (!isDestroyed && !isFinishing) {
-                copying = false; screenShell()
-                status.text = if (outcome.isSuccess) "$finished arquivo(s) salvos em Downloads/Monitor Remoto." else
-                    "Salvos $finished/${items.size}. ${outcome.exceptionOrNull()?.message}"
-                add(button("Voltar aos arquivos", true) { listFolder() })
-            } }
+            .setNegativeButton("Fechar", null)
+            .setNeutralButton("Apagar todos") { _, _ ->
+                AlertDialog.Builder(this).setTitle("Apagar todas as cópias parciais deste aparelho?")
+                    .setMessage("Libera espaço no controlador. Não modifica arquivos do monitorado nem os downloads já concluídos.")
+                    .setNegativeButton("Cancelar", null)
+                    .setPositiveButton("Apagar") { _, _ ->
+                        if (!copying) {
+                            partials.forEach { RemoteDownloadResume.discard(folder, it.id) }
+                            status.text = "Cópias parciais apagadas."
+                        }
+                    }.show()
+            }.show()
+    }
+
+    /** Apenas Downloads usa checkpoint persistente; SAF arbitrário pode não suportar seek. */
+    private fun stagedDownload(item: JSONObject, source: List<String>, onProgress: (Long, Long) -> Unit): Pair<File, String> {
+        val secret = key ?: error("Chave de conexão indisponível.")
+        val size = item.optLong("size", -1L)
+        val modified = item.optLong("modified", -1L)
+        val name = item.optString("name")
+        check(RemoteFilePolicy.validPath(source) && RemoteFilePolicy.validSegment(name) &&
+            size in 1..RemoteFilePolicy.MAX_FILE_BYTES) { "Arquivo inválido para retomar." }
+        val folder = RemoteDownloadResume.folder(noBackupFilesDir)
+        val id = RemoteDownloadResume.id(host, source, size, modified)
+        val checkpoint = RemoteDownloadResume.prepare(folder, id, host, name, size, modified,
+            RemoteFilePolicy.FAST_CHUNK_BYTES)
+        val remaining = size - checkpoint.resumeAt
+        val available = StatFs(folder.absolutePath).availableBytes
+        check(remaining + 16L * 1024 * 1024 < available) {
+            "Espaço interno insuficiente. Precisa de ${formatBytes(remaining)} livres mais reserva de segurança."
+        }
+        // Recalcula o SHA-256 do prefixo do arquivo privado antes de confiar na retomada.
+        val digest = MessageDigest.getInstance("SHA-256")
+        FileInputStream(checkpoint.file).use { input ->
+            val bytes = ByteArray(128 * 1024)
+            var left = checkpoint.resumeAt
+            while (left > 0L) {
+                check(!cancel.get()) { "Cópia cancelada." }
+                val read = input.read(bytes, 0, minOf(bytes.size.toLong(), left).toInt())
+                check(read > 0) { "Cópia parcial não pôde ser conferida." }
+                digest.update(bytes, 0, read)
+                left -= read
+            }
+        }
+        var done = checkpoint.resumeAt
+        onProgress(done, size)
+        try {
+            FileOutputStream(checkpoint.file, true).buffered(256 * 1024).use { output ->
+                RemoteClient.dataStream(host, secret, applicationContext, method, source, size, modified,
+                    beforeNext = {
+                        check(!cancel.get()) { "Transferência cancelada." }
+                        check(SettingsStore.getRemoteHost(applicationContext) == host) { "O aparelho selecionado mudou." }
+                        while (paused.get()) { check(!cancel.get()); Thread.sleep(150L) }
+                    }, onChunk = { bytes ->
+                        output.write(bytes)
+                        done += bytes.size
+                        onProgress(done, size)
+                    }, startOffset = checkpoint.resumeAt, resumeDigest = digest,
+                    onPrefixProgress = { checked -> main.post {
+                        if (!isDestroyed && !isFinishing) {
+                            currentTransferStage?.text = "Conferindo origem antes de retomar"
+                            currentTransferEta?.text = "Origem: ${formatBytes(checked)}"
+                        }
+                    } })
+                output.flush()
+            }
+            check(checkpoint.file.length() == size && !cancel.get()) { "Arquivo incompleto ou cancelado." }
+            return checkpoint.file to id
+        } catch (failure: Exception) {
+            // Divergência criptográfica invalida todo o prefixo. Falha de conexão
+            // apenas conserva o que foi escrito; ele será truncado para bloco inteiro.
+            val message = failure.message.orEmpty().lowercase(Locale.ROOT)
+            if (listOf("sha-256", "integridade", "fora de ordem", "arquivo mudou", "quadro remoto").any { it in message })
+                RemoteDownloadResume.discard(folder, id)
+            throw failure
         }
     }
 
-    private fun saveDownloads(item: JSONObject, nextAction: String = "") {
-        if (Build.VERSION.SDK_INT < 29) { chooseDestination(item, path); return }
+    /** Publica só após digest final conferido, nunca deixa arquivo visível pela metade. */
+    private fun updatePublishing(written: Long, total: Long, fileName: String) {
+        if (isDestroyed || isFinishing) return
+        currentTransferStage?.text = "Salvando em Downloads • cópia local"
+        currentTransferName?.text = fileName
+        if (total > 0) {
+            currentTransferBar?.progress = (written * 1000L / total).toInt().coerceIn(0, 1000)
+            currentTransferPercent?.text = "${written * 100L / total}%"
+            currentTransferAmount?.text = "${formatBytes(written)} / ${formatBytes(total)}"
+        }
+        currentTransferSpeed?.text = "Gravando…"
+        currentTransferEta?.text = "Publicação"
+    }
+
+    private fun publishStaged(part: File, item: JSONObject): Uri {
         val name = item.optString("name")
         val mime = item.optString("mime").takeIf { '/' in it } ?: "application/octet-stream"
         val values = ContentValues().apply {
@@ -1413,9 +1508,122 @@ class RemoteFilesActivity : Activity() {
             put(MediaStore.MediaColumns.RELATIVE_PATH, "Download/Monitor Remoto")
             put(MediaStore.MediaColumns.IS_PENDING, 1)
         }
-        val target = runCatching { contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values) }.getOrNull()
-        if (target == null) { status.text = "Downloads indisponível. Escolha outro destino."; return }
-        copyOne(target, item, path + name, inDownloads = true, nextAction = nextAction)
+        val target = contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+            ?: error("Android não permitiu criar arquivo em Downloads.")
+        try {
+            val out = contentResolver.openOutputStream(target, "wt")
+                ?: error("Android recusou gravação em Downloads.")
+            out.use { destination -> FileInputStream(part).use { source ->
+                val buffer = ByteArray(256 * 1024)
+                val expected = part.length()
+                var copied = 0L
+                var lastShown = 0L
+                main.post { updatePublishing(0L, expected, name) }
+                while (true) {
+                    check(!cancel.get()) { "Publicação cancelada." }
+                    while (paused.get()) { check(!cancel.get()); Thread.sleep(150L) }
+                    val bytes = source.read(buffer)
+                    if (bytes < 0) break
+                    destination.write(buffer, 0, bytes)
+                    copied += bytes
+                    val now = SystemClock.elapsedRealtime()
+                    if (copied == expected || now - lastShown >= 500L) {
+                        lastShown = now
+                        val snapshot = copied
+                        main.post { updatePublishing(snapshot, expected, name) }
+                    }
+                }
+                destination.flush()
+                check(copied == expected && !cancel.get()) { "Publicação incompleta ou cancelada." }
+            } }
+            check(contentResolver.update(target, ContentValues().apply {
+                put(MediaStore.MediaColumns.IS_PENDING, 0)
+            }, null, null) == 1) { "O Android não publicou o download." }
+            return target
+        } catch (failure: Exception) {
+            runCatching { contentResolver.delete(target, null, null) }
+            throw failure
+        }
+    }
+
+    private fun showPublishedFile(target: Uri, item: JSONObject, nextAction: String) {
+        if (nextAction.isBlank()) return
+        val mime = item.optString("mime").takeIf { '/' in it } ?: "application/octet-stream"
+        val intent = if (nextAction == "share") Intent(Intent.ACTION_SEND).apply {
+            type = mime; putExtra(Intent.EXTRA_STREAM, target)
+        } else Intent(Intent.ACTION_VIEW).apply { setDataAndType(target, mime) }
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        runCatching {
+            startActivity(if (nextAction == "share") Intent.createChooser(intent, "Compartilhar arquivo") else intent)
+        }.onFailure { status.text = "Arquivo salvo em Downloads, mas não foi possível abrir: ${it.message}" }
+    }
+
+    private fun copyBatchDownloads(items: List<JSONObject>) {
+        if (Build.VERSION.SDK_INT < 29 || copying || items.isEmpty() ||
+            items.any { it.optBoolean("folder") } ||
+            !RemoteBatchPolicy.eligible(items.map { it.optLong("size", -1) })) {
+            status.text = "Escolha até 20 arquivos e no máximo 2 GiB por lote."; return
+        }
+        copying = true; cancel.set(false); paused.set(false); ++generation
+        screenShell(); showTransferPanel("Baixando ${items.size} para Downloads")
+        thread(name = "MonitorRemoto-downloads-batch") {
+            var finished = 0
+            var completedBytes = 0L
+            val outcome = runCatching {
+                items.forEachIndexed { index, item ->
+                    check(!cancel.get()) { "Transferência cancelada." }
+                    val name = item.optString("name")
+                    val source = path + name
+                    val (part, id) = stagedDownload(item, source) { done, total ->
+                        main.post { if (!isDestroyed && !isFinishing)
+                            updateProgress(done, total, "${index + 1}/${items.size} · $name") }
+                    }
+                    check(!cancel.get()) { "Transferência cancelada." }
+                    publishStaged(part, item)
+                    RemoteDownloadResume.discard(RemoteDownloadResume.folder(noBackupFilesDir), id)
+                    completedBytes += item.optLong("size", 0L)
+                    finished++
+                }
+            }
+            logOperation("download", outcome.isSuccess, finished, items.size, completedBytes)
+            main.post { if (!isDestroyed && !isFinishing) {
+                copying = false; screenShell()
+                status.text = if (outcome.isSuccess) "$finished arquivo(s) salvos em Downloads/Monitor Remoto." else
+                    "Salvos $finished/${items.size}. ${outcome.exceptionOrNull()?.message}. Cópias parciais podem ser retomadas ao selecionar novamente os arquivos."
+                add(button("Voltar aos arquivos", true) { listFolder() })
+                add(button("Ver downloads interrompidos") { showPartialDownloads() })
+            } }
+        }
+    }
+
+    private fun saveDownloads(item: JSONObject, nextAction: String = "") {
+        if (Build.VERSION.SDK_INT < 29) { chooseDestination(item, path); return }
+        if (copying) return
+        val source = path + item.optString("name")
+        copying = true; cancel.set(false); paused.set(false); ++generation
+        screenShell(); showTransferPanel("Baixando ${item.optString("name")}")
+        thread(name = "MonitorRemoto-downloads-resumable") {
+            var publishedUri: Uri? = null
+            val result = runCatching {
+                val (part, id) = stagedDownload(item, source) { done, total ->
+                    main.post { if (!isDestroyed && !isFinishing)
+                        updateProgress(done, total, item.optString("name")) }
+                }
+                check(!cancel.get()) { "Transferência cancelada." }
+                publishedUri = publishStaged(part, item)
+                RemoteDownloadResume.discard(RemoteDownloadResume.folder(noBackupFilesDir), id)
+            }
+            logOperation("download", result.isSuccess, if (result.isSuccess) 1 else 0, 1,
+                if (result.isSuccess) item.optLong("size", 0L) else 0L)
+            main.post { if (!isDestroyed && !isFinishing) {
+                copying = false; screenShell()
+                status.text = if (result.isSuccess) "Salvo em Downloads/Monitor Remoto com SHA-256 conferido." else
+                    "Download interrompido: ${result.exceptionOrNull()?.message}. Retome escolhendo o mesmo arquivo e Salvar em Downloads."
+                add(button("Voltar aos arquivos", primary = true) { listFolder() })
+                add(button("Downloads interrompidos") { showPartialDownloads() })
+                if (result.isSuccess) publishedUri?.let { showPublishedFile(it, item, nextAction) }
+            } }
+        }
     }
 
     @Deprecated("Navegação por Activity")

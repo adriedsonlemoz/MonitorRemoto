@@ -24,6 +24,8 @@ internal object FastFileStream {
     const val DATA: Byte = 1
     const val DONE: Byte = 2
     const val ERROR: Byte = 3
+    /** Mensagem cifrada de progresso durante a releitura do prefixo remoto. */
+    const val PROGRESS: Byte = 4
     private val random = SecureRandom()
     private val domain = "monitor-remoto/file-stream-alpha81".toByteArray(Charsets.UTF_8)
 
@@ -51,9 +53,9 @@ internal object FastFileStream {
 
     fun send(output: OutputStream, key: ByteArray, challenge: ByteArray,
         type: Byte, offset: Long, payload: ByteArray, count: Int = payload.size) {
-        require(type in DATA..ERROR && offset >= 0 && count in 0..MAX_DATA_BYTES && count <= payload.size)
+        require(type in DATA..PROGRESS && offset >= 0 && count in 0..MAX_DATA_BYTES && count <= payload.size)
         require((type == DATA && count > 0) || (type == DONE && count == 32) ||
-            (type == ERROR && count in 1..512))
+            (type == ERROR && count in 1..512) || (type == PROGRESS && count == 0))
         val nonce = ByteArray(NONCE_BYTES).also(random::nextBytes)
         val plaintext = ByteArray(HEADER_BYTES + count)
         plaintext[0] = type
@@ -85,6 +87,7 @@ internal object FastFileStream {
             DATA -> payload.isNotEmpty() && payload.size <= MAX_DATA_BYTES
             DONE -> payload.size == 32
             ERROR -> payload.size in 1..512
+            PROGRESS -> payload.isEmpty()
             else -> false
         }) { "Quadro remoto inválido." }
         return Frame(type, offset, payload)

@@ -154,16 +154,22 @@ object RemoteClient {
      */
     fun dataStream(host: String, key: ByteArray, context: Context, method: String,
         path: List<String>, size: Long, modified: Long,
-        beforeNext: () -> Unit, onChunk: (ByteArray) -> Unit) {
+        beforeNext: () -> Unit, onChunk: (ByteArray) -> Unit,
+        startOffset: Long = 0L, resumeDigest: java.security.MessageDigest? = null,
+        onPrefixProgress: (Long) -> Unit = {}) {
         require(host.isNotBlank() && host.length <= 253 && '/' !in host && ':' !in host && ' ' !in host)
         require(br.dev.monitorremoto.core.RemoteFilePolicy.validPath(path) && path.isNotEmpty() &&
             size in 1..br.dev.monitorremoto.core.RemoteFilePolicy.MAX_FILE_BYTES)
+        require(startOffset >= 0 && startOffset <= size &&
+            startOffset % br.dev.monitorremoto.core.RemoteFilePolicy.FAST_CHUNK_BYTES == 0L)
+        require(startOffset == 0L || resumeDigest != null) { "Falta hash do trecho já recebido." }
         val fresh = FastFileStream.freshChallenge()
         val challenge = FastFileStream.challengeBytes(fresh)
         val request = JSONObject().put("v", WireProtocol.VERSION).put("op", "dataStream")
             .put("appVersion", AppVersion.NAME).put("ts", System.currentTimeMillis())
             .put("streamNonce", fresh)
             .put("path", org.json.JSONArray(path)).put("size", size).put("modified", modified)
+            .put("offset", startOffset)
             .put("clientId", SettingsStore.controllerId(context))
             .put("clientName", listOf(Build.MANUFACTURER, Build.MODEL).joinToString(" ").take(72))
             .put("accessMethod", method)
@@ -180,14 +186,20 @@ object RemoteClient {
             check(ack.optString("op") == "dataStream" && ack.optInt("v") == WireProtocol.VERSION &&
                 AppVersion.compatible(ack.optString("appVersion"))) { "Resposta de transferência inválida." }
             check(ack.optBoolean("ok")) { ack.optString("message", "Cópia remota recusada.") }
+            check(ack.optLong("offset", -1L) == startOffset) { "O monitorado recusou o ponto de retomada." }
             val input = java.io.BufferedInputStream(raw, 256 * 1024)
-            val digest = java.security.MessageDigest.getInstance("SHA-256")
-            var offset = 0L
+            val digest = resumeDigest ?: java.security.MessageDigest.getInstance("SHA-256")
+            var offset = startOffset
             while (true) {
                 beforeNext()
                 val frame = FastFileStream.receive(input, key, challenge)
                 if (frame.type == FastFileStream.ERROR)
                     error(String(frame.payload, Charsets.UTF_8).take(170))
+                if (frame.type == FastFileStream.PROGRESS) {
+                    check(startOffset > 0 && frame.offset in 1..startOffset) { "Progresso de prefixo inválido." }
+                    onPrefixProgress(frame.offset)
+                    continue
+                }
                 check(frame.offset == offset) { "Bloco fora de ordem." }
                 if (frame.type == FastFileStream.DONE) {
                     check(offset == size &&

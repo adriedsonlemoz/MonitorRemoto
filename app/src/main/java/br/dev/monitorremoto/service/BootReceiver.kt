@@ -12,6 +12,8 @@ class BootReceiver : BroadcastReceiver() {
         try {
             RecoveryScheduler.refresh(context)
             MonitorService.start(context)
+            // Android may reject a background FGS; never bypass permission requirements.
+            LocationRecoveryStarter.tryStart(context)
         } catch (_: Exception) {
             // Restrições de fabricante/SO: iniciar manualmente se necessário.
         }

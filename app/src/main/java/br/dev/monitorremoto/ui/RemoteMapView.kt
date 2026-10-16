@@ -39,10 +39,12 @@ internal class RemoteMapView(context: Context) : View(context) {
     private var targetLat: Double? = null
     private var targetLon: Double? = null
     private var accuracyM: Double? = null
-    private var centerLat = 0.0
-    private var centerLon = 0.0
-    private var zoom = 15
-    private var initialized = false
+    // Overview is only a reference map, never the remote device's assumed position.
+    private var centerLat = -14.235
+    private var centerLon = -51.925
+    private var zoom = 4
+    private var initialized = true
+    private var hasFix = false
     private var scaleAccumulator = 1f
     private var dragX = 0f
     private var dragY = 0f
@@ -71,7 +73,12 @@ internal class RemoteMapView(context: Context) : View(context) {
         if (!br.dev.monitorremoto.core.LocationSharePolicy.coordinatesValid(lat, lon)) return
         targetLat = lat; targetLon = lon
         accuracyM = accuracy?.takeIf { it.isFinite() && it >= 0.0 }
-        if (!initialized || follow) { centerLat = MapProjection.latitude(lat); centerLon = MapProjection.longitude(lon); initialized = true }
+        if (!hasFix || follow) {
+            centerLat = MapProjection.latitude(lat); centerLon = MapProjection.longitude(lon)
+            if (!hasFix) zoom = 15
+            initialized = true
+        }
+        hasFix = true
         invalidate()
     }
     fun clearPosition() { targetLat = null; targetLon = null; accuracyM = null; invalidate() }
@@ -85,10 +92,7 @@ internal class RemoteMapView(context: Context) : View(context) {
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         canvas.drawColor(Color.rgb(239, 244, 247))
-        if (!initialized) {
-            canvas.drawText("Aguardando posição autorizada", width / 2f, height / 2f, hint)
-            return
-        }
+        // Keep displaying the map without a remote fix; do not draw a false marker.
         val cx = MapProjection.x(centerLon, zoom)
         val cy = MapProjection.y(centerLat, zoom)
         val count = 1 shl zoom
@@ -129,6 +133,14 @@ internal class RemoteMapView(context: Context) : View(context) {
             canvas.drawCircle(px, py, 9 * density, dot)
             canvas.drawCircle(px, py, 9 * density, white)
         }
+        if (targetLat == null) {
+            val label = if (canNetwork) "MAPA DE REFERÊNCIA  ·  SEM POSIÇÃO REMOTA" else "ATIVAR MAPA ONLINE  ·  SEM GPS REMOTO"
+            val overlay = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(225, 18, 33, 48) }
+            val rect = RectF(12 * density, 12 * density, width - 12 * density, 45 * density)
+            canvas.drawRoundRect(rect, 9 * density, 9 * density, overlay)
+            val textPaint = Paint(hint).apply { color = Color.WHITE; textSize = 10f * resources.displayMetrics.scaledDensity }
+            canvas.drawText(label, width / 2f, 33 * density, textPaint)
+        }
         if (!canNetwork) canvas.drawText("Mapa online desativado · cache já visualizado", width / 2f, height - 26 * density, hint)
     }
 
@@ -157,7 +169,7 @@ internal class RemoteMapView(context: Context) : View(context) {
         try {
             connection = URL("https://tile.openstreetmap.org/$z/$x/$y.png").openConnection() as HttpURLConnection
             connection.connectTimeout = 4500; connection.readTimeout = 4500
-            connection.setRequestProperty("User-Agent", "MonitorRemoto-Android/0.1.0-alpha.82 (+https://github.com/adriedsonlemoz)")
+            connection.setRequestProperty("User-Agent", "MonitorRemoto-Android/0.1.0-alpha.87 (+https://github.com/adriedsonlemoz)")
             if (file.exists()) connection.ifModifiedSince = file.lastModified()
             val code = connection.responseCode
             if (code == HttpURLConnection.HTTP_NOT_MODIFIED) { file.setLastModified(System.currentTimeMillis()); return }

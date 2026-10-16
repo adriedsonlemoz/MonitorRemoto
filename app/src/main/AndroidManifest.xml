@@ -11,6 +11,8 @@
     <!-- SSID/RSSI somente com autorização local explícita de localização. -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- Opcional: apenas para modo recuperação ativado localmente, após a concessão nas configurações Android. -->
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
     <!-- Acesso ao uso precisa de autorização manual nas configurações especiais Android. -->
@@ -118,7 +120,8 @@
             android:stopWithTask="false"
             android:foregroundServiceType="camera" />
 
-        <!-- Apenas após início local explícito. Notificação permanente com ação Parar. -->
+        <!-- Sessão local ou recuperação previamente armada; notificação permanente com ação Parar.
+             Restauro após boot exige ACCESS_BACKGROUND_LOCATION concedida no sistema. -->
         <service android:name=".service.LocationShareService"
             android:exported="false"
             android:stopWithTask="false"

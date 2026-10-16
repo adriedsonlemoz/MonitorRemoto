@@ -28,6 +28,9 @@ object LocationShareStore {
     fun hasPermission(context: Context): Boolean =
         context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
         context.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+    fun hasBackgroundPermission(context: Context): Boolean =
+        Build.VERSION.SDK_INT < 29 ||
+        context.checkSelfPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION) == PackageManager.PERMISSION_GRANTED
     fun hasFinePermission(context: Context): Boolean =
         context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
     fun locationEnabled(context: Context): Boolean = runCatching {
@@ -48,6 +51,8 @@ object LocationShareStore {
     @Synchronized fun snapshot(context: Context): JSONObject {
         val authorized = active && SettingsStore.isMonitorEnabled(context)
         val result = JSONObject().put("sharing", authorized)
+            .put("recoveryArmed", SettingsStore.locationRecoveryEnabled(context))
+            .put("backgroundPermission", hasBackgroundPermission(context))
             .put("permission", hasPermission(context))
             .put("locationEnabled", locationEnabled(context))
             .put("profile", if (authorized) profile else JSONObject.NULL)

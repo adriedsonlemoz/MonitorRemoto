@@ -57,7 +57,7 @@ class RemoteLocationActivity : Activity() {
     private lateinit var map: RemoteMapView
     private var visible = false
     private var inFlight = false
-    private var automatic = false
+    private var automatic = true
     private var intervalMs = 60_000L
     private var mapOnline = false
     private val prefs by lazy { getSharedPreferences("monitor_location_map_controller", Context.MODE_PRIVATE) }
@@ -123,9 +123,8 @@ class RemoteLocationActivity : Activity() {
             setOnClickListener { finish() }; isClickable = true; isFocusable = true
             contentDescription = "Voltar ao painel"
         })
-        content.addView(text("Localização · mapa", 21f, true))
-        content.addView(text(title, 12f))
-        content.addView(text("Mapa online opcional · posição somente após autorização no monitorado", 11f))
+        content.addView(text("Localização", 23f, true))
+        content.addView(text("📍 $title  ·  Consulta autenticada", 12f))
 
         map = RemoteMapView(this).apply {
             enableOnline(mapOnline)
@@ -133,7 +132,8 @@ class RemoteLocationActivity : Activity() {
             clipToOutline = true
             contentDescription = "Mapa com posição remota; arraste para explorar, use dois dedos para ampliar"
         }
-        content.addView(map, LinearLayout.LayoutParams(-1, dp(300)).apply { topMargin = dp(11) })
+        val deviceHeightDp = resources.displayMetrics.heightPixels / resources.displayMetrics.density
+        content.addView(map, LinearLayout.LayoutParams(-1, dp((deviceHeightDp * .55f).toInt().coerceIn(320, 540))).apply { topMargin = dp(10) })
         actions(content, button("−") { map.zoomBy(-1) }, button("+  Zoom") { map.zoomBy(1) },
             button("Centralizar") { map.centerOnMarker() })
         followButton = button("Seguir: ligado") {
@@ -144,7 +144,7 @@ class RemoteLocationActivity : Activity() {
         onlineButton = button("") { changeTilesPermission() }
         actions(content, followButton, onlineButton)
         updateOnlineLabel()
-        content.addView(text("© OpenStreetMap contributors · somente blocos vistos, cache local. Sem rede, o GPS funciona, mas o mapa mostra apenas os blocos já consultados.", 10.5f).apply {
+        content.addView(text("© OpenStreetMap contributors · mapa de referência enquanto não houver posição. Blocos online somente com permissão; toque para créditos.", 10f).apply {
             setOnClickListener { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.openstreetmap.org/copyright"))) }
         })
 
@@ -153,27 +153,28 @@ class RemoteLocationActivity : Activity() {
             setPadding(dp(13), dp(12), dp(13), dp(12))
             background = rounded(surface)
         }
-        content.addView(box, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(12) })
-        status = text("Aguardando consulta…", 16f, true)
-        details = text("A posição depende de uma sessão iniciada pelo monitorado.", 12.5f)
+        status = text("Consultando aparelho…", 16f, true)
+        details = text("Verificando localização e conexão…", 12.5f)
         box.addView(status)
         quality = text("Sem medição de precisão ou idade de posição.", 12f)
         quality.setPadding(0, dp(5), 0, dp(7))
         box.addView(quality)
         box.addView(details)
+        // Status primeiro: no mapa a posição ou falta dela é identificada imediatamente.
+        content.addView(box, 3, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(10) })
         refresh = button("Atualizar agora") { load() }
         openMap = button("Mapa externo") { openExternalMap() }.apply { isEnabled = false }
         copy = button("Copiar GPS") { copyCoordinates() }.apply { isEnabled = false }
         actions(content, refresh, openMap, copy)
-        content.addView(text("Uma consulta sem resposta limpa o marcador; o mapa não mostra uma posição antiga como atual. A localização do monitorado precisa continuar ativa e autorizada.", 11f))
-        automaticButton = button("Automático: desligado") {
+        content.addView(text("O mapa continua disponível para consulta mesmo sem posição. Nenhum ponto é inventado.", 10.5f))
+        automaticButton = button("Automático: ligado") {
             automatic = !automatic
             automaticButton.text = if (automatic) "Automático: ligado" else "Automático: desligado"
             schedule()
         }
         intervalButton = button("Consultar: ${RATE_LABELS[RATES.indexOf(intervalMs)]}") { chooseInterval() }
         actions(content, automaticButton, intervalButton)
-        content.addView(text("O intervalo acima controla apenas as consultas feitas por esta tela. O perfil GPS é escolhido no aparelho monitorado e não pode ser alterado remotamente. Atualizações e precisão dependem do Android.", 11f))
+        content.addView(text("A consulta automática funciona enquanto esta tela estiver aberta. A proteção contínua é ativada uma vez no aparelho monitorado.", 10.5f))
         if (host.isBlank() || RecentDevices.key(this, host) == null) {
             status.text = "Aparelho não pareado"
             details.text = "Escolha um aparelho com chave salva e conexão de rede."
@@ -235,11 +236,11 @@ class RemoteLocationActivity : Activity() {
                 refresh.isEnabled = true
                 response.onSuccess { renderStatus(it.optJSONObject("location")) }
                     .onFailure {
-                        // Não apresentar leitura anterior como posição atual após perda de conexão.
-                        clearSample()
-                        status.text = "Sem resposta"
-                        quality.text = "Sem posição atual · confira a rede e a sessão no monitorado"
-                        details.text = "Última consulta falhou: ${it.message?.take(150) ?: "erro de rede"}"
+                        // Conexão perdida: manter só o último ponto desta tela, sempre identificado como antigo.
+                        status.text = "Sem conexão com o aparelho"
+                        quality.text = if (sample == null) "Nenhuma posição remota recebida" else "⚠ Posição anterior da sessão · NÃO é localização ao vivo"
+                        details.text = "Falha de rede: ${it.message?.take(130) ?: "indisponível"}. " +
+                            if (sample == null) "O mapa permanece disponível para consulta." else "Último marcador é antigo; tente atualizar."
                     }
             }
         }
@@ -258,7 +259,12 @@ class RemoteLocationActivity : Activity() {
             return
         }
         when (value.optString("state")) {
-            "desativada" -> { status.text = "Compartilhamento desativado"; details.text = "No monitorado: Configurações → Localização → Iniciar compartilhamento." }
+            "desativada" -> {
+                val armed = value.optBoolean("recoveryArmed", false)
+                status.text = if (armed) "Recuperação configurada · GPS parado" else "GPS remoto ainda não configurado"
+                details.text = if (armed) "O modo está armado, mas a sessão de localização não está ativa. Confira permissões de segundo plano e restrições de bateria do Android." else
+                    "Configure uma única vez: Monitorado → Configurações → Localização → Ativar recuperação automática. Depois consulte daqui sem precisar tocar no outro celular."
+            }
             "sem_permissao" -> { status.text = "Sem autorização Android"; details.text = "Conceda localização aproximada ou precisa no monitorado." }
             "gps_desligado" -> { status.text = "Localização Android desligada"; details.text = "Ative a localização no aparelho monitorado." }
             "aguardando" -> { status.text = "Aguardando GPS/rede"; details.text = "Sessão ativa, mas sem leitura válida. Tente ao ar livre." }

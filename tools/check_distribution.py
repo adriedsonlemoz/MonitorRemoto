@@ -16,7 +16,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.85" and code.group(1) == "85", "Versões incompatíveis"
+assert version == "0.1.0-alpha.87" and code.group(1) == "87", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -1157,7 +1157,7 @@ stream_wire = (root / 'app/src/main/java/br/dev/monitorremoto/transport/FastFile
 shared_folder = (root / 'app/src/main/java/br/dev/monitorremoto/core/SharedDataFolder.kt').read_text()
 remote_client = (root / 'app/src/main/java/br/dev/monitorremoto/transport/RemoteClient.kt').read_text()
 remote_files = (root / 'app/src/main/java/br/dev/monitorremoto/ui/RemoteFilesActivity.kt').read_text()
-assert 'streamSlots.tryAcquire()' in stream_server and 'SharedDataFolder.stream(context, regular)' in stream_server
+assert 'streamSlots.tryAcquire()' in stream_server and 'SharedDataFolder.stream(context, regular' in stream_server
 assert 'FastFileStream.send(output, permanentKey, challenge' in stream_server
 assert 'WireProtocol.send(output, WireProtocol.encode(permanentKey,' in stream_server, 'ACK não autenticado'
 assert 'fun stream(context:' in shared_folder and 'openInputStream(uri)' in shared_folder
@@ -1222,5 +1222,41 @@ assert 'RemoteOperationHistoryPolicy.valid(' in recent85 and 'operations = setOf
 assert 'private fun showHistory()' in files85 and 'logOperation("download"' in files85
 assert 'logOperation("upload"' in files85 and 'logOperation(action,' in files85
 assert 'tiles.chunked(2)' in remote85 and 'Dados guardados no controlador' in remote85
-assert 'Sem posição atual' in location85 and 'Leitura antiga' in location85
+assert 'Sem conexão com o aparelho' in location85 and 'Leitura antiga' in location85
 print('PASSOU: alpha.85 histórico local mínimo, grade legível, diagnóstico da conexão e GPS.')
+
+# Alpha.86: stream recomeça em offset validado, mas confere SHA-256 completo.
+resume = (root / "app/src/main/java/br/dev/monitorremoto/core/RemoteDownloadResume.kt").read_text()
+source = (root / "app/src/main/java/br/dev/monitorremoto/core/SharedDataFolder.kt").read_text()
+client = (root / "app/src/main/java/br/dev/monitorremoto/transport/RemoteClient.kt").read_text()
+server = (root / "app/src/main/java/br/dev/monitorremoto/transport/MonitorServer.kt").read_text()
+files = (root / "app/src/main/java/br/dev/monitorremoto/ui/RemoteFilesActivity.kt").read_text()
+assert 'startOffset % RemoteFilePolicy.FAST_CHUNK_BYTES == 0L' in source
+assert 'if (transferred >= startOffset) emit' in source and 'digest.update(buffer, 0, count)' in source
+assert 'startOffset = checkpoint.resumeAt, resumeDigest = digest' in files
+assert 'ack.optLong("offset", -1L) == startOffset' in client
+assert 'responseBase.put("ok", true).put("offset", startOffset)' in server
+assert 'MessageDigest.isEqual(digest.digest(), frame.payload)' in client
+assert 'FileInputStream(checkpoint.file)' in files and 'RemoteDownloadResume.prepare(' in files
+assert 'MediaStore.MediaColumns.IS_PENDING, 1' in files and 'publishStaged(' in files
+assert 'noBackupFilesDir' in files and 'MAX_RECORDS = 20' in resume
+assert (root / "app/src/test/java/br/dev/monitorremoto/core/RemoteDownloadResumeTest.kt").exists()
+print('PASSOU: alpha.86 checkpoints privados, retomada alinhada, publicação após SHA-256.')
+
+# Alpha.87: recovery mode is persistent ONLY after explicit local opt-in, Android background permission,
+# and visible location foreground notification. Remote requests cannot arm GPS or skip permissions.
+rec = (root / "app/src/main/java/br/dev/monitorremoto/core/LocationRecoveryMode.kt").read_text()
+init = (root / "app/src/main/java/br/dev/monitorremoto/service/LocationRecoveryStarter.kt").read_text()
+loc = (root / "app/src/main/java/br/dev/monitorremoto/service/LocationShareService.kt").read_text()
+map_src = (ui_root / "RemoteMapView.kt").read_text()
+settings87 = (ui_root / "SettingsScreenUi.kt").read_text()
+assert 'ACCESS_BACKGROUND_LOCATION' in manifest
+assert 'armed && monitorEnabled && permission && backgroundAccess && locationOn' in rec
+assert 'LocationShareStore.hasBackgroundPermission(context)' in init and 'ACTION_RECOVER' in init
+assert 'LocationRecoveryStarter.tryStart(context)' in (root / "app/src/main/java/br/dev/monitorremoto/service/BootReceiver.kt").read_text()
+assert 'SettingsStore.setLocationRecoveryEnabled(this, false)' in loc and 'setOngoing(true)' in loc
+assert 'Ativar recuperação automática' in settings87 and 'ACTION_APPLICATION_DETAILS_SETTINGS' in settings87
+assert 'MAPA DE REFERÊNCIA' in map_src and 'private var initialized = true' in map_src
+assert 'private var automatic = true' in location_ui and 'NÃO é localização ao vivo' in location_ui
+assert (root / "app/src/test/java/br/dev/monitorremoto/core/LocationRecoveryModeTest.kt").exists()
+print('PASSOU: alpha.87 proteção opt-in, restauração condicionada ao Android e mapa sem falsa localização.')

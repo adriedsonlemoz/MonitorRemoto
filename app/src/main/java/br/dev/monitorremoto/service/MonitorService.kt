@@ -143,6 +143,8 @@ class MonitorService : Service() {
         registerConnectivityWatch()
         // Serviço ativo não significa porta disponível; o supervisor valida ambos.
         ensureServerReady()
+        // Persistent recovery location is allowed only with owner opt-in + Android background grant.
+        LocationRecoveryStarter.tryStart(this)
         refreshMainNotification()
         mainHandler.removeCallbacks(serverWatchdog)
         mainHandler.postDelayed(serverWatchdog, 15_000L)

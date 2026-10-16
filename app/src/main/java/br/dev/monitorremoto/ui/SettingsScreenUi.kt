@@ -870,10 +870,51 @@ internal fun MainActivity.fillLocationSettings(layout: LinearLayout) {
     val profile = SettingsStore.locationProfile(this)
     val hasPermission = br.dev.monitorremoto.core.LocationShareStore.hasPermission(this)
     val enabled = br.dev.monitorremoto.core.LocationShareStore.locationEnabled(this)
-    dialogIntro(layout, "Compartilhe a localização apenas quando necessário. A sessão é visível na notificação do Android e continua com a tela apagada enquanto o sistema permitir.")
+    dialogIntro(layout, "Configure uma vez no aparelho monitorado. No modo recuperação, o GPS continua disponível com a tela apagada enquanto o Android permitir, sem novo toque a cada consulta. A notificação indica quando está ativo.")
     layout.addView(dialogMetricRow("Sessão", if (active) "Ativa" else "Desligada"))
     layout.addView(dialogMetricRow("Permissão Android", if (hasPermission) "Concedida" else "Não autorizada"))
     layout.addView(dialogMetricRow("Localização Android", if (enabled) "Ligada" else "Desligada"))
+    val recovery = SettingsStore.locationRecoveryEnabled(this)
+    layout.addView(dialogMetricRow("Modo recuperação", if (recovery) "Armado" else "Desligado"))
+    layout.addView(dialogMetricRow("Acesso em segundo plano",
+        if (br.dev.monitorremoto.core.LocationShareStore.hasBackgroundPermission(this)) "Concedido" else "Não concedido"))
+    layout.addView(iconMenuRow(R.drawable.ic_pin,
+        if (recovery) "Desligar recuperação automática" else "Ativar recuperação automática",
+        if (recovery) "Permanente até você desligar" else "Configuração única no aparelho",
+        actionLabel = if (recovery) "DESLIGAR" else "ATIVAR") {
+        if (recovery) {
+            SettingsStore.setLocationRecoveryEnabled(this, false)
+            br.dev.monitorremoto.service.LocationShareService.stop(this)
+            openSettingsSection("location")
+        } else {
+            showManagedDialog(AlertDialog.Builder(this)
+                .setTitle("Ativar localização para recuperação?")
+                .setMessage("O aparelho continuará compartilhando localização com controladores já pareados enquanto o monitoramento estiver ativo, inclusive com a tela apagada. Não precisa confirmar cada consulta. A opção de iniciar monitoramento após reiniciar também será habilitada. O Android poderá exigir acesso em segundo plano para restaurar após reiniciar. Uma notificação mostrará a sessão e permitirá pará-la. Não funciona fora do alcance da rede ou VPN configurada.")
+                .setNegativeButton("Cancelar", null)
+                .setPositiveButton("Ativar") { _, _ ->
+                    if (!br.dev.monitorremoto.core.LocationShareStore.hasPermission(this)) {
+                        showAppNotice("Autorize primeiro o GPS", "Conceda localização precisa ou aproximada no Android, depois retorne e ative a recuperação.")
+                        requestPermissions(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION), 9275)
+                    } else if (!br.dev.monitorremoto.core.LocationShareStore.locationEnabled(this)) {
+                        showAppNotice("GPS do Android desligado", "Ligue a localização e ative novamente o modo recuperação.")
+                    } else if (!SettingsStore.isMonitorEnabled(this) || !MonitorService.isRunning) {
+                        showAppNotice("Monitoramento desligado", "Inicie o monitoramento do aparelho antes de armar a recuperação.")
+                    } else {
+                        SettingsStore.setLocationRecoveryEnabled(this, true)
+                        SettingsStore.setAutoStart(this, true)
+                        startLocationSharingFromSettings()
+                        openSettingsSection("location")
+                    }
+                })
+        }
+    })
+    if (recovery && !br.dev.monitorremoto.core.LocationShareStore.hasBackgroundPermission(this) && Build.VERSION.SDK_INT >= 29) {
+        layout.addView(actionButton("Permitir localização o tempo todo no Android") {
+            showAppNotice("Permissão para recuperação após reinício", "Abra Permissões → Localização → Permitir o tempo todo nas configurações deste aplicativo, quando essa opção estiver disponível. Sem ela, a localização ativa pode funcionar, mas a restauração após reiniciar não é garantida.")
+            startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                android.net.Uri.parse("package:$packageName")))
+        })
+    }
     layout.addView(iconMenuRow(R.drawable.ic_pin, "Perfil de localização",
         br.dev.monitorremoto.core.LocationSharePolicy.label(profile), actionLabel = "ALTERAR") {
         if (active) {
@@ -899,7 +940,7 @@ internal fun MainActivity.fillLocationSettings(layout: LinearLayout) {
         startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
     })
     sectionGap(layout, 7)
-    layout.addView(label("O controlador pode consultar apenas as posições desta sessão. Nenhum histórico é salvo. O GPS não pode ser ativado remotamente. O controlador possui mapa interno com carregamento online opcional e saída para aplicativos externos.", 11.5f, muted = true))
+    layout.addView(label("No modo recuperação, a posição fica disponível para os controladores pareados sem novo toque, enquanto a sessão e a rede funcionarem. Após reiniciar, a retomada depende de permissões e regras do Android/fabricante. Sem internet/VPN remota, a conexão continua restrita à rede alcançável. Parar revoga o modo e a sessão.", 11.5f, muted = true))
 }
 
 internal fun MainActivity.startLocationSharingFromSettings() {

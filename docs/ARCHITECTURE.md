@@ -1,4 +1,4 @@
-# Arquitetura (0.1.0-alpha.85)
+# Arquitetura (0.1.0-alpha.87)
 
 ```text
 MONITORADO                                      CONTROLE
@@ -31,9 +31,9 @@ A captura usa `ImageReader` RGBA, `Bitmap` JPEG com largura máxima 540 px, taxa
 
 ## Distribuição e assinatura
 
-O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.85` e `versionCode=85`.
+O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.87` e `versionCode=87`.
 
-- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.85.apk`.
+- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.87.apk`.
 - `upload-artifact` sempre distribui um ZIP; GitHub Releases recebe o **arquivo APK direto**.
 - Com quatro Secrets, Gradle gera APK Release assinado e AAB. Sem Secrets, o arquivo é Debug de teste e não preserva necessariamente a assinatura entre execuções.
 - Releases são prévias, não substituem a futura revisão da Google Play e nem os ensaios reais.
@@ -314,3 +314,14 @@ O renderer `RemoteMapView` recebe exclusivamente coordenadas retornadas por `Rem
 ## Alpha.85: histórico local de operações
 
 `core/RemoteOperationHistory` utiliza SharedPreferences privadas e guarda somente código de operação, estado, contagem, bytes e horário, associados a identificador do host derivado de SHA-256 com sal local. Limita a 48 eventos e 30 dias. Sem filenames, URIs, IPs, dados da câmera, SMS ou tokens. Alterações são persistidas após o encerramento da operação, inclusive parciais quando detectados. Sem serviço ou sessão adicional. Este registro NÃO fornece retomada; o download contínuo ainda depende da Activity e permanece integralmente verificado por SHA-256.
+
+## Downloads retomáveis (alpha.86)
+
+O controlador guarda prefixos incompletos de arquivos destinados a Downloads/Monitor Remoto somente em `noBackupFilesDir`, com identidade SHA-256 estável da origem (host, caminho, tamanho e data). Um pedido seguinte do usuário para o mesmo arquivo reaproveita somente blocos íntegros de 192 KiB. O servidor valida autorização SAF e versão, relê origem do início para SHA-256 total e emite quadros AES-GCM apenas do offset alinhado. O cliente recalcula o hash local do prefixo e combina ao restante, validando SHA-256 final antes de publicar no MediaStore. Origem alterada é recusada pelo hash integral. Cancelar/sair interrompe a conexão; os parciais privados permanecem por até 7 dias. Downloads em destino SAF geral e uploads não usam este mecanismo, e NÃO existe serviço oculto de background.
+
+## Modo recuperação de localização (alpha.87)
+- Opt-in único e explícito em Configurações no monitorado; monitoramento, localização do Android e permissões necessárias são pré-requisitos. Não há endpoint que ligue GPS à distância.
+- `LocationRecoveryMode` decide se a retomada é permitida; `LocationRecoveryStarter` tenta restaurar FGS com `ACCESS_BACKGROUND_LOCATION` concedida pelo Android. `BootReceiver` não tenta sem esse acesso; estado de boot/recovery não equivale a êxito da localização.
+- `LocationShareService` usa notificação permanente com Parar, e essa ação revoga também o modo persistente. Desativar monitoramento revoga o modo. Android pode interromper serviços, particularmente fabricantes agressivos; sem garantia de reinício.
+- O controlador consulta automaticamente apenas com a tela aberta; pode exibir um mapa de referência sem GPS, **nunca** inventar o ponto do monitorado. Uma última posição pode ficar na memória dessa tela após falha de conexão, marcando-a explicitamente como antiga.
+- Transporte ainda usa LAN/VPN e AES-GCM. O app não oferece rastreamento global pela internet após furto sem infraestrutura externa e conectividade.

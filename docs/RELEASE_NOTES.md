@@ -1,15 +1,14 @@
-# Monitor Remoto v0.1.0-alpha.85 · Arquivos, painel e localização
+# Monitor Remoto v0.1.0-alpha.87 · Mapa visível e modo recuperação de GPS
 
 ## Novidades
-- Gerenciador de arquivos: histórico local e voluntário de resultados de download, upload, exclusão, movimento e demais operações autenticadas. Até 48 eventos dos últimos 30 dias. Não armazena IP, nomes, caminhos, hashes nem conteúdo. Filtrado por aparelho salvo e removível no controlador, sem alterar a origem remota.
-- Indicação mais evidente de pasta somente leitura ou leitura/escrita e último resultado registrado.
-- Painel: funções em duas colunas com alvos de toque maiores; cartão distingue resposta autenticada recém-obtida de dados armazenados e mostra última atividade de arquivos quando houver.
-- Localização: indicador separado de idade e precisão reportadas, estado antigo/sem resposta e fundo do mapa adaptado ao tema. Tiles online continuam desativados por padrão, com autorização por aparelho.
+- Mapa interno agora renderiza blocos OSM da região de referência mesmo sem resposta GPS, com aviso de **nenhuma posição remota** e sem marcador inventado. Mantém consentimento de blocos online por controlador/aparelho e atribuição.
+- Área de status sobe acima do mapa; cartão e textos mais compactos. Consultas automáticas ficam ligadas enquanto a tela estiver aberta e podem ser desligadas.
+- No aparelho monitorado, opção **Ativar recuperação automática** com configuração local única. A sessão de localização permanece em primeiro plano com notificação e ação Parar, mesmo após apagar a tela.
+- Tentativa de restaurar GPS por boot/reinício do MonitorService SOMENTE quando modo recuperação e permissões Android, inclusive acesso de localização em segundo plano, foram previamente autorizados. O usuário pode abrir Configurações do Android para conceder "Permitir o tempo todo". Serviço pode não ser restaurado conforme Android/fabricante.
+- Consulta autenticada não solicita outra autorização do monitorado. Falha de rede pode manter nesta tela um marcador anterior somente com aviso **não ao vivo**.
 
-## Segurança e limites
-- Nenhuma nova permissão ou comando remoto. Histórico apenas local e limitado a metadados mínimos; não é um histórico remoto do celular monitorado.
-- Transferências continuam protegidas por AES-GCM e SHA-256. A retomada persistente após fechar a tela **não** está disponível; em caso de interrupção é necessário iniciar novamente.
-- Não foram acrescentadas sondagens periódicas de GPS, câmera ou arquivos.
-
-## Validação
-- Checagens sintáticas e estruturais locais; build Gradle/Android e testes em aparelhos ainda pendentes. Instale a mesma alpha.85 nos dois aparelhos após compilação pelo GitHub Actions.
+## Limitações
+- O GPS do Android não é ligado remotamente; instalar e autorizar ainda exige acesso físico uma única vez. Nenhum comando escondido ativa GPS.
+- O app não tem serviço público de internet: fora da LAN/VPN não poderá localizar o celular desaparecido. O modo não funciona após desinstalação, force-stop, perda de permissão ou sem energia/conectividade.
+- Permissão ACCESS_BACKGROUND_LOCATION requer declaração adicional e pode limitar publicação Google Play. Testes Gradle/Android/boot nos Redmi estão pendentes.
+- Para transmissão de fotos, as regras separadas de câmera não mudaram.

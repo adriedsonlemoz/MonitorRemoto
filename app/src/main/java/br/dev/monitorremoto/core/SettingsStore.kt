@@ -20,6 +20,11 @@ object SettingsStore {
         br.dev.monitorremoto.service.RemoteHealthScheduler.refresh(context)
     }
 
+    /** Owner-enabled recovery location: configured locally, never by a remote command. */
+    fun locationRecoveryEnabled(context: Context) = prefs(context).getBoolean("location_recovery_enabled", false)
+    fun setLocationRecoveryEnabled(context: Context, enabled: Boolean) =
+        prefs(context).edit().putBoolean("location_recovery_enabled", enabled).apply()
+
     /** Perfil da sessão de localização, nunca inicia o GPS por si só. */
     fun locationProfile(context: Context): String = prefs(context).getString("location_profile", "economico") ?: "economico"
     fun setLocationProfile(context: Context, profile: String) {
@@ -37,6 +42,7 @@ object SettingsStore {
         if (!enabled) recordRecoveryEvent(context, "Monitoramento interrompido localmente")
         // Nunca reutilizar eventos da sessão anterior, mesmo com uma captura em trânsito.
         if (!enabled) {
+            setLocationRecoveryEnabled(context, false)
             br.dev.monitorremoto.service.LocationShareService.stop(context)
             br.dev.monitorremoto.service.PhotoReadyService.stop(context)
             br.dev.monitorremoto.capture.CameraFrameStore.stop()

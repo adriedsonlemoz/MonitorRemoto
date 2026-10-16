@@ -217,7 +217,8 @@ object SharedDataFolder {
      * O transporte autentica cada bloco separadamente e inclui o desafio do pedido no AAD.
      * O resultado só é aceito pelo controlador após o SHA-256 integral.
      */
-    fun stream(context: Context, request: JSONObject, emit: (ByteArray, Int, Long) -> Unit): ByteArray {
+    fun stream(context: Context, request: JSONObject, onPrefixProgress: (Long) -> Unit = {},
+        emit: (ByteArray, Int, Long) -> Unit): ByteArray {
         require(available(context)) { "Compartilhamento de arquivos não autorizado." }
         val tree = tree(context) ?: error("Pasta remota não selecionada.")
         val parts = path(request)
@@ -228,10 +229,16 @@ object SharedDataFolder {
         }
         check(request.optLong("size", -1L) == node.size &&
             request.optLong("modified", -1L) == node.modified) { "Arquivo mudou desde a listagem." }
+        // O cliente pode continuar apenas em fronteiras de quadros; a origem é
+        // relida desde o início para calcular um hash integral, mesmo ao retomar.
+        val startOffset = request.optLong("offset", 0L)
+        require(startOffset >= 0L && startOffset <= node.size &&
+            startOffset % RemoteFilePolicy.FAST_CHUNK_BYTES == 0L) { "Ponto de retomada inválido." }
         val uri = DocumentsContract.buildDocumentUriUsingTree(tree, node.id)
         val digest = MessageDigest.getInstance("SHA-256")
         val buffer = ByteArray(RemoteFilePolicy.FAST_CHUNK_BYTES)
         var transferred = 0L
+        var lastPrefixReport = 0L
         context.contentResolver.openInputStream(uri)?.use { raw ->
             java.io.BufferedInputStream(raw, 128 * 1024).use { input ->
                 while (transferred < node.size) {
@@ -246,7 +253,13 @@ object SharedDataFolder {
                         got += n
                     }
                     digest.update(buffer, 0, count)
-                    emit(buffer, count, transferred)
+                    if (transferred >= startOffset) emit(buffer, count, transferred)
+                    else if (transferred + count - lastPrefixReport >= 3L * 1024 * 1024) {
+                        // Mantém a conexão viva durante a validação de muitos bytes
+                        // já recebidos, sem reenviar o conteúdo do prefixo.
+                        lastPrefixReport = transferred + count
+                        onPrefixProgress(lastPrefixReport)
+                    }
                     transferred += count
                 }
                 check(input.read() == -1) { "Arquivo cresceu durante a transferência." }

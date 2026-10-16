@@ -1,3 +1,15 @@
+## 0.1.0-alpha.87 (versionCode 87) | 16/10/2026
+- Modo recuperação automática da localização com opt-in local persistente e revogação via notificação, GPS ativo com tela apagada e tentativa condicionada de restauro após boot/serviço (ACCESS_BACKGROUND_LOCATION concedida pelo sistema).
+- Mapa de referência é renderizado mesmo sem posição remota; indicador explícito de ausência de fix e sem marcador inventado. Painel de posição reposicionado antes do mapa; consultas periódicas ao controlador inicialmente ativas com tela aberta.
+- Ao perder conexão, último ponto desta tela pode permanecer somente como não ao vivo; sem histórico persistente nem garantia de GPS/rede após perda ou furto.
+- Permissões Android e limitações de inicialização preservadas. Build Gradle/Android e testes físicos pendentes.
+
+## 0.1.0-alpha.86 (versionCode 86) | 16/10/2026
+- Downloads para Downloads/Monitor Remoto passam por checkpoint em área privada sem backup. Interrupções deixam prefixo retomável, descartando bloco incompleto; nova seleção do mesmo arquivo retoma após confirmação da origem e SHA-256 integral.
+- Protocolo `dataStream` aceita offset alinhado de 192 KiB, com eco de ACK autenticado. O monitorado processa desde byte zero para hash final, mas envia só a parte faltante; o controlador reconstrói hash do parcial antes de receber o restante.
+- Nova consulta de Downloads interrompidos na UI, limpeza manual e expurgo após 7 dias; publicação MediaStore só após confirmação final e destino não visível durante escrita.
+- Nenhuma alteração de permissões ou destinos SAF arbitrários; não existe serviço de transferência em segundo plano. Build Android/ensaios físicos ainda pendentes.
+
 ## 0.1.0-alpha.85 (versionCode 85) | 16/10/2026
 
 - UI: painel de controle em duas colunas com informações explícitas sobre conexão e dados armazenados.

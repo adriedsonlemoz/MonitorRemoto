@@ -166,10 +166,19 @@ class MonitorServer(private val context: Context) {
                         val output = java.io.BufferedOutputStream(socket.getOutputStream(), 128 * 1024)
                         try {
                             socket.tcpNoDelay = false // grandes blocos aproveitam agregação TCP
+                            val startOffset = regular.optLong("offset", 0L)
+                            // Revalidado na leitura SAF; validar também ANTES do ACK.
+                            require(startOffset >= 0 && startOffset <= regular.optLong("size", -1L) &&
+                                startOffset % br.dev.monitorremoto.core.RemoteFilePolicy.FAST_CHUNK_BYTES == 0L)
                             WireProtocol.send(output, WireProtocol.encode(permanentKey,
-                                responseBase.put("ok", true)))
+                                responseBase.put("ok", true).put("offset", startOffset)))
                             acknowledged = true
-                            val digest = SharedDataFolder.stream(context, regular) { bytes, count, offset ->
+                            val digest = SharedDataFolder.stream(context, regular,
+                                onPrefixProgress = { checked ->
+                                    FastFileStream.send(output, permanentKey, challenge,
+                                        FastFileStream.PROGRESS, checked, byteArrayOf())
+                                    output.flush() // quadro pequeno não fica preso no buffer TCP
+                                }) { bytes, count, offset ->
                                 FastFileStream.send(output, permanentKey, challenge,
                                     FastFileStream.DATA, offset, bytes, count)
                             }
