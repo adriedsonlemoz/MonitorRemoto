@@ -102,7 +102,7 @@ internal fun MainActivity.showMyConnectionInfo() {
         }
     })
     layout.addView(actions)
-    val dialog = AlertDialog.Builder(this)
+    val dialog = themedPopup(this)
         .setTitle("Minhas informações")
         .setView(wrapper)
         .setNegativeButton("Fechar", null)

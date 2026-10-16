@@ -680,7 +680,7 @@ internal fun MainActivity.selectNotificationApps() {
         override fun afterTextChanged(s: android.text.Editable?) = Unit
     })
     refreshList("")
-    showManagedDialog(AlertDialog.Builder(this)
+    showManagedDialog(themedPopup(this)
         .setView(wrapper)
         .setNegativeButton("Cancelar", null)
         .setPositiveButton("Salvar") { _, _ ->
@@ -691,68 +691,39 @@ internal fun MainActivity.selectNotificationApps() {
 
 /** Seleção local no próprio monitorado. Nunca solicitar MANAGE_EXTERNAL_STORAGE. */
 private fun MainActivity.fillFileRecoverySettings(layout: LinearLayout) {
-    val chosen = SettingsStore.sharedDataTree(this).isNotBlank()
-    val active = br.dev.monitorremoto.core.SharedDataFolder.available(this)
-    dialogIntro(layout, "No telefone que contém os arquivos, escolha uma pasta pelo seletor do Android. " +
-        "Leitura permite baixar; gerenciamento (escrita) permite também enviar, criar, copiar, mover, renomear ou apagar. " +
-        "A escrita fica DESLIGADA até ser autorizada separadamente neste aparelho.")
-    layout.addView(iconMenuRow(R.drawable.ic_folder_download, "Pasta autorizada",
-        if (active) "Leitura ativa · ${if (br.dev.monitorremoto.core.SharedDataFolder.writable(this)) "escrita ativa" else "escrita desativada"} · trocar pasta" else if (chosen) "Pasta selecionada · serviço desativado ou permissão expirada" else "Nenhuma pasta ativa · toque para escolher", badge = SettingsBadgeKind.forEnabled(active)) {
-        showAppConfirm("Autorizar recuperação de arquivos?",
-            "Você deverá selecionar pessoalmente uma pasta neste celular. " +
-            "Controladores que possuem a chave de pareamento poderão listar e baixar os arquivos dessa pasta. " +
-            "Gerenciamento/remoção requer uma segunda autorização, desligada por padrão. " +
-            "Não permite acessar pastas privadas de outros aplicativos, nem recuperar dados apagados. " +
-            "Escolha apenas uma pasta com arquivos que deseja compartilhar.",
-            R.drawable.ic_shield, "Escolher pasta") {
-            startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or
-                    Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
-            }, 4321)
-        }
+    val supported = br.dev.monitorremoto.core.FixedDownloadsFolder.supported()
+    val sharing = br.dev.monitorremoto.core.FixedDownloadsFolder.available(this)
+    dialogIntro(layout, "Pasta fixa: Downloads/Monitor Remoto. Ela é criada automaticamente sem selecionar diretório. " +
+        "Somente os arquivos criados ou recebidos pelo próprio aplicativo podem ser gerenciados remotamente. " +
+        "Arquivos pessoais de outros aplicativos continuam protegidos pelo Android.")
+    layout.addView(iconMenuRow(R.drawable.ic_folder_download, "Pasta padrão de transferências",
+        if (supported) "Downloads/Monitor Remoto · ${if (sharing) "monitoramento ativo" else "monitoramento parado"}" else
+            "Requer Android 10 ou superior",
+        badge = SettingsBadgeKind.forEnabled(sharing)) {
+        showAppNotice("Downloads/Monitor Remoto",
+            "Enviar e baixar usam uma pasta fixa nos dois celulares. O aplicativo só pode listar e gerenciar arquivos que ele próprio criou. " +
+                "Não existe seleção de árvore. Renomear, mover ou excluir arquivos remotos exige chave de pareamento e confirmação das ações sensíveis.",
+            R.drawable.ic_folder_download)
     })
     sectionGap(layout, 10)
-    val canWrite = br.dev.monitorremoto.core.SharedDataFolder.writable(this)
-    layout.addView(iconMenuRow(R.drawable.ic_edit, "Gerenciar arquivos remotamente",
-        if (canWrite) "ATIVADO · envio, renomeação, movimento e exclusão" else
-            "DESATIVADO · ativação local exige pasta com escrita concedida",
-        badge = SettingsBadgeKind.forEnabled(canWrite)) {
-        if (canWrite) {
-            br.dev.monitorremoto.core.SettingsStore.setAllowRemoteFileWrite(this, false)
-            message("Escrita remota desativada. Download permanece autorizado.")
-            render()
-        } else showAppConfirm("Permitir gerenciamento remoto?",
-            "Qualquer controlador com a chave de pareamento poderá ENVIAR, RENOMEAR, MOVER, COPIAR " +
-                "e EXCLUIR arquivos da pasta escolhida e suas subpastas. A exclusão pode ser definitiva. " +
-                "Não autorize pastas contendo arquivos sensíveis; controle individual por controlador ainda não existe.",
-            R.drawable.ic_shield, "Autorizar escrita") {
-            val authorized = contentResolver.persistedUriPermissions.any { permission ->
-                permission.uri.toString() == SettingsStore.sharedDataTree(this) && permission.isWritePermission
-            }
-            if (!authorized) message("O Android não concedeu escrita. Escolha a pasta novamente para solicitar a permissão.")
-            else { SettingsStore.setAllowRemoteFileWrite(this, true); render(); message("Gerenciamento remoto ativado.") }
-        }
+    layout.addView(iconMenuRow(R.drawable.ic_shield, "Segurança da pasta",
+        "Acesso limitado aos arquivos do app; pareamento autenticado", badge = SettingsBadgeKind.forEnabled(sharing)) {
+        showAppNotice("Acesso aos arquivos",
+            "A pasta pertence ao aplicativo e pode ser gerenciada por controladores que possuem a chave de pareamento enquanto o monitoramento estiver ativo. " +
+                "Pare o monitoramento ou troque a chave para cortar esse acesso. Arquivos de terceiros não são acessados.", R.drawable.ic_shield)
     })
-    sectionGap(layout, 12)
-    layout.addView(iconMenuRow(R.drawable.ic_shield, "Revogar acesso à pasta",
-        if (active || SettingsStore.sharedDataTree(this).isNotBlank()) "Retirar imediatamente a autorização" else "Sem autorização ativa", badge = if (chosen) SettingsBadgeKind.WARNING else SettingsBadgeKind.INACTIVE) {
-        if (SettingsStore.sharedDataTree(this).isBlank()) message("Nenhuma pasta está autorizada.")
-        else showAppConfirm("Revogar recuperação remota?",
-            "O Monitor Remoto deixará de servir novos blocos de arquivos dessa pasta. " +
-            "Cópias já concluídas em outro telefone não serão apagadas.",
-            R.drawable.ic_shield, "Revogar") {
-            br.dev.monitorremoto.core.SharedDataFolder.revoke(this)
-            message("Permissão revogada no monitorado.")
-        }
-    })
-    sectionGap(layout, 12)
-    layout.addView(label("Limites: até 2 GiB por arquivo/lote, até 20 arquivos por lote e 150 itens por pasta. " +
-        "Escrita somente com opt-in local; Downloads raiz tem restrições do seletor Android. " +
-        "A transferência exige o serviço Monitor Remoto ativo e a mesma versão nos dois aparelhos.",
-        11.5f, muted = true))
+    sectionGap(layout, 10)
+    layout.addView(label("Até 2 GiB por arquivo/lote e até 20 arquivos em lote. " +
+        "Arquivos antes autorizados por seletores SAF não entram automaticamente na nova pasta. " +
+        "Você pode enviá-los pelo controlador, escolhendo o arquivo individualmente para o envio.", 11.5f, muted = true))
 }
 
 internal fun MainActivity.handleRecoveryPickerResult(resultCode: Int, data: Intent?) {
+    if (br.dev.monitorremoto.core.FixedDownloadsFolder.supported()) {
+        message("A seleção de pastas foi substituída por Downloads/Monitor Remoto.")
+        return
+    }
+
     val selectedUri = data?.data
     if (resultCode == android.app.Activity.RESULT_OK && selectedUri != null) {
         val outcome = runCatching {
@@ -846,7 +817,7 @@ internal fun MainActivity.fillLocationSettings(layout: LinearLayout) {
             br.dev.monitorremoto.service.LocationShareService.stop(this)
             openSettingsSection("location")
         } else {
-            showManagedDialog(AlertDialog.Builder(this)
+            showManagedDialog(themedPopup(this)
                 .setTitle("Ativar localização para recuperação?")
                 .setMessage("O aparelho continuará compartilhando localização com controladores já pareados enquanto o monitoramento estiver ativo, inclusive com a tela apagada. Não precisa confirmar cada consulta. A opção de iniciar monitoramento após reiniciar também será habilitada. O Android poderá exigir acesso em segundo plano para restaurar após reiniciar. Uma notificação mostrará a sessão e permitirá pará-la. Não funciona fora do alcance da rede ou VPN configurada.")
                 .setNegativeButton("Cancelar", null)
@@ -879,7 +850,7 @@ internal fun MainActivity.fillLocationSettings(layout: LinearLayout) {
         if (active) {
             showAppNotice("Sessão em andamento", "Pare a sessão antes de alterar o intervalo GPS.")
         } else {
-            showManagedDialog(AlertDialog.Builder(this)
+            showManagedDialog(themedPopup(this)
                 .setTitle("Intervalo de localização")
                 .setSingleChoiceItems(arrayOf("Econômico · 5 minutos", "Equilibrado · 60 segundos", "Intermediário · 30 segundos", "Preciso · 10 segundos"),
                     listOf("economico", "equilibrado", "intermediario", "preciso").indexOf(profile)) { dialog, which ->

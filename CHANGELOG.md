@@ -1,3 +1,10 @@
+## 0.1.0-alpha.89 (versionCode 89) | 16/10/2026
+- Pasta fixa Downloads/Monitor Remoto (Android 10+) em ambos os aparelhos; criada automaticamente pelo app e usada por todas as opções de download/upload, sem escolher pastas SAF.
+- `FixedDownloadsFolder` usa MediaStore e filtra a propriedade do app, evitando acesso a arquivos de outros aplicativos, com operações de arquivo autenticadas e confirmação de exclusão; pastas vazias virtuais com índice local.
+- Downloads de pastas preservam hierarquia e hash; download simples/lotes seguem com retomada privada de 7 dias e publicação atômica no MediaStore.
+- Modernização de diálogos e menu inferior de ações, mantendo layout do painel em 3 colunas.
+- Sem alteração de permissões Android; para acessar conteúdo de terceiros continua necessário consentimento/autorização. Build Android e testes no dispositivo pendentes.
+
 ## 0.1.0-alpha.88 (versionCode 88) | 16/10/2026
 - Painel remoto redesenhado em 3 colunas com 12 ações compactas. Detalhes saiu da grade e fica junto ao cabeçalho do aparelho.
 - Página inicial de Configurações reorganizada por finalidade com busca instantânea local, inclusive acentos; rotas e permissões originais preservadas.

@@ -56,7 +56,7 @@ internal fun MainActivity.chooseQrAddress() {
             })
             sectionGap(layout, 7)
         }
-        showManagedDialog(AlertDialog.Builder(this).setView(wrapper).setNegativeButton("Cancelar", null))
+        showManagedDialog(themedPopup(this).setView(wrapper).setNegativeButton("Cancelar", null))
     }
 }
 
@@ -95,7 +95,7 @@ internal fun MainActivity.showPairingQr(ip: String) {
         sectionGap(panel, 10)
         panel.addView(label("No aparelho controlador, escolha QR Code e aponte a câmera.", 12.5f))
         panel.addView(label("Expira em 2 minutos ou após o primeiro pareamento. Não compartilhe a imagem deste QR.", 11.5f, muted = true))
-        val dialog = AlertDialog.Builder(this)
+        val dialog = themedPopup(this)
             .setTitle("Parear pela rede local")
             .setView(panel)
             .setNegativeButton("Fechar", null)

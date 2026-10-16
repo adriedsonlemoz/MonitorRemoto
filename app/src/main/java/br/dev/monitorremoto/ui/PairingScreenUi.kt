@@ -30,7 +30,7 @@ internal fun MainActivity.showSavedDeviceOptions(item: RecentDevices.Device) {
         popup?.dismiss()
         forgetSavedDevice(item)
     })
-    popup = AlertDialog.Builder(this).setTitle("Aparelho salvo")
+    popup = themedPopup(this).setTitle("Aparelho salvo")
         .setView(wrapper).setNegativeButton("Fechar", null).create()
     popup?.let { showManagedDialog(it) }
 }
@@ -99,7 +99,7 @@ internal fun MainActivity.showConnectionChooser() {
         layout.addView(card)
         sectionGap(layout, 8)
     }
-    chooser = AlertDialog.Builder(this).setTitle("Conectar aparelho")
+    chooser = themedPopup(this).setTitle("Conectar aparelho")
         .setView(wrapper).setNegativeButton("Fechar", null).create()
     chooser?.let { showManagedDialog(it) }
 }
@@ -122,7 +122,7 @@ internal fun MainActivity.renameSavedDevice(item: RecentDevices.Device, returnTo
     sectionGap(layout, 10)
     val input = field("Nome do aparelho", item.name)
     layout.addView(input)
-    showManagedDialog(AlertDialog.Builder(this).setView(wrapper)
+    showManagedDialog(themedPopup(this).setView(wrapper)
         .setNegativeButton("Cancelar") { _, _ -> if (returnToChooser) showConnectionChooser() }
         .setPositiveButton("Salvar") { _, _ ->
             RecentDevices.rename(this, item.host, input.text.toString())
@@ -184,7 +184,7 @@ internal fun MainActivity.showManualConnectionDialog() {
         visibility = View.GONE
     }
     layout.addView(inputError)
-    val dialog = AlertDialog.Builder(this).setTitle("Conexão manual")
+    val dialog = themedPopup(this).setTitle("Conexão manual")
         .setView(wrapper).setNegativeButton("Voltar") { _, _ -> showConnectionChooser() }
         .setPositiveButton("Conectar", null).create()
     dialog.setOnShowListener {

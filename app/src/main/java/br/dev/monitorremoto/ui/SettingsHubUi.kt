@@ -36,7 +36,7 @@ private val settingGroups = listOf(
         SettingsDestination(R.drawable.ic_monitor, "Tela e controle remoto", "Compartilhamento, toque e áudio", "screen"),
     )),
     SettingsGroup("ARQUIVOS E APLICATIVOS", listOf(
-        SettingsDestination(R.drawable.ic_folder_download, "Arquivos e armazenamento", "Pasta compartilhada, leitura e escrita", "files"),
+        SettingsDestination(R.drawable.ic_folder_download, "Arquivos e armazenamento", "Pasta fixa em Downloads", "files"),
         SettingsDestination(R.drawable.ic_phone, "Aplicativos instalados", "Compartilhamento da lista e abertura", "apps"),
     )),
     SettingsGroup("ALERTAS E COMUNICAÇÃO", listOf(

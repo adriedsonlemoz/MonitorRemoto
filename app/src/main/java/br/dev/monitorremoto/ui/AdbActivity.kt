@@ -341,7 +341,7 @@ class AdbActivity : Activity() {
     private fun modal(title: String, body: LinearLayout, cancel: Boolean = true): AlertDialog {
         closeDialog()
         val content = ScrollView(this).apply { addView(body); isFillViewport = false }
-        val result = AlertDialog.Builder(this).setTitle(title).setView(content)
+        val result = themedPopup(this).setTitle(title).setView(content)
             .apply {
                 if (cancel) setNegativeButton("Fechar") { _, _ ->
                     clearQr(); stopDiscovery(); if (busy) cancelWork()
@@ -589,7 +589,7 @@ class AdbActivity : Activity() {
             if (expected != null && !expectedModel.isNullOrBlank() && !receivedModel.isNullOrBlank() &&
                 !expectedModel.equals(receivedModel, ignoreCase = true) &&
                 !expectedModel.equals(displayModel, ignoreCase = true)) {
-                AlertDialog.Builder(this).setTitle("Confirmar aparelho")
+                themedPopup(this).setTitle("Confirmar aparelho")
                     .setMessage("O aparelho respondeu como $displayModel, mas o salvo é ${expected.name}. Confirme no telefone antes de substituir os dados salvos.")
                     .setNegativeButton("Desconectar") { _, _ -> disconnect() }
                     .setPositiveButton("É o mesmo aparelho") { _, _ -> finishConnected(displayModel, android, host, port, expected) }
@@ -658,7 +658,7 @@ class AdbActivity : Activity() {
         }
         val adbHost = activeClient.endpoint?.substringBeforeLast(':').orEmpty()
         if (adbHost.isBlank() || RecentDevices.key(applicationContext, adbHost) == null) {
-            AlertDialog.Builder(this)
+            themedPopup(this)
                 .setTitle("Falta autorizar a imagem")
                 .setMessage("O ADB está conectado, mas a tela remota usa outro canal. No celular monitorado, " +
                     "autorize o Monitor Remoto normal e a captura pelo Android (MediaProjection). " +
@@ -717,7 +717,7 @@ class AdbActivity : Activity() {
         body.addView(text("Digite REINICIAR para confirmar", 14f, bold = true))
         val verify = formField("REINICIAR")
         body.addView(verify)
-        val check = AlertDialog.Builder(this)
+        val check = themedPopup(this)
             .setTitle("Confirmar reinicialização")
             .setView(body)
             .setNegativeButton("Cancelar", null)
@@ -782,7 +782,7 @@ class AdbActivity : Activity() {
         body.addView(text("Digite $confirmation para executar", 13f, bold = true))
         val entry = formField(confirmation)
         body.addView(entry)
-        val dialog = AlertDialog.Builder(this).setTitle("Confirmar operação ADB")
+        val dialog = themedPopup(this).setTitle("Confirmar operação ADB")
             .setView(body).setNegativeButton("Cancelar", null)
             .setPositiveButton("Executar", null).create()
         dialog.setOnShowListener {
@@ -854,7 +854,7 @@ class AdbActivity : Activity() {
         val body = modalBody()
         body.addView(separatedText("Escolha um apelido para identificar este celular, sem depender do IP.", 13f, secondary = true))
         body.addView(field)
-        AlertDialog.Builder(this).setTitle("Renomear celular").setView(body)
+        themedPopup(this).setTitle("Renomear celular").setView(body)
             .setNegativeButton("Cancelar", null).setPositiveButton("Salvar") { _, _ ->
                 val name = field.text.toString().trim().take(60)
                 if (name.isNotBlank()) {
@@ -871,7 +871,7 @@ class AdbActivity : Activity() {
         body.addView(text("${device.host}:${device.port} • última conexão ${lastSeen(device.lastConnectedAt)}", 13f, secondary = true))
         body.addView(button("Renomear celular") { renameDevice(device) })
         body.addView(button("Esquecer da lista", outline = true) {
-            AlertDialog.Builder(this).setTitle("Esquecer ${device.name}?")
+            themedPopup(this).setTitle("Esquecer ${device.name}?")
                 .setMessage("Isso remove o histórico local, mas não revoga a autorização ADB no outro celular.")
                 .setNegativeButton("Cancelar", null).setPositiveButton("Esquecer") { _, _ ->
                     AdbKnownDevices.forget(this, device); closeDialog(); render()
@@ -880,7 +880,7 @@ class AdbActivity : Activity() {
         modal("Opções do aparelho", body)
     }
     private fun forgetIdentity() {
-        AlertDialog.Builder(this).setTitle("Apagar credencial ADB?")
+        themedPopup(this).setTitle("Apagar credencial ADB?")
             .setMessage("Os aparelhos terão de ser pareados novamente. A revogação definitiva deve ser feita no Android do celular monitorado.")
             .setNegativeButton("Cancelar", null).setPositiveButton("Apagar") { _, _ ->
                 disconnect()

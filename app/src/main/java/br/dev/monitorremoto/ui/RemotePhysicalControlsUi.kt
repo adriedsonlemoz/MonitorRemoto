@@ -61,7 +61,7 @@ internal fun MainActivity.showRemotePhysicalDialog(sound: Boolean) {
     sectionGap(content, 8)
     val refresh = actionButton("Atualizar estado") { }
     content.addView(refresh)
-    val dialog = AlertDialog.Builder(this).setView(wrapper).setNegativeButton("Fechar", null).create()
+    val dialog = themedPopup(this).setView(wrapper).setNegativeButton("Fechar", null).create()
     var busy = false
     var authorized = false
     fun setEnabled() {

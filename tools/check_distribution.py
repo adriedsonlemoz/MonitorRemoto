@@ -16,7 +16,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.88" and code.group(1) == "88", "Versões incompatíveis"
+assert version == "0.1.0-alpha.89" and code.group(1) == "89", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -353,7 +353,7 @@ print('PASSOU: alpha.28, incompatibilidade cifrada, erros classificados, diálog
 access_actions = monitor.split('private fun MainActivity.showIncomingAccessActions(', 1)
 assert len(access_actions) == 2, 'Ações de acesso recebido não encontradas'
 access_actions = access_actions[1]
-assert access_actions.count('val dialog = AlertDialog.Builder(this)') == 1, 'Construtor do diálogo deve ser único'
+assert access_actions.count('val dialog = themedPopup(this)') == 1, 'Construtor do diálogo deve ser único'
 assert access_actions.count('.create()') == 1, 'O diálogo deve ser criado apenas uma vez'
 assert access_actions.count('showManagedDialog(dialog)') == 1, 'O diálogo deve ser apresentado uma única vez'
 assert '.create().let { showManagedDialog(it) }' not in access_actions, 'Terminação antiga duplicada'
@@ -638,18 +638,18 @@ print('PASSOU: alpha.44, lambdas ADB vinculadas ao parâmetro operation(AdbClien
 remote_files = (root / 'app/src/main/java/br/dev/monitorremoto/ui/RemoteFilesActivity.kt').read_text()
 shared_folder = (root / 'app/src/main/java/br/dev/monitorremoto/core/SharedDataFolder.kt').read_text()
 file_policy = (root / 'app/src/main/java/br/dev/monitorremoto/core/RemoteFilePolicy.kt').read_text()
-assert 'Arquivos", "Pasta autorizada", enabled = true' in (root / 'app/src/main/java/br/dev/monitorremoto/ui/RemoteDashboardUi.kt').read_text()
-assert 'ACTION_OPEN_DOCUMENT_TREE' in (root / 'app/src/main/java/br/dev/monitorremoto/ui/SettingsScreenUi.kt').read_text()
+assert 'Arquivos", "Downloads fixos", enabled = true' in (root / 'app/src/main/java/br/dev/monitorremoto/ui/RemoteDashboardUi.kt').read_text()
+assert 'FixedDownloadsFolder.supported()' in (root / 'app/src/main/java/br/dev/monitorremoto/ui/SettingsScreenUi.kt').read_text()
 assert 'takePersistableUriPermission' in shared_folder and 'releasePersistableUriPermission' in shared_folder
 assert 'DocumentsContract.buildChildDocumentsUriUsingTree' in shared_folder and 'fun resolve(' in shared_folder
 assert 'RemoteFilePolicy.validPath(path)' in client and 'RemoteFilePolicy.validPath(path)' in shared_folder
 assert 'dataList' in server and 'dataChunk' in server and 'SharedDataFolder.handle(context, regular)' in server
-assert 'ACTION_CREATE_DOCUMENT' in remote_files and 'RemoteClient.dataChunks(' in remote_files and 'cancel.set(true)' in remote_files
+assert 'publishStaged(' in remote_files and 'RemoteClient.dataChunks(' in remote_files and 'cancel.set(true)' in remote_files
 assert 'MessageDigest.getInstance("SHA-256")' in client and 'MAX_FILE_BYTES = 2L * 1024L * 1024L * 1024L' in file_policy
 assert 'MANAGE_EXTERNAL_STORAGE' not in manifest and 'READ_EXTERNAL_STORAGE' not in manifest
 assert 'android:name=".ui.RemoteFilesActivity" android:exported="false"' in manifest
 assert (root / 'app/src/test/java/br/dev/monitorremoto/core/RemoteFilePolicyTest.kt').exists()
-print('PASSOU: alpha.45, recuperação restrita à árvore SAF consentida, criptografia, limites e cancelamento')
+print('PASSOU: alpha.89, área fixa MediaStore de arquivos próprios, criptografia, limites e cancelamento')
 
 # Alpha.46: compileDebugKotlin workflow #45 falhou por conflito de nomes com View.foreground: Drawable.
 # O getter foreground do Activity retorna Int; aplicar o receiver explícito nas duas views.
@@ -788,9 +788,9 @@ print('PASSOU: alpha.56, botões espaçados, histórico sem repetição e codec/
 # Alpha.57: a recuperação segue somente leitura SAF e manutenção mantém confirmação.
 files57 = (ui_root / 'RemoteFilesActivity.kt').read_text(encoding='utf-8')
 dashboard57 = (ui_root / 'RemoteDashboardUi.kt').read_text(encoding='utf-8')
-for token in ['ACTION_OPEN_DOCUMENT_TREE', 'ACTION_CREATE_DOCUMENT', 'MAX_BATCH_ITEMS = 20',
-              'MAX_BATCH_BYTES = 2L * 1024L * 1024L * 1024L', 'safeNewDocumentName',
-              'DocumentsContract.createDocument', 'DocumentsContract.deleteDocument',
+for token in ['copyBatchDownloads', 'publishStaged', 'MAX_BATCH_ITEMS = 20',
+              'MAX_BATCH_BYTES = 2L * 1024L * 1024L * 1024L', 'copyRemoteFolderDownloads',
+              'publishStaged', 'confirmBatchDelete',
               'RemoteClient.dataChunks(', 'RemoteClient.dataList(', 'Selecionar', 'Baixar',
               'Ordenar', 'Buscar nesta pasta', 'Grade', 'entryDate', 'entrySize', 'showHelp']:
     assert token in files57, f'alpha.57: função ausente: {token}'
@@ -800,7 +800,7 @@ assert 'Reiniciar normalmente' in dashboard57 and 'iconSectionHeader' in dashboa
 assert 'val deviceCard = card(body, fill = soft)' in ui56
 assert 's?.toString()?.trim() == "REINICIAR"' in ui56
 assert 'adb.requestNormalReboot()' in ui56
-print('PASSOU: alpha.57, cópia múltipla SAF somente leitura, manutenção protegida e interface aprimorada')
+print('PASSOU: alpha.89, cópia múltipla para Downloads fixos, manutenção protegida e interface aprimorada')
 
 # Alpha.58: notificações com diagnóstico e apps com opt-in explícito, sem alcance universal.
 cat58 = (ui_root / 'RemoteCatalogActivity.kt').read_text()
@@ -1145,11 +1145,11 @@ assert 'check(writable(context))' in folder and 'RemoteUploadStore.finish(' in f
 assert 'dataRead' in server and 'dataManage' in server and 'dataUploadStatus' in server
 assert 'dataRead(' in client and 'dataUpload(' in client and 'dataManage(' in client
 assert 'expectedHash' in store and 'session.owner == owner' in store
-assert 'setAllowRemoteFileWrite(this, true)' in settings and 'Autorizar escrita' in settings
+assert 'FixedDownloadsFolder.supported()' in settings and 'Downloads/Monitor Remoto' in settings
 assert 'confirmBatchDelete' in filesui and 'confirmBatchTrash' in filesui
 assert 'MediaStore.Downloads.EXTERNAL_CONTENT_URI' in filesui and 'PICK_UPLOADS' in filesui
 assert 'FAST_CHUNK_BYTES' in file_policy and 'RemoteClient.dataRead(' in filesui
-print('PASSOU: alpha.79, opt-in de escrita, CRUD SAF, uploads staged, Downloads e fast chunks.')
+print('PASSOU: alpha.89, legado SAF isolado, MediaStore próprio, uploads staged e fast chunks.')
 
 # alpha.81: ACK JSON autenticado, desafio por sessão e framing binário AES-GCM.
 stream_server = (root / 'app/src/main/java/br/dev/monitorremoto/transport/MonitorServer.kt').read_text()
@@ -1273,3 +1273,20 @@ assert 'Pesquisar configurações' in settings88 and 'openSettingsSection(item.s
 assert 'lastRoundTripMs' in conn88 and 'SystemClock.elapsedRealtime()' in conn88
 assert 'secondary = "Cancelar"' in dialogs88 and 'onPrimary = onConfirm' in dialogs88
 print('PASSOU: alpha.88 três colunas, busca por categorias, RTT monotônico e confirmação preservada.')
+
+# Alpha.89: área fixa limitada ao app, sem configuração SAF nem seletor de destino exposto.
+fixed = (root / "app/src/main/java/br/dev/monitorremoto/core/FixedDownloadsFolder.kt").read_text()
+activity89 = (ui_root / "RemoteFilesActivity.kt").read_text()
+settings89 = (ui_root / "SettingsScreenUi.kt").read_text()
+service89 = (root / "app/src/main/java/br/dev/monitorremoto/service/MonitorService.kt").read_text()
+assert 'OWNER_PACKAGE_NAME' in fixed and 'owner != context.packageName' in fixed
+assert 'FixedDownloadPathPolicy.ROOT' in fixed and 'IS_PENDING' in fixed and 'Download/Monitor Remoto/' in (root / 'app/src/main/java/br/dev/monitorremoto/core/FixedDownloadPathPolicy.kt').read_text()
+assert 'FixedDownloadsFolder.handle(context, request)' in shared_folder
+assert 'FixedDownloadsFolder.stream(context, request, onPrefixProgress, emit)' in shared_folder
+assert 'FixedDownloadsFolder.ensure(applicationContext)' in service89
+assert 'ACTION_OPEN_DOCUMENT_TREE' not in settings89
+assert 'copyBatchDownloads(chosen)' in activity89 and 'copyRemoteFolderDownloads' in activity89
+assert 'publishStaged(part, item' in activity89 and 'confirmBatchDelete' in activity89
+assert (ui_root / 'ThemedPopup.kt').exists() and 'setGravity(Gravity.BOTTOM)' in activity89
+assert 'tiles.chunked(3)' in dashboard88
+print('PASSOU: alpha.89 Downloads fixos de propriedade do app, operações autenticadas e menus modernos.')

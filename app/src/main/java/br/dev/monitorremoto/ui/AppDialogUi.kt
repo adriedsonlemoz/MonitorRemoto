@@ -45,7 +45,7 @@ private fun MainActivity.showThemedMessageDialog(
     if (destructive) confirmButton.setTextColor(android.graphics.Color.rgb(188, 62, 55))
     actions.addView(confirmButton, LinearLayout.LayoutParams(0, dp(46), 1f))
     layout.addView(actions)
-    dialog = AlertDialog.Builder(this).setView(wrapper).create()
+    dialog = themedPopup(this).setView(wrapper).create()
     showManagedDialog(dialog)
     dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
     dialog.window?.setLayout((resources.displayMetrics.widthPixels * 0.91f).toInt(), -2)

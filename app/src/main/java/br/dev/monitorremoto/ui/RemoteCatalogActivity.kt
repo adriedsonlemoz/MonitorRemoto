@@ -442,7 +442,7 @@ class RemoteCatalogActivity : Activity() {
             else "Execução não confirmada"
         val options = arrayOf("Abrir aplicativo", "Forçar parada via ADB", "Configurações via ADB",
             if (isFavorite(pkg)) "Remover dos favoritos" else "Adicionar aos favoritos")
-        AlertDialog.Builder(this)
+        themedPopup(this)
             .setTitle(name.ifBlank { pkg })
             .setMessage("Pacote: $pkg\n$observed")
             .setItems(options) { _, which ->
@@ -459,7 +459,7 @@ class RemoteCatalogActivity : Activity() {
 
     private fun openApp(packageName: String) {
         if (!RemoteAppsPolicy.validPackage(packageName)) return
-        AlertDialog.Builder(this).setTitle("Abrir aplicativo remoto?")
+        themedPopup(this).setTitle("Abrir aplicativo remoto?")
             .setMessage("Tentar abrir $packageName com autorização no monitorado. O Android pode impedir a ação quando a tela do Monitor Remoto estiver em segundo plano.")
             .setNegativeButton("Cancelar", null)
             .setNeutralButton("Usar ADB") { _, _ -> adbApp(packageName, "open") }
@@ -471,11 +471,11 @@ class RemoteCatalogActivity : Activity() {
                     main.post {
                         if (request != generation || isFinishing || isDestroyed) return@post
                         result.onSuccess {
-                            AlertDialog.Builder(this).setTitle("Pedido enviado")
+                            themedPopup(this).setTitle("Pedido enviado")
                                 .setMessage(it.optString("message") + "\nA abertura visual não é confirmada.")
                                 .setPositiveButton("OK", null).show()
                         }.onFailure {
-                            AlertDialog.Builder(this).setTitle("Abertura normal indisponível")
+                            themedPopup(this).setTitle("Abertura normal indisponível")
                                 .setMessage((it.message ?: "O Android recusou a solicitação.").take(200) + "\nDeseja tentar via ADB autorizado?")
                                 .setNegativeButton("Agora não", null)
                                 .setPositiveButton("Ir para ADB") { _, _ -> adbApp(packageName, "open") }.show()
@@ -487,11 +487,11 @@ class RemoteCatalogActivity : Activity() {
 
     private fun stopApp(packageName: String) {
         if (!RemoteAppsPolicy.canForceStop(packageName)) {
-            AlertDialog.Builder(this).setMessage("Aplicativo do sistema/protegido: parada indisponível.")
+            themedPopup(this).setMessage("Aplicativo do sistema/protegido: parada indisponível.")
                 .setPositiveButton("OK", null).show()
             return
         }
-        AlertDialog.Builder(this).setTitle("Forçar parada pelo ADB?")
+        themedPopup(this).setTitle("Forçar parada pelo ADB?")
             .setMessage("Isso interromperá tarefas, gravações e transferências de $packageName. Não há API normal do Android para forçar a parada de outros apps. ADB precisa estar autorizado.")
             .setNegativeButton("Cancelar", null)
             .setPositiveButton("Abrir ADB") { _, _ -> adbApp(packageName, "stop") }.show()

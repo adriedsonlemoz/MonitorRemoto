@@ -1,4 +1,18 @@
-# Monitor Remoto v0.1.0-alpha.88 · Painel em 3 colunas e Configurações pesquisáveis
+# Monitor Remoto v0.1.0-alpha.89 · Menus modernos e Downloads fixos
+
+## Novidades
+- **Downloads/Monitor Remoto** criado automaticamente no Android 10+; essa é a única pasta de transferência padrão nos dois aparelhos, sem seletor de pasta.
+- Listagem remota restrita a arquivos próprios que o app criou no MediaStore, filtrados por proprietário do pacote e caminho relativo. Não há acesso oculto aos downloads de outros aplicativos.
+- Operações autenticadas disponíveis sobre arquivos próprios: download, upload, renomeação, movimentação, cópia, lixeira e exclusão confirmada; diretórios vazios podem ser criados e removidos.
+- Modernização de diálogos temáticos em várias telas e menu inferior para ações de arquivo. Mantida grade de 3 colunas.
+- Validação e publicação SHA-256, retomada privada de downloads e versão exata nos dois aparelhos preservadas.
+
+## Limitações
+- Transferência na modalidade fixa requer Android 10+. Os arquivos que eram acessíveis via árvore SAF na alpha.88 NÃO migram automaticamente. É necessário enviá-los ao Monitor Remoto como arquivos específicos.
+- Arquivos pessoais de outros apps em Downloads não aparecem na pasta remota sem autorização específica; nenhum bypass de privacidade/segurança do Android.
+- Compilação Android completa e testes reais não disponíveis nesta entrega.
+
+# Monitor Remoto v0.1.0-alpha.89 · Painel em 3 colunas e Configurações pesquisáveis
 
 ## Novidades
 - Painel compacto com **12 funções em 3 colunas**, mantendo toque e acessibilidade. Detalhes na barra do aparelho.

@@ -134,7 +134,7 @@ internal fun MainActivity.displayResult(root: JSONObject, fromCache: Boolean = f
         (0 until events.length()).count { events.optJSONObject(it)?.optString("type") == "notificacao" }
     } ?: 0
     val cards = listOf(
-        actionTile(R.drawable.ic_folder_download, "Arquivos", "Pasta autorizada", enabled = true) {
+        actionTile(R.drawable.ic_folder_download, "Arquivos", "Downloads fixos", enabled = true) {
             startActivity(Intent(this, RemoteFilesActivity::class.java).apply {
                 putExtra(RemoteFilesActivity.EXTRA_HOST, br.dev.monitorremoto.core.SettingsStore.getRemoteHost(this@displayResult))
                 putExtra(RemoteFilesActivity.EXTRA_METHOD, remoteConnection.method)
@@ -264,7 +264,7 @@ private fun MainActivity.showRemoteMaintenance() {
         addView(label("Se o celular não voltar a iniciar, ele poderá ficar inacessível sem o botão Power. A Depuração sem fios pode não voltar sozinha.", 12.5f, muted = true))
         addView(label("Nenhum comando é enviado ao abrir este menu. O desligamento completo não é oferecido por segurança. A confirmação de reinicialização é feita no ADB.", 12f, muted = true))
     })
-    showManagedDialog(AlertDialog.Builder(this)
+    showManagedDialog(themedPopup(this)
         .setView(wrapper)
         .setNegativeButton("Cancelar", null))
 }

@@ -192,7 +192,7 @@ private fun MainActivity.showIncomingAccessActions(peer: AuthenticatedAccess.Pee
     layout.addView(dialogMetricRow("Primeiro acesso", formatDate(peer.sinceMs)))
     sectionGap(layout, 8)
     layout.addView(label("O acesso não é uma sessão TCP contínua. Interromper ou trocar a chave afeta todos os controladores.", 11f, muted = true))
-    val dialog = AlertDialog.Builder(this)
+    val dialog = themedPopup(this)
         .setTitle("Acesso autenticado")
         .setView(wrapper)
         .setNeutralButton("Trocar chave") { _, _ -> confirmRotateMonitorKey() }

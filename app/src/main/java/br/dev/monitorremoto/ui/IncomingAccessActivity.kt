@@ -145,7 +145,7 @@ class IncomingAccessActivity : Activity() {
             addView(gap(8))
             addView(text("O monitoramento será desligado para todos os controladores. Ele só voltará a compartilhar dados após uma nova ativação explícita.", 13.5f, subtle = true))
         }
-        AlertDialog.Builder(this)
+        themedPopup(this)
             .setView(confirmation)
             .setNegativeButton("Cancelar", null)
             .setPositiveButton("Parar monitoramento") { _, _ ->

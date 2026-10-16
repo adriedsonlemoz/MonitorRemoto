@@ -1,4 +1,4 @@
-# Arquitetura (0.1.0-alpha.88)
+# Arquitetura (0.1.0-alpha.89)
 
 ```text
 MONITORADO                                      CONTROLE
@@ -29,6 +29,10 @@ Ver tela começa em JPEG por responsividade. H.264 depende de seleção explíci
 
 A captura usa `ImageReader` RGBA, `Bitmap` JPEG com largura máxima 540 px, taxa 1 fps, até 110 KiB/frame e sem persistência. `ScreenFrameStore` mantém somente o quadro atual em RAM com validade de 3 s. Solicitações `screenFrame` são autenticadas via AES-GCM (versão exata, timestamp, nonce contra replay) na mesma porta TCP. O controlador decodifica e mostra na `RemoteScreenActivity` enquanto visível; nunca salva ou grava. **Não confundir 1 fps com vídeo fluido.** O Android protege conteúdo `FLAG_SECURE` e exige consentimento renovado após parada; o monitor não contorna.
 
+## Pasta de transferência fixa (alpha.89)
+O monitorado e o controlador usam `MediaStore.Downloads` com `RELATIVE_PATH=Download/Monitor Remoto/` em Android 10+. `FixedDownloadsFolder` filtra `OWNER_PACKAGE_NAME == packageName` e não retorna arquivos de terceiros, mesmo se estiverem nessa pasta. O seletor SAF não é exposto na interface nova: a chave de pareamento e a versão exata continuam necessárias para acessar endpoints `data*`. O app materializa a pasta ao iniciar por meio de um arquivo LEIA-ME de propriedade do aplicativo. Upload é staged em cache privado e só publicado após SHA-256; downloads são validados antes da publicação e mantêm retomada em pasta temporária privada.
+A interface de arquivos mantém limite 2 GiB, até 20 itens por lote e diretórios virtuais de propriedade do aplicativo. Operações suportadas: criação de subpasta, envio, cópia/movimentação/renomeação/exclusão de arquivos, lixeira lógica, remoção de pastas vazias. Subpastas não vazias não são excluídas. A lista não dá acesso universal ao armazenamento; arquivos pré-existentes de outros apps exigem seleção/autorização Android se houver novo fluxo apropriado. No Android 8–9, a modalidade fixa não está disponível. Não presumir que o Google Play aprovará permissões não relacionadas.
+
 ## Interface alpha.88
 - Painel remoto: 12 ações em grade de três colunas; Detalhes separado no cabeçalho. O texto secundário dos cartões permanece acessível a leitores de tela.
 - Configurações: índice local pesquisável, separado por segurança, recuperação, câmera/tela, arquivos, comunicação e aparência; cada ação continua exigindo permissões locais aplicáveis.
@@ -37,9 +41,9 @@ A captura usa `ImageReader` RGBA, `Bitmap` JPEG com largura máxima 540 px, taxa
 
 ## Distribuição e assinatura
 
-O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.88` e `versionCode=88`.
+O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.89` e `versionCode=89`.
 
-- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.88.apk`.
+- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.89.apk`.
 - `upload-artifact` sempre distribui um ZIP; GitHub Releases recebe o **arquivo APK direto**.
 - Com quatro Secrets, Gradle gera APK Release assinado e AAB. Sem Secrets, o arquivo é Debug de teste e não preserva necessariamente a assinatura entre execuções.
 - Releases são prévias, não substituem a futura revisão da Google Play e nem os ensaios reais.

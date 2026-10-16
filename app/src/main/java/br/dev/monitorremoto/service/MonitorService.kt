@@ -111,6 +111,17 @@ class MonitorService : Service() {
         manager.createNotificationChannel(NotificationChannel(
             ACCESS_CHANNEL, "Acesso remoto detectado", NotificationManager.IMPORTANCE_DEFAULT
         ))
+        if (br.dev.monitorremoto.core.FixedDownloadsFolder.supported()) {
+            kotlin.concurrent.thread(name = "MonitorRemoto-prepare-downloads") {
+                runCatching {
+                    // Revoga apenas o grant legado SAF, não apaga arquivos do usuário.
+                    if (SettingsStore.sharedDataTree(applicationContext).isNotBlank())
+                        br.dev.monitorremoto.core.SharedDataFolder.revoke(applicationContext)
+                    br.dev.monitorremoto.core.FixedDownloadsFolder.ensure(applicationContext)
+                }
+                    .onFailure { Log.w("MonitorRemotoFiles", "Pasta padrão indisponível", it) }
+            }
+        }
         br.dev.monitorremoto.core.RemotePhysicalControls.start(applicationContext)
         br.dev.monitorremoto.core.DeviceStateReader.start(applicationContext)
     }

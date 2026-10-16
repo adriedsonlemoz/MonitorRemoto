@@ -40,7 +40,7 @@ internal fun MainActivity.showRemoteLockDialog() {
     sectionGap(layout, 8)
     val refreshButton = actionButton("Atualizar autorização") { }
     layout.addView(refreshButton)
-    val dialog = AlertDialog.Builder(this).setView(wrapper).setNegativeButton("Fechar", null).create()
+    val dialog = themedPopup(this).setView(wrapper).setNegativeButton("Fechar", null).create()
     var busy = false
     var permissionReady = false
     fun setEnabled() {

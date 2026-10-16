@@ -31,6 +31,7 @@ object SharedDataFolder {
     }
 
     fun available(context: Context): Boolean {
+        if (FixedDownloadsFolder.supported()) return FixedDownloadsFolder.available(context)
         val uri = tree(context) ?: return false
         return SettingsStore.isMonitorEnabled(context) && hasPermission(context, uri)
     }
@@ -38,7 +39,7 @@ object SharedDataFolder {
     private fun hasPermission(context: Context, uri: Uri): Boolean =
         context.contentResolver.persistedUriPermissions.any { it.uri == uri && it.isReadPermission }
 
-    fun writable(context: Context): Boolean = available(context) && SettingsStore.allowRemoteFileWrite(context) &&
+    fun writable(context: Context): Boolean = if (FixedDownloadsFolder.supported()) available(context) else available(context) && SettingsStore.allowRemoteFileWrite(context) &&
         tree(context)?.let { uri -> context.contentResolver.persistedUriPermissions.any {
             it.uri == uri && it.isReadPermission && it.isWritePermission } } == true
 
@@ -131,6 +132,7 @@ object SharedDataFolder {
     }
 
     fun handle(context: Context, request: JSONObject): JSONObject {
+        if (FixedDownloadsFolder.supported()) return FixedDownloadsFolder.handle(context, request)
         val response = JSONObject().put("v", 1).put("op", request.optString("op"))
             .put("appVersion", br.dev.monitorremoto.transport.AppVersion.NAME)
         if (!available(context)) return response.put("ok", false).put("message",
@@ -219,6 +221,7 @@ object SharedDataFolder {
      */
     fun stream(context: Context, request: JSONObject, onPrefixProgress: (Long) -> Unit = {},
         emit: (ByteArray, Int, Long) -> Unit): ByteArray {
+        if (FixedDownloadsFolder.supported()) return FixedDownloadsFolder.stream(context, request, onPrefixProgress, emit)
         require(available(context)) { "Compartilhamento de arquivos não autorizado." }
         val tree = tree(context) ?: error("Pasta remota não selecionada.")
         val parts = path(request)

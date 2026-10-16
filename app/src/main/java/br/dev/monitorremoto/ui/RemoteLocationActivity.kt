@@ -195,7 +195,7 @@ class RemoteLocationActivity : Activity() {
             map.enableOnline(false)
             updateOnlineLabel()
         } else {
-            AlertDialog.Builder(this)
+            themedPopup(this)
                 .setTitle("Carregar mapa online?")
                 .setMessage("Para buscar blocos do OpenStreetMap, a região visualizada e seu endereço de rede são comunicados ao serviço de mapas. Só serão carregados blocos da área visível, com cache local. Você pode desligar a qualquer momento.")
                 .setNegativeButton("Cancelar", null)
@@ -208,7 +208,7 @@ class RemoteLocationActivity : Activity() {
         }
     }
     private fun chooseInterval() {
-        AlertDialog.Builder(this).setTitle("Frequência de consulta do controlador")
+        themedPopup(this).setTitle("Frequência de consulta do controlador")
             .setSingleChoiceItems(RATE_LABELS, RATES.indexOf(intervalMs)) { dialog, idx ->
                 intervalMs = RATES[idx]
                 prefs.edit().putLong("refresh_interval_ms", intervalMs).apply()

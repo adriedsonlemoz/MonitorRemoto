@@ -414,7 +414,7 @@ internal fun MainActivity.showRemoteMessageEditor(operation: String, recipient: 
         filters = arrayOf(android.text.InputFilter.LengthFilter(500))
     }
     layout.addView(input, LinearLayout.LayoutParams(-1, -2))
-    val dialog = AlertDialog.Builder(this).setTitle("Responder mensagem")
+    val dialog = themedPopup(this).setTitle("Responder mensagem")
         .setView(wrapper).setNegativeButton("Cancelar", null).setPositiveButton("Revisar", null).create()
     showManagedDialog(dialog)
     dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {

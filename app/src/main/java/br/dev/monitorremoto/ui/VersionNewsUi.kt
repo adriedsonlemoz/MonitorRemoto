@@ -15,18 +15,18 @@ internal fun MainActivity.showVersionNews() {
     layout.addView(iconSectionHeader(R.drawable.ic_info, "Novidades · ${AppVersion.NAME}", "Bem-vindo à atualização"))
     sectionGap(layout, 10)
     val entries = listOf(
-        "Painel em 3 colunas" to "12 funções com botões compactos e Detalhes no cabeçalho do aparelho.",
-        "Configurações mais simples" to "Seis grupos e busca local instantânea. Autorizações continuam no aparelho monitorado.",
-        "Avisos com novo visual" to "Diálogos principais mais compactos, mantendo confirmação para ações sensíveis.",
-        "Diagnóstico de tempo" to "Exibe duração real da última solicitação autenticada, sem confundir com a idade dos dados.",
-        "Recursos preservados" to "Arquivos, mapa e fotografia remota continuam com as autorizações já existentes."
+        "Downloads sem escolher pasta" to "Pasta fixa Downloads/Monitor Remoto criada automaticamente em Android 10+.",
+        "Envio e recuperação" to "Enviar seleciona os arquivos; baixar usa Downloads/Monitor Remoto, mantendo integridade e retomada.",
+        "Arquivos do próprio app" to "Somente arquivos criados pelo Monitor Remoto ficam disponíveis, sem ler downloads de terceiros.",
+        "Menus redesenhados" to "Ações de arquivo em menu inferior e diálogos com estilo coerente nos temas.",
+        "Segurança preservada" to "Chave de pareamento e confirmação de exclusão continuam obrigatórias."
     )
     entries.forEach { (title, details) ->
         layout.addView(dialogCardRow(title, details, ""))
         sectionGap(layout, 7)
     }
     layout.addView(label("A transferência pode ser limitada pelo Wi-Fi ou armazenamento. Atualize os dois aparelhos para a mesma versão antes de copiar.", 12f, muted = true))
-    val dialog = AlertDialog.Builder(this).setView(wrapper)
+    val dialog = themedPopup(this).setView(wrapper)
         .setPositiveButton("Entendi") { _, _ -> SettingsStore.markNewsSeen(this, AppVersion.NAME) }
         .create().apply { setCancelable(false); setCanceledOnTouchOutside(false) }
     showManagedDialog(dialog)
