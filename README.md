@@ -1,8 +1,10 @@
 # Monitor Remoto
 
-**Alpha.84 · fotografia remota aprimorada:** no monitorado, ative monitoramento e abra **Preparar foto remota** uma vez para armar a câmera com permissão Android e notificação permanente. No controlador, toque em **Tirar foto**. Apenas um JPEG é capturado por Camera2 (sem prévia/streaming), recebido por AES-GCM e mostrado para salvar. Não funciona se o Android parar a sessão, houver indisponibilidade da câmera ou se o aparelho estiver fora da LAN/VPN. Não rearma por boot nem permite abertura oculta.
+**Foto remota (histórico alpha.84):** no monitorado, ative monitoramento e abra **Preparar foto remota** uma vez para armar a câmera com permissão Android e notificação permanente. No controlador, toque em **Tirar foto**. Apenas um JPEG é capturado por Camera2 (sem prévia/streaming), recebido por AES-GCM e mostrado para salvar. Não funciona se o Android parar a sessão, houver indisponibilidade da câmera ou se o aparelho estiver fora da LAN/VPN. Não rearma por boot nem permite abertura oculta.
 
-**v0.1.0-alpha.87 / versionCode 87** · Android 8.0+ · Kotlin 2.2.21 · AGP 8.13.2 · Gradle 8.13
+**v0.1.0-alpha.88 / versionCode 88** · Android 8.0+ · Kotlin 2.2.21 · AGP 8.13.2 · Gradle 8.13
+
+**Novidades alpha.88:** o Painel de controle agora exibe 12 ações em **3 colunas**, e Detalhes fica no cabeçalho do aparelho. Configurações ganham uma página inicial de grupos pesquisáveis (GPS, câmera, arquivos, segurança e outras seções), com rótulos objetivos e sem mudar permissões. Os diálogos centrais de aviso/confirmar seguem o tema e usam botões compactos; confirmação explícita permanece obrigatória. A telemetria mostra o tempo real de ida e volta (RTT) da última requisição autenticada, distinto do horário da informação observada. A tela não usa streaming TCP persistente: os 15 s são o intervalo de consulta, não latência. Sem novas permissões, sem alteração de protocolo nem coleta de dados. Compilação Android/validação em aparelhos ainda pendentes.
 
 **Novidades alpha.87:** **Recuperação automática da localização** configurada uma única vez em Configurações no aparelho monitorado, com notificação visível, acesso Android e revogação explícita. Enquanto a sessão estiver ativa, os controladores pareados consultam sem novo toque no monitorado. A restauração após reinício só é tentada quando monitoramento/autostart e permissão de **localização o tempo todo** já foram autorizados; Android/fabricante podem bloquear. Na tela Localização, o mapa de referência aparece mesmo sem fix remoto (NÃO é marcador do aparelho), GPS autenticado recentraliza automaticamente, consultas periódicas ligadas com a tela aberta, status mais compacto e último ponto da tela marcado como antigo se a conexão cair. Sem servidor remoto: rede local/VPN ainda exigida; sem rastreamento secreto, sem ativação silenciosa de câmera, sem GPS ligado por comando do controlador. Compilação e hardware pendentes.
 
@@ -313,7 +315,7 @@ A Home, o Modo Monitorado, a escolha de conexão, os submenus de Configurações
 
 ## Como utilizar
 
-1. Execute GitHub Actions > **Gerar APK e Release** > Run workflow. Para baixar **APK sem ZIP**, use Releases > `v0.1.0-alpha.87` > Assets > **`MonitorRemoto-v0.1.0-alpha.87.apk`**. Em Actions > Artifacts, um APK de contingência (quando presente) continua vindo em ZIP por comportamento padrão do GitHub. Instale o mesmo APK nos dois aparelhos.
+1. Execute GitHub Actions > **Gerar APK e Release** > Run workflow. Para baixar **APK sem ZIP**, use Releases > `v0.1.0-alpha.88` > Assets > **`MonitorRemoto-v0.1.0-alpha.88.apk`**. Em Actions > Artifacts, um APK de contingência (quando presente) continua vindo em ZIP por comportamento padrão do GitHub. Instale o mesmo APK nos dois aparelhos.
 2. No telefone secundário: na nova **Home**, toque em **Monitorar este aparelho**; autorize a notificação de serviço e ative o monitoramento. Em Configurações, conceda apenas as permissões necessárias e selecione os aplicativos cujas notificações deseja compartilhar.
 3. Na página Monitorado, toque no cartão **Gerar QR**. Escolha o IP privado acessível. O QR expira em 2 minutos e é válido para um único pareamento.
 4. No telefone principal: na **Home**, toque em **Conectar novo aparelho > QR Code**, aponte a câmera na janela compacta e confirme os dados do aparelho antes do pareamento. Para um aparelho salvo, use **Aparelhos anteriores > Conectar**. A digitação manual de IP e chave continua disponível.
@@ -340,7 +342,7 @@ Requer Android SDK API 36, Java 17, Gradle 8.13. O repositório ainda não inclu
 gradle :app:testDebugUnitTest :app:assembleDebug
 ```
 
-APK local de teste: `app/build/outputs/apk/debug/app-debug.apk`. O workflow copia esse arquivo ou o Release assinado como **`MonitorRemoto-v0.1.0-alpha.87.apk`**. Baixe diretamente na aba GitHub **Releases**. **O APK não está incluído neste ZIP de código-fonte.** Veja `docs/PAIRING_QR.md` para segurança do QR.
+APK local de teste: `app/build/outputs/apk/debug/app-debug.apk`. O workflow copia esse arquivo ou o Release assinado como **`MonitorRemoto-v0.1.0-alpha.88.apk`**. Baixe diretamente na aba GitHub **Releases**. **O APK não está incluído neste ZIP de código-fonte.** Veja `docs/PAIRING_QR.md` para segurança do QR.
 
 Opcional: configure os quatro Secrets de assinatura para gerar APK Release assinado e AAB. Ver `docs/APK_DOWNLOAD.md`. Preservar a mesma keystore entre builds é essencial para atualizações sem reinstalação.
 

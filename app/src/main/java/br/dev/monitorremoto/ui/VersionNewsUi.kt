@@ -15,11 +15,11 @@ internal fun MainActivity.showVersionNews() {
     layout.addView(iconSectionHeader(R.drawable.ic_info, "Novidades · ${AppVersion.NAME}", "Bem-vindo à atualização"))
     sectionGap(layout, 10)
     val entries = listOf(
-        "Histórico local de arquivos" to "Mostra operações concluídas, parciais e falhas, sem nomes de arquivos, com opção de apagar.",
-        "Painel mais legível" to "Funções em duas colunas e aviso quando a telemetria é apenas uma leitura guardada.",
-        "Localização mais clara" to "GPS com idade e precisão separadas, destacando leitura antiga e sem resposta.",
-        "Privacidade mantida" to "Sem novas permissões; arquivos, câmera, SMS e localização seguem dependentes de autorização.",
-        "Transferências" to "Cópia continua contínua e cifrada; retomada após fechar a tela ainda não está disponível."
+        "Painel em 3 colunas" to "12 funções com botões compactos e Detalhes no cabeçalho do aparelho.",
+        "Configurações mais simples" to "Seis grupos e busca local instantânea. Autorizações continuam no aparelho monitorado.",
+        "Avisos com novo visual" to "Diálogos principais mais compactos, mantendo confirmação para ações sensíveis.",
+        "Diagnóstico de tempo" to "Exibe duração real da última solicitação autenticada, sem confundir com a idade dos dados.",
+        "Recursos preservados" to "Arquivos, mapa e fotografia remota continuam com as autorizações já existentes."
     )
     entries.forEach { (title, details) ->
         layout.addView(dialogCardRow(title, details, ""))

@@ -1,4 +1,4 @@
-# Monitor Remoto 0.1.0-alpha.87
+# Monitor Remoto 0.1.0-alpha.88
 # Convenções permanentes do projeto Monitor Remoto
 
 - Toda alteração de código incrementa sequencialmente `versionCode` e `versionName` (ex.: `0.1.0-alpha.8` -> `0.1.0-alpha.9`). Sincronizar tela, README, CHANGELOG, RELEASE_NOTES e documentação.
@@ -21,7 +21,7 @@
 - Alpha.10: manter tema **claro padrão**, as opções da engrenagem, janela Conectar, botão de atualização compacto, lista de até 5 aparelhos recentes e os dados do Controle no topo. Não reintroduzir formulário longo na tela principal.
 - Credenciais por dispositivo usam `RecentDevices` + `SecretVault.profileKeyName`, com migração única da alpha.9. Não reaproveitar `CONTROLLER_KEY` antigo para IPs novos nem gravar segredo em preferências sem criptografia. Esquecer apaga o segredo correspondente.
 - Respostas HTTP/TCP não são conexão persistente. Exibir "Conectado" apenas após consulta autenticada bem-sucedida e "Sem resposta" após erro. Não inventar tempos de atualização.
-- Próxima versão sequencial: `0.1.0-alpha.87`, `versionCode 87`.
+- Próxima versão sequencial: `0.1.0-alpha.89`, `versionCode 89`.
 
 - Alpha.15: preservar a seleção Conectar → QR/Manual/Salvos, confirmação do QR antes de parear, cartões salvos com três ações e o scanner em Activity com tema Dialog.
 
@@ -174,3 +174,5 @@
 - Alpha.86: retomada persistente SOMENTE para Downloads MediaStore no controlador, por arquivos parciais em noBackupFilesDir com 7 dias de retenção. Usuário inicia novamente ao escolher o mesmo arquivo; nenhuma transferência invisível continua após fechar Activity. Servidor recebe offset múltiplo de 192 KiB, mas calcula hash SHA-256 DO ARQUIVO INTEIRO (inclusive prefixo não retransmitido); cliente calcula hash de prefixo local, verifica digest integral antes de publicar em MediaStore (IS_PENDING). Não confiar apenas em tamanho/data. Não retomar escrita em provedores SAF arbitrários nem em uploads sem protocolo adequado. Distinguir progresso do transporte e publicação final; avisar sobre duplicação transitória de armazenamento. Compilação Android/testes físicos pendentes. Próxima alpha.87.
 
 - Alpha.87: autorização prévia e local de **Recuperação automática da localização** (OFF por padrão) permite coordenadas em sessões subsequentes sem toque a cada consulta. Reboot/recriação só tenta GPS se ACCESS_BACKGROUND_LOCATION e monitoramento/autostart foram concedidos; nunca iniciar GPS por requisição remota ou ignorar limites do Android. Notificação permanente + ação Parar desarmam recuperação, assim como encerrar monitoramento. GPS e transmissão não funcionam sem permissão, Android Location ON, FGS e rede LAN/VPN. `RemoteMapView` sempre pode desenhar mapa de referência sem fingir posição do remoto, com OSM somente após autorização de blocos online. Status de rede pode preservar último ponto na mesma tela somente se identificado como ANTIGO; nunca mostrar como atual. Compilação Android/teste físico pendentes; próxima alpha.88.
+
+- Alpha.88: o painel usa 12 funções em três colunas, com Detalhes no cabeçalho; Configurações têm índice pesquisável por categorias sem alterar o caminho de concessão de permissões. Avisos/confirmacões centrais devem preservar botão Cancelar nas ações sensíveis e mensagens legíveis nos temas. RTT da consulta autenticada é medido com relógio monotônico, não substitui a hora da leitura remota e não confirma conexão persistente. Nunca voltar à grade de duas colunas no painel de funções.

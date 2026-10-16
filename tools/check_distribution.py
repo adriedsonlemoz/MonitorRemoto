@@ -16,7 +16,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.87" and code.group(1) == "87", "Versões incompatíveis"
+assert version == "0.1.0-alpha.88" and code.group(1) == "88", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -169,8 +169,8 @@ assert 'internal fun MainActivity.networkIcon(host: String)' in ui and 'internal
 assert 'private fun MainActivity.compactMetricCard(' in ui and 'private fun MainActivity.addMetricGrid(' in ui
 assert 'private fun MainActivity.actionTile(' in ui and 'private fun MainActivity.addActionGrid(' in ui
 assert 'RemoteCatalogActivity::class.java' in ui and (ui_root / 'RemoteCatalogActivity.kt').is_file()
-assert 'private fun MainActivity.showRemoteDetailsDialog(root: JSONObject)' in ui
-assert 'private fun MainActivity.showRemoteDetailsDialog(root: JSONObject)' in ui
+assert 'internal fun MainActivity.showRemoteDetailsDialog(root: JSONObject)' in ui
+assert 'internal fun MainActivity.showRemoteDetailsDialog(root: JSONObject)' in ui
 assert 'Funções remotas' in ui and 'Mensagens' in ui and 'Ver tela' in ui and 'Localização' in ui
 print('PASSOU: alpha.19, painel remoto compacto, atalhos e detalhes dedicados')
 
@@ -294,8 +294,8 @@ assert 'if (optedIn && granted && Build.VERSION.SDK_INT >= 33)' in telephony_rea
 assert 'phoneNumberPermissionRequest ->' in main_ui
 assert 'SettingsStore.setSharePhoneNumber(this, false)' in ui
 assert 'R.drawable.ic_battery' in ui and 'R.drawable.ic_thermometer' in ui
-assert 'R.drawable.ic_folder_download' in ui and 'Recuperar dados' in ui
-assert 'Consulta autorizada' in ui and 'showRemoteDetailsDialog(root)' in ui
+assert 'R.drawable.ic_folder_download' in ui and 'Arquivos' in ui
+assert 'Consulta autorizada' in ui and 'showRemoteDetailsDialog(current)' in ui
 assert 'Armazenamento' in details and 'Rede móvel e chip' in details and 'Sistema e hardware' in details
 assert 'Copiar resumo técnico' in details and 'FLAG_SECURE' in details
 assert len(list((root / 'app/src/main/res/drawable').glob('ic_*.xml'))) >= 25
@@ -448,7 +448,7 @@ assert 'fun stop()' in frame_store and 'STALE_MS = 3_000L' in frame_store
 assert 'MAX_JPEG_BYTES = 110_000' in frame_store
 assert '"screenFrame"' in server and 'ScreenFrameStore.snapshot()' in server
 assert 'fun screenFrame(' in client and 'RemoteClient.screenFrame(' in viewer
-assert '"Ver tela", "Ao vivo' in module_ui['RemoteDashboardUi.kt']
+assert '"Tela", "Ao vivo' in module_ui['RemoteDashboardUi.kt']
 assert 'createVirtualDisplay(' in screen and 'createVirtualDisplay(' not in viewer
 assert 'MediaProjectionManager' not in viewer
 assert 'ScreenShareService.stop(this)' in monitor_service
@@ -638,7 +638,7 @@ print('PASSOU: alpha.44, lambdas ADB vinculadas ao parâmetro operation(AdbClien
 remote_files = (root / 'app/src/main/java/br/dev/monitorremoto/ui/RemoteFilesActivity.kt').read_text()
 shared_folder = (root / 'app/src/main/java/br/dev/monitorremoto/core/SharedDataFolder.kt').read_text()
 file_policy = (root / 'app/src/main/java/br/dev/monitorremoto/core/RemoteFilePolicy.kt').read_text()
-assert 'Recuperar dados", "Pasta autorizada", enabled = true' in (root / 'app/src/main/java/br/dev/monitorremoto/ui/RemoteDashboardUi.kt').read_text()
+assert 'Arquivos", "Pasta autorizada", enabled = true' in (root / 'app/src/main/java/br/dev/monitorremoto/ui/RemoteDashboardUi.kt').read_text()
 assert 'ACTION_OPEN_DOCUMENT_TREE' in (root / 'app/src/main/java/br/dev/monitorremoto/ui/SettingsScreenUi.kt').read_text()
 assert 'takePersistableUriPermission' in shared_folder and 'releasePersistableUriPermission' in shared_folder
 assert 'DocumentsContract.buildChildDocumentsUriUsingTree' in shared_folder and 'fun resolve(' in shared_folder
@@ -677,7 +677,7 @@ assert 'client?.connected() != true' in ui50
 assert 'showControls()' in ui50 and 'modal("Controles ADB"' in ui50
 assert (root / 'app/src/main/java/br/dev/monitorremoto/adb/AdbAutoConnectPolicy.kt').exists()
 assert (root / 'app/src/test/java/br/dev/monitorremoto/adb/AdbAutoConnectPolicyTest.kt').exists()
-assert 'Reconexão rápida e configuração guiada ADB' in (ui_root / 'SettingsScreenUi.kt').read_text()
+assert 'Modo avançado ADB' in (ui_root / 'SettingsHubUi.kt').read_text()
 print('PASSOU: alpha.50, wizard modal, QR com descoberta automática e fallback manual')
 
 # Alpha.51: reconexão somente foreground, serviço ADB já autorizado e heartbeat real.
@@ -860,7 +860,7 @@ assert all(f'"{action}"' in policy60 for action in ("status", "soundStart", "sou
 assert '5, 10, 20, 30' in policy60 and 'seconds in durations' in policy60
 assert 'showRemotePhysicalDialog' in ui60 and 'remoteConnection.deviceControl' in ui60
 assert 'Permitir alerta sonoro remoto' in settings60 and 'Permitir lanterna remota' in settings60
-assert 'Tocar som' in ui59 and 'Lanterna' in ui59
+assert '"Som"' in ui59 and 'Lanterna' in ui59
 assert '<uses-permission android:name="android.permission.CAMERA"' in manifest
 assert '<uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"' not in manifest
 assert (root / 'app/src/test/java/br/dev/monitorremoto/core/DeviceControlPolicyTest.kt').exists()
@@ -1003,7 +1003,7 @@ _components = (_ui_dir / "UiComponents.kt").read_text(encoding="utf-8")
 _dialogs = (_ui_dir / "AppDialogUi.kt").read_text(encoding="utf-8")
 _main = (_ui_dir / "MainActivity.kt").read_text(encoding="utf-8")
 assert not re.search(r"\blineSpacingExtra\s*=", _components + "\n" + _dialogs), "TextView.lineSpacingExtra é val somente leitura; usar setLineSpacing"
-assert _components.count("setLineSpacing(") >= 2 and _dialogs.count("setLineSpacing(") >= 2, "Espaçamento visual deve usar o setter Android"
+assert _components.count("setLineSpacing(") >= 2 and _dialogs.count("setLineSpacing(") >= 1, "Espaçamento visual deve usar o setter Android"
 assert "internal fun darkTheme(): Boolean" in _main, "darkTheme deve ser acessível às extensões UI"
 assert "private fun darkTheme(): Boolean" not in _main, "darkTheme privado causou erro de compilação no workflow 64"
 print("PASSOU: alpha.69 regressão Kotlin TextView.setLineSpacing e visibilidade de darkTheme")
@@ -1221,7 +1221,7 @@ assert all(x not in recent85 for x in ['put("path"', 'put("name"', 'put("ip"', '
 assert 'RemoteOperationHistoryPolicy.valid(' in recent85 and 'operations = setOf' in policy85
 assert 'private fun showHistory()' in files85 and 'logOperation("download"' in files85
 assert 'logOperation("upload"' in files85 and 'logOperation(action,' in files85
-assert 'tiles.chunked(2)' in remote85 and 'Dados guardados no controlador' in remote85
+assert 'tiles.chunked(3)' in remote85 and 'Dados guardados no controlador' in remote85
 assert 'Sem conexão com o aparelho' in location85 and 'Leitura antiga' in location85
 print('PASSOU: alpha.85 histórico local mínimo, grade legível, diagnóstico da conexão e GPS.')
 
@@ -1260,3 +1260,16 @@ assert 'MAPA DE REFERÊNCIA' in map_src and 'private var initialized = true' in 
 assert 'private var automatic = true' in location_ui and 'NÃO é localização ao vivo' in location_ui
 assert (root / "app/src/test/java/br/dev/monitorremoto/core/LocationRecoveryModeTest.kt").exists()
 print('PASSOU: alpha.87 proteção opt-in, restauração condicionada ao Android e mapa sem falsa localização.')
+
+# Alpha.88: novas telas não podem reduzir as barreiras de segurança; três colunas são obrigatórias.
+dashboard88 = (ui_root / "RemoteDashboardUi.kt").read_text()
+settings88 = (ui_root / "SettingsHubUi.kt").read_text()
+conn88 = (ui_root / "RemoteConnectionManager.kt").read_text()
+dialogs88 = (ui_root / "AppDialogUi.kt").read_text()
+assert 'tiles.chunked(3)' in dashboard88 and 'tiles.chunked(2)' not in dashboard88
+assert '"Detalhes", ""' not in dashboard88 and 'showRemoteDetailsDialog' in (ui_root / "ConnectionScreenUi.kt").read_text()
+assert 'renderSettingsHome()' in (ui_root / "SettingsScreenUi.kt").read_text()
+assert 'Pesquisar configurações' in settings88 and 'openSettingsSection(item.section)' in settings88
+assert 'lastRoundTripMs' in conn88 and 'SystemClock.elapsedRealtime()' in conn88
+assert 'secondary = "Cancelar"' in dialogs88 and 'onPrimary = onConfirm' in dialogs88
+print('PASSOU: alpha.88 três colunas, busca por categorias, RTT monotônico e confirmação preservada.')

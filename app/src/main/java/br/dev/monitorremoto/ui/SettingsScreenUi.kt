@@ -57,48 +57,7 @@ internal fun MainActivity.renderSettingsModule() {
     content.addView(top)
     sectionGap(content, 13)
     if (section == "home") {
-        val groupA = panel(15)
-        groupA.addView(label("PRIVACIDADE E PERMISSÕES", 11.5f, strong = true, muted = true))
-        sectionGap(groupA, 10)
-        settingsEntry(groupA, R.drawable.ic_bell, "Notificações",
-            "Escolher aplicativos e permitir respostas", "notifications")
-        settingsEntry(groupA, R.drawable.ic_phone, "Aplicativos instalados", "Compartilhar lista de apps sob demanda", "apps")
-        settingsEntry(groupA, R.drawable.ic_message, "SMS e telefonia",
-            "Ler, receber, responder e selecionar chip", "sms")
-        settingsEntry(groupA, R.drawable.ic_folder_download, "Arquivos e recuperação",
-            "Autorizar pasta para cópia em outro celular", "files")
-        settingsEntry(groupA, R.drawable.ic_monitor, "Tela e controle remoto",
-            "Compartilhar, controlar toque e capturar áudio", "screen")
-        content.addView(groupA)
-        sectionGap(content, 12)
-        val groupB = panel(15)
-        groupB.addView(label("APARELHO E MANUTENÇÃO", 11.5f, strong = true, muted = true))
-        sectionGap(groupB, 10)
-        settingsEntry(groupB, R.drawable.ic_flashlight, "Som e lanterna",
-            "Autorizações para localizar e ligar o flash", "physical")
-        settingsEntry(groupB, R.drawable.ic_shield, "Bloqueio remoto",
-            "Permissão Android e autorização local", "lock")
-        settingsEntry(groupB, R.drawable.ic_power, "Serviço e recuperação",
-            "Inicialização, retomada e funcionamento", "service")
-        settingsEntry(groupB, R.drawable.ic_pin, "Localização",
-            "Compartilhar GPS com início e parada local", "location")
-        settingsEntry(groupB, R.drawable.ic_thermometer, "Alertas e proteção",
-            "Bateria, temperatura e proteção térmica", "health")
-        settingsEntry(groupB, R.drawable.ic_activity, "Diagnóstico",
-            "Conexão, permissões e estado do servidor", "diagnostics")
-        groupB.addView(iconMenuRow(R.drawable.ic_shield, "Modo avançado ADB", "Reconexão rápida e configuração guiada ADB") {
-            startActivity(Intent(this, AdbActivity::class.java))
-        })
-        content.addView(groupB)
-        sectionGap(content, 12)
-        val groupC = panel(15)
-        groupC.addView(label("APLICATIVO", 11.5f, strong = true, muted = true))
-        sectionGap(groupC, 10)
-        settingsEntry(groupC, R.drawable.ic_shield, "Segurança e pareamento", "Credenciais e revogação", "security")
-        settingsEntry(groupC, R.drawable.ic_palette, "Aparência", "Tema claro, escuro ou sistema", "appearance")
-        settingsEntry(groupC, R.drawable.ic_info, "Novidades da versão", "Ver mudanças desta atualização", "news")
-        settingsEntry(groupC, R.drawable.ic_info, "Sobre", "Versão e privacidade", "about", false)
-        content.addView(groupC)
+        renderSettingsHome()
     } else {
         val page = panel(15)
         when (section) {

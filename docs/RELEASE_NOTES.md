@@ -1,3 +1,16 @@
+# Monitor Remoto v0.1.0-alpha.88 · Painel em 3 colunas e Configurações pesquisáveis
+
+## Novidades
+- Painel compacto com **12 funções em 3 colunas**, mantendo toque e acessibilidade. Detalhes na barra do aparelho.
+- Configurações agrupadas em seis áreas com pesquisa local instantânea (aceita acentos) e navegação para as opções atuais.
+- Avisos e confirmações centrais em diálogos temáticos compactos. Permissões e consentimentos não foram relaxados.
+- Tempo de requisição autenticada em milissegundos junto à última resposta. O relógio da última observação remota permanece distinto.
+
+## Limites
+- O intervalo de atualização ainda é de 15 s; RTT mede a duração total da chamada, não velocidade de rede pura.
+- Telas especializadas e alguns menus herdados ainda usam diálogos Android e são candidatos às próximas versões.
+- Android Gradle completo e testes visuais reais pendentes. Instalar a mesma versão nos dois celulares.
+
 # Monitor Remoto v0.1.0-alpha.87 · Mapa visível e modo recuperação de GPS
 
 ## Novidades

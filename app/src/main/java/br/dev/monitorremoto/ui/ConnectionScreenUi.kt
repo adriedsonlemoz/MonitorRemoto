@@ -64,6 +64,21 @@ internal fun MainActivity.renderController() {
     }
     heading.addView(refresh, LinearLayout.LayoutParams(dp(38), dp(38)))
     heading.addView(View(this), LinearLayout.LayoutParams(dp(6), 1))
+    val details = android.widget.ImageView(this).apply {
+        setImageResource(br.dev.monitorremoto.R.drawable.ic_info)
+        imageTintList = android.content.res.ColorStateList.valueOf(ink)
+        setPadding(dp(9), dp(9), dp(9), dp(9))
+        background = shape(fieldColor, 13, true)
+        contentDescription = "Detalhes completos deste aparelho"
+        isClickable = true; isFocusable = true
+        setOnClickListener {
+            val current = remoteConnection.cached?.takeIf { remoteConnection.cachedHost == host }
+            if (current != null) showRemoteDetailsDialog(current)
+            else showAppNotice("Detalhes", "Atualize o aparelho para obter as informações remotas.")
+        }
+    }
+    heading.addView(details, LinearLayout.LayoutParams(dp(38), dp(38)))
+    heading.addView(View(this), LinearLayout.LayoutParams(dp(6), 1))
     currentConnectButton = actionButton("Desconectar") {
         when (effectiveConnectionState()) {
             "connected", "loading" -> disconnectCurrent()
@@ -110,7 +125,7 @@ internal fun MainActivity.updateConnectionLabels() {
     val hasKey = host.isNotBlank() && RecentDevices.key(this, host) != null
     val actualState = effectiveConnectionState()
     val text = when (actualState) {
-        "connected" -> "● Conectado"
+        "connected" -> "● Respondeu"
         "offline" -> "● Sem resposta"
         "loading" -> "◌ Atualizando…"
         else -> "○ Desconectado"
@@ -131,7 +146,8 @@ internal fun MainActivity.updateConnectionLabels() {
             if (remoteConnection.cachedHost == host && remoteConnection.lastSuccessMs > 0L)
                 " · última leitura: ${formatDate(remoteConnection.lastSuccessMs)}" else ""
         remoteConnection.lastSuccessMs > 0 && remoteConnection.cachedHost == host ->
-            "Leitura: ${formatDate(remoteConnection.lastSuccessMs)}"
+            "Leitura: ${formatDate(remoteConnection.lastSuccessMs)}" +
+                (remoteConnection.lastRoundTripMs?.let { " · ${it} ms" } ?: "")
         else -> remoteConnection.message ?: "Aguardando resposta de $host"
     }
 }

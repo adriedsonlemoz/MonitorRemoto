@@ -1,3 +1,10 @@
+## 0.1.0-alpha.88 (versionCode 88) | 16/10/2026
+- Painel remoto redesenhado em 3 colunas com 12 ações compactas. Detalhes saiu da grade e fica junto ao cabeçalho do aparelho.
+- Página inicial de Configurações reorganizada por finalidade com busca instantânea local, inclusive acentos; rotas e permissões originais preservadas.
+- Avisos/confirmacões centrais com tema e espaçamento consistentes. Ações críticas continuam exigindo confirmação explícita.
+- Mostra tempo medido da consulta autenticada (RTT) separado do horário da leitura; não converte polling em conexão permanente.
+- Versionamento sincronizado. Sem compilação Android completa neste ambiente; validar GitHub Actions e aparelhos.
+
 ## 0.1.0-alpha.87 (versionCode 87) | 16/10/2026
 - Modo recuperação automática da localização com opt-in local persistente e revogação via notificação, GPS ativo com tela apagada e tentativa condicionada de restauro após boot/serviço (ACCESS_BACKGROUND_LOCATION concedida pelo sistema).
 - Mapa de referência é renderizado mesmo sem posição remota; indicador explícito de ausência de fix e sem marcador inventado. Painel de posição reposicionado antes do mapa; consultas periódicas ao controlador inicialmente ativas com tela aberta.

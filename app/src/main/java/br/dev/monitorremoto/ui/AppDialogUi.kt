@@ -17,28 +17,46 @@ internal fun MainActivity.showManagedDialog(dialog: AlertDialog): AlertDialog {
 internal fun MainActivity.showManagedDialog(builder: AlertDialog.Builder): AlertDialog =
     showManagedDialog(builder.create())
 
+/** Diálogos compactos de tema único; alertas importantes mantêm confirmação explícita. */
+private fun MainActivity.showThemedMessageDialog(
+    title: String, description: String, icon: Int,
+    primary: String, destructive: Boolean = false, secondary: String? = null,
+    onPrimary: (() -> Unit)? = null,
+) {
+    val (wrapper, layout) = dialogWrapper()
+    layout.background = shape(surface, 22, true)
+    layout.setPadding(dp(18), dp(17), dp(18), dp(15))
+    layout.addView(iconSectionHeader(icon, title))
+    sectionGap(layout, 8)
+    layout.addView(label(description, 14f).apply {
+        setLineSpacing(dp(2).toFloat(), 1f)
+    })
+    sectionGap(layout, 14)
+    lateinit var dialog: AlertDialog
+    val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+    if (secondary != null) {
+        actions.addView(actionButton(secondary) { dialog.dismiss() },
+            LinearLayout.LayoutParams(0, dp(46), 1f).apply { rightMargin = dp(8) })
+    }
+    val confirmButton = actionButton(primary, emphasis = secondary == null || !destructive) {
+        dialog.dismiss()
+        onPrimary?.invoke()
+    }
+    if (destructive) confirmButton.setTextColor(android.graphics.Color.rgb(188, 62, 55))
+    actions.addView(confirmButton, LinearLayout.LayoutParams(0, dp(46), 1f))
+    layout.addView(actions)
+    dialog = AlertDialog.Builder(this).setView(wrapper).create()
+    showManagedDialog(dialog)
+    dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+    dialog.window?.setLayout((resources.displayMetrics.widthPixels * 0.91f).toInt(), -2)
+}
+
 internal fun MainActivity.showAppNotice(
     title: String,
     description: String,
     icon: Int = R.drawable.ic_info,
     buttonText: String = "Entendi",
-) {
-    val (wrapper, layout) = dialogWrapper()
-    layout.addView(iconSectionHeader(icon, title))
-    sectionGap(layout, 10)
-    layout.addView(panel(13).apply {
-        background = shape(fieldColor, 18, true)
-        addView(label(description, 14.2f).apply {
-            setPadding(0, 0, 0, 0)
-            setLineSpacing(dp(2).toFloat(), 1f)
-        })
-    })
-    sectionGap(layout, 10)
-    lateinit var dialog: AlertDialog
-    layout.addView(button(buttonText, emphasis = true) { dialog.dismiss() })
-    dialog = AlertDialog.Builder(this).setView(wrapper).create()
-    showManagedDialog(dialog)
-}
+) = showThemedMessageDialog(title, description, icon, buttonText)
 
 internal fun MainActivity.showAppConfirm(
     title: String,
@@ -46,26 +64,6 @@ internal fun MainActivity.showAppConfirm(
     icon: Int = R.drawable.ic_shield,
     confirmText: String,
     onConfirm: () -> Unit,
-) {
-    val (wrapper, layout) = dialogWrapper()
-    layout.addView(iconSectionHeader(icon, title))
-    sectionGap(layout, 10)
-    layout.addView(panel(13).apply {
-        background = shape(fieldColor, 18, true)
-        addView(label(description, 14.2f).apply {
-            setPadding(0, 0, 0, 0)
-            setLineSpacing(dp(2).toFloat(), 1f)
-        })
-    })
-    sectionGap(layout, 10)
-    layout.addView(label("Confirme a ação abaixo. Você poderá voltar e mudar depois quando houver suporte.", 12.5f, muted = true))
-    sectionGap(layout, 12)
-    lateinit var dialog: AlertDialog
-    layout.addView(button(confirmText, emphasis = true) {
-        dialog.dismiss()
-        onConfirm()
-    })
-    layout.addView(button("Cancelar") { dialog.dismiss() })
-    dialog = AlertDialog.Builder(this).setView(wrapper).create()
-    showManagedDialog(dialog)
-}
+) = showThemedMessageDialog(title, description, icon, confirmText,
+    destructive = title.contains("excluir", true) || title.contains("apagar", true) || title.contains("revogar", true),
+    secondary = "Cancelar", onPrimary = onConfirm)

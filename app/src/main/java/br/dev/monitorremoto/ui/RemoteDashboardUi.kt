@@ -59,12 +59,13 @@ internal fun MainActivity.displayResult(root: JSONObject, fromCache: Boolean = f
     val liveReading = !fromCache && remoteConnection.state == "connected"
     container.addView(dialogCardRow(
         if (liveReading) "✓ Resposta autenticada" else "◷ Dados guardados no controlador",
-        if (liveReading) "Consulta concluída ${formatDate(remoteConnection.lastSuccessMs)} · ${remoteConnection.method}"
+        if (liveReading) "Resposta ${formatDate(remoteConnection.lastSuccessMs)} · ${remoteConnection.lastRoundTripMs?.let { "${it} ms" } ?: "tempo indisponível"}"
         else "Esta leitura não confirma conexão atual. Última resposta: ${if (remoteConnection.lastSuccessMs > 0L) formatDate(remoteConnection.lastSuccessMs) else "não registrada"}",
         "ⓘ") {
         showAppNotice("Estado da conexão", "O Monitor Remoto consulta cada dado mediante requisição autenticada; não mantém um canal conectado permanentemente.\n" +
             "Estado: ${if (liveReading) "última consulta respondida" else "leitura armazenada"}\n" +
             "Método: ${remoteConnection.method}\n" +
+            "Duração da requisição: ${remoteConnection.lastRoundTripMs?.let { "${it} ms" } ?: "não medida"}\n" +
             "Última resposta: ${if (remoteConnection.lastSuccessMs > 0L) formatDate(remoteConnection.lastSuccessMs) else "não disponível"}")
     })
     sectionGap(container, 9)
@@ -126,28 +127,27 @@ internal fun MainActivity.displayResult(root: JSONObject, fromCache: Boolean = f
     sectionGap(container, 12)
 
     container.addView(label("Funções remotas", 17f, strong = true).apply { setPadding(0, 0, 0, dp(5)) })
-    container.addView(label("Cada função respeita as permissões concedidas no monitorado.", 11f, muted = true).apply {
-        setPadding(0, 0, 0, dp(12))
+    container.addView(label("Toque para abrir · 12 funções · 3 colunas", 10.5f, muted = true).apply {
+        setPadding(0, 0, 0, dp(8))
     })
     val eventCount = root.optJSONArray("events")?.let { events ->
         (0 until events.length()).count { events.optJSONObject(it)?.optString("type") == "notificacao" }
     } ?: 0
     val cards = listOf(
-        actionTile(R.drawable.ic_folder_download, "Recuperar dados", "Pasta autorizada", enabled = true) {
+        actionTile(R.drawable.ic_folder_download, "Arquivos", "Pasta autorizada", enabled = true) {
             startActivity(Intent(this, RemoteFilesActivity::class.java).apply {
                 putExtra(RemoteFilesActivity.EXTRA_HOST, br.dev.monitorremoto.core.SettingsStore.getRemoteHost(this@displayResult))
                 putExtra(RemoteFilesActivity.EXTRA_METHOD, remoteConnection.method)
             })
         },
-        actionTile(R.drawable.ic_phone, "Detalhes", "", enabled = true) { showRemoteDetailsDialog(root) },
-        actionTile(R.drawable.ic_bell, "Notificações", if (eventCount > 0) "$eventCount evento(s)" else "", enabled = true) {
+        actionTile(R.drawable.ic_bell, "Alertas", if (eventCount > 0) "$eventCount evento(s)" else "", enabled = true) {
             startActivity(Intent(this, RemoteCatalogActivity::class.java).apply {
                 putExtra(RemoteCatalogActivity.EXTRA_HOST, br.dev.monitorremoto.core.SettingsStore.getRemoteHost(this@displayResult))
                 putExtra(RemoteCatalogActivity.EXTRA_METHOD, remoteConnection.method)
                 putExtra(RemoteCatalogActivity.EXTRA_TYPE, "notifications")
             })
         },
-        actionTile(R.drawable.ic_phone, "Aplicativos", "Instalados · autorizados", enabled = true) {
+        actionTile(R.drawable.ic_phone, "Apps", "Instalados · autorizados", enabled = true) {
             startActivity(Intent(this, RemoteCatalogActivity::class.java).apply {
                 putExtra(RemoteCatalogActivity.EXTRA_HOST, br.dev.monitorremoto.core.SettingsStore.getRemoteHost(this@displayResult))
                 putExtra(RemoteCatalogActivity.EXTRA_METHOD, remoteConnection.method)
@@ -157,13 +157,13 @@ internal fun MainActivity.displayResult(root: JSONObject, fromCache: Boolean = f
         actionTile(R.drawable.ic_message, "Mensagens", "SMS e respostas", enabled = true) {
             openRemoteMessagesScreen()
         },
-        actionTile(R.drawable.ic_monitor, "Ver tela", "Ao vivo · autorizado", enabled = true) {
+        actionTile(R.drawable.ic_monitor, "Tela", "Ao vivo · autorizado", enabled = true) {
             startActivity(Intent(this, RemoteScreenActivity::class.java).apply {
                 putExtra(RemoteScreenActivity.EXTRA_HOST, br.dev.monitorremoto.core.SettingsStore.getRemoteHost(this@displayResult))
                 putExtra(RemoteScreenActivity.EXTRA_METHOD, remoteConnection.method)
             })
         },
-        actionTile(R.drawable.ic_remote_camera, "Tirar foto", "JPEG único · sem vídeo", enabled = true) {
+        actionTile(R.drawable.ic_remote_camera, "Foto", "JPEG único · sem vídeo", enabled = true) {
             startActivity(Intent(this, RemotePhotoActivity::class.java).apply {
                 putExtra(RemotePhotoActivity.EXTRA_HOST, br.dev.monitorremoto.core.SettingsStore.getRemoteHost(this@displayResult))
                 putExtra(RemotePhotoActivity.EXTRA_METHOD, remoteConnection.method)
@@ -175,7 +175,7 @@ internal fun MainActivity.displayResult(root: JSONObject, fromCache: Boolean = f
                 putExtra(RemoteCameraActivity.EXTRA_METHOD, remoteConnection.method)
             })
         },
-        actionTile(R.drawable.ic_bell, "Tocar som", "Localizar · até 30 s", enabled = true) {
+        actionTile(R.drawable.ic_bell, "Som", "Localizar · até 30 s", enabled = true) {
             showRemotePhysicalDialog(sound = true)
         },
         actionTile(R.drawable.ic_flashlight, "Lanterna", "Ligar e desligar", enabled = true) {
@@ -318,42 +318,40 @@ private fun MainActivity.addMetricGrid(parent: LinearLayout, cards: List<LinearL
     parent.addView(row)
 }
 
+/** Grade compacta de três colunas em retrato, sem esconder ações por falta de largura. */
 private fun MainActivity.actionTile(icon: Int, title: String, subtitle: String, enabled: Boolean = false, onClick: () -> Unit): LinearLayout =
     LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         gravity = Gravity.CENTER
-        background = shape(surface, 18, true)
-        setPadding(dp(6), dp(14), dp(6), dp(10))
-        minimumHeight = dp(100)
+        background = shape(surface, 16, true)
+        setPadding(dp(3), dp(10), dp(3), dp(9))
+        minimumHeight = dp(86)
         isClickable = true
         isFocusable = true
-        contentDescription = "$title${if (!enabled) ", em desenvolvimento" else ""}"
+        contentDescription = listOf(title, subtitle).filter { it.isNotBlank() }.joinToString(". ")
         setOnClickListener { onClick() }
-        addView(vectorIcon(icon, 28), LinearLayout.LayoutParams(dp(28), dp(28)))
-        addView(label(title, 13f, strong = enabled).apply {
+        addView(vectorIcon(icon, 23, if (enabled) ink else dim),
+            LinearLayout.LayoutParams(dp(23), dp(23)).apply { gravity = Gravity.CENTER_HORIZONTAL })
+        addView(label(title, 11.5f, strong = enabled).apply {
             gravity = Gravity.CENTER
             maxLines = 2
-            setPadding(0, dp(10), 0, 0)
+            setPadding(dp(1), dp(7), dp(1), 0)
+            ellipsize = android.text.TextUtils.TruncateAt.END
         })
-        if (subtitle.isNotBlank()) addView(label(subtitle, 10.5f, muted = true).apply {
-            gravity = Gravity.CENTER
-            maxLines = 1
-            setPadding(0, dp(2), 0, 0)
-        })
+        // Subtítulos permanecem no contentDescription para TalkBack; não ocupam linhas.
     }
 
 private fun MainActivity.addActionGrid(parent: LinearLayout, tiles: List<LinearLayout>) {
-    // Duas colunas para nomes legíveis nos aparelhos menores e alvos de toque amplos.
-    tiles.chunked(2).forEachIndexed { index, segment ->
+    tiles.chunked(3).forEachIndexed { rowIndex, segment ->
         val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         segment.forEachIndexed { column, tile ->
-            row.addView(tile, LinearLayout.LayoutParams(0, -2, 1f).apply {
-                if (column == 0) rightMargin = dp(8)
+            row.addView(tile, LinearLayout.LayoutParams(0, dp(88), 1f).apply {
+                if (column < 2) rightMargin = dp(7)
             })
         }
-        if (segment.size == 1) row.addView(View(this), LinearLayout.LayoutParams(0, 1, 1f))
+        repeat(3 - segment.size) { row.addView(View(this), LinearLayout.LayoutParams(0, 1, 1f)) }
         parent.addView(row)
-        if (index < (tiles.size + 1) / 2 - 1) sectionGap(parent, 9)
+        if (rowIndex < (tiles.size + 2) / 3 - 1) sectionGap(parent, 7)
     }
 }
 
@@ -361,7 +359,7 @@ private fun MainActivity.showFeatureSoon(name: String, description: String) {
     showAppNotice(name, "$description\n\nEste recurso ainda não está implementado.", R.drawable.ic_info)
 }
 
-private fun MainActivity.showRemoteDetailsDialog(root: JSONObject) {
+internal fun MainActivity.showRemoteDetailsDialog(root: JSONObject) {
     val name = currentDeviceTitle?.text?.toString().orEmpty()
     val selectedHost = br.dev.monitorremoto.core.SettingsStore.getRemoteHost(this)
     startActivity(Intent(this, RemoteDetailsActivity::class.java).apply {

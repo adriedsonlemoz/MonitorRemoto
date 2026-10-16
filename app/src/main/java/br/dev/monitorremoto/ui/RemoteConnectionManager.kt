@@ -3,6 +3,7 @@ package br.dev.monitorremoto.ui
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import br.dev.monitorremoto.core.RecentDevices
 import br.dev.monitorremoto.transport.RemoteClient
 import org.json.JSONObject
@@ -33,6 +34,9 @@ internal class RemoteConnectionManager(context: Context) {
         private set
     var lastAttemptMs = 0L
         private set
+    /** Tempo real da última requisição completada, não idade dos dados remotos. */
+    var lastRoundTripMs: Long? = null
+        private set
 
     fun effectiveState(host: String): String =
         if (host.isBlank() || RecentDevices.key(appContext, host) == null) "idle" else state
@@ -41,6 +45,7 @@ internal class RemoteConnectionManager(context: Context) {
     fun select(method: String) {
         invalidate()
         this.method = method
+        lastRoundTripMs = null
         state = "loading"
         message = null
         issue = null
@@ -52,6 +57,7 @@ internal class RemoteConnectionManager(context: Context) {
         cached = null
         cachedHost = ""
         lastSuccessMs = 0L
+        lastRoundTripMs = null
         state = "idle"
         issue = null
         message = if (resetMethod) "Seleção removida." else null
@@ -142,6 +148,7 @@ internal class RemoteConnectionManager(context: Context) {
             return
         }
         fetching = true
+        val startElapsed = SystemClock.elapsedRealtime()
         lastAttemptMs = System.currentTimeMillis()
         fetchingHost = host
         val token = ++generation
@@ -158,6 +165,7 @@ internal class RemoteConnectionManager(context: Context) {
                 if (token != generation || fetchingHost != host) return@post
                 fetching = false
                 fetchingHost = ""
+                lastRoundTripMs = (SystemClock.elapsedRealtime() - startElapsed).coerceAtLeast(0L)
                 if (!stillVisible()) return@post
                 response.onSuccess { snapshot ->
                     lastSuccessMs = System.currentTimeMillis()
