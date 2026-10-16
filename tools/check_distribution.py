@@ -16,7 +16,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.84" and code.group(1) == "84", "Versões incompatíveis"
+assert version == "0.1.0-alpha.85" and code.group(1) == "85", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -1209,3 +1209,18 @@ assert 'startForegroundService(request)' in photo_setup and 'PhotoReadyService.s
 assert 'MAX_PREVIEW_EDGE = 1600' in preview_policy
 assert (root / 'app/src/test/java/br/dev/monitorremoto/core/PhotoPreviewPolicyTest.kt').exists()
 print('PASSOU: alpha.84 foto UI, zoom, compartilhamento explícito, amostragem de prévia, consentimento e parada.')
+
+# Alpha.85: atividades locais não podem guardar caminhos/nomes ou permitir comandos.
+recent85 = (root / "app/src/main/java/br/dev/monitorremoto/core/RemoteOperationHistory.kt").read_text()
+policy85 = (root / "app/src/main/java/br/dev/monitorremoto/core/RemoteOperationHistoryPolicy.kt").read_text()
+files85 = (root / "app/src/main/java/br/dev/monitorremoto/ui/RemoteFilesActivity.kt").read_text()
+remote85 = (root / "app/src/main/java/br/dev/monitorremoto/ui/RemoteDashboardUi.kt").read_text()
+location85 = (root / "app/src/main/java/br/dev/monitorremoto/ui/RemoteLocationActivity.kt").read_text()
+assert 'MAX_ITEMS = 48' in recent85 and 'MAX_AGE_MS' in recent85
+assert all(x not in recent85 for x in ['put("path"', 'put("name"', 'put("ip"', 'put("filename"'])
+assert 'RemoteOperationHistoryPolicy.valid(' in recent85 and 'operations = setOf' in policy85
+assert 'private fun showHistory()' in files85 and 'logOperation("download"' in files85
+assert 'logOperation("upload"' in files85 and 'logOperation(action,' in files85
+assert 'tiles.chunked(2)' in remote85 and 'Dados guardados no controlador' in remote85
+assert 'Sem posição atual' in location85 and 'Leitura antiga' in location85
+print('PASSOU: alpha.85 histórico local mínimo, grade legível, diagnóstico da conexão e GPS.')

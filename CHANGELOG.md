@@ -1,3 +1,11 @@
+## 0.1.0-alpha.85 (versionCode 85) | 16/10/2026
+
+- UI: painel de controle em duas colunas com informações explícitas sobre conexão e dados armazenados.
+- Arquivos: histórico local limitado, por aparelho e sem nomes/caminhos/IP, com limpeza explícita e marcação dos resultados das operações após o trabalho terminar.
+- Localização: destaque da idade/precisão reportadas, diferenças entre leitura antiga, válida e erro de consulta; mapa harmonizado com tema.
+- Sem mudanças na rede, nas permissões, na criptografia ou na semântica dos comandos; retomada após sair da tela segue pendente.
+- Build Android completo e testes em aparelhos não validados localmente.
+
 ## 0.1.0-alpha.84 (versionCode 84) | 16/10/2026
 
 - Fotografia remota recebeu tema claro/escuro, barra de progresso, estado contextual, identificação do aparelho, prévia ampliável com pinça/arraste/duplo toque e metadados reais.

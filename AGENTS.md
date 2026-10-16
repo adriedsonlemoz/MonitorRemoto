@@ -1,4 +1,4 @@
-# Monitor Remoto 0.1.0-alpha.84
+# Monitor Remoto 0.1.0-alpha.85
 # Convenções permanentes do projeto Monitor Remoto
 
 - Toda alteração de código incrementa sequencialmente `versionCode` e `versionName` (ex.: `0.1.0-alpha.8` -> `0.1.0-alpha.9`). Sincronizar tela, README, CHANGELOG, RELEASE_NOTES e documentação.
@@ -168,3 +168,5 @@
 - Alpha.83: o endpoint `photoTake` requer par autorizado AES-GCM, versão exata e PhotoReadyService armada antes da captura via `RemotePhotoSetupActivity` visível no monitorado. Câmera Camera2 JPEG única sem stream e sem armazenamento remoto, notificação pública com ação Parar, OFF após parada, reinício/force-stop, NUNCA iniciar por boot/polling ou request remota. Não tentar contornar while-in-use do Android 14+, nem prometer resposta após furto sem VPN/LAN e serviço ativo. Próxima alpha.84.
 
 - Alpha.84: UI da câmera no controlador segue tema, tem status de captura, zoom local, botões Salvar/Compartilhar (compartilhar salva foto local somente após toque), decodificação de prévia em escala e no worker. A foto única e o opt-in pré-armado no monitorado continuam idênticos; não introduzir auto-save, histórico oculto, câmera iniciada remotamente, novas permissões ou polling de vídeo. Controle de salvar, compartilhar e lens não deve disparar segundo pedido enquanto captura em andamento. Testes Android e em aparelhos permanecem pendentes. Próxima alpha.85.
+
+- Alpha.85: o histórico de arquivos é estritamente local, limitado a 48 operações dos últimos 30 dias; não gravar nomes, caminho, IP, tokens nem conteúdo. Registrar término/parcial/falha sem afirmar sucesso por mera requisição. Painel remoto diferencia explicitamente dados de cache de consulta autenticada; GPS antigo/indisponível não finge leitura recente. Nenhuma retomada após fechamento da Activity foi implementada; não a anunciar nem abrir transferências paralelas. Preservar 2 colunas de funções e as permissões remotas existentes. Próxima alpha.86.

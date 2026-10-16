@@ -46,6 +46,7 @@ class RemoteLocationActivity : Activity() {
     private var sample: Pair<Double, Double>? = null
     private lateinit var status: TextView
     private lateinit var details: TextView
+    private lateinit var quality: TextView
     private lateinit var openMap: Button
     private lateinit var copy: Button
     private lateinit var refresh: Button
@@ -124,10 +125,11 @@ class RemoteLocationActivity : Activity() {
         })
         content.addView(text("Localização · mapa", 21f, true))
         content.addView(text(title, 12f))
+        content.addView(text("Mapa online opcional · posição somente após autorização no monitorado", 11f))
 
         map = RemoteMapView(this).apply {
             enableOnline(mapOnline)
-            background = rounded(Color.rgb(238, 244, 247))
+            background = rounded(if (dark) Color.rgb(34, 46, 62) else Color.rgb(238, 244, 247))
             clipToOutline = true
             contentDescription = "Mapa com posição remota; arraste para explorar, use dois dedos para ampliar"
         }
@@ -154,11 +156,16 @@ class RemoteLocationActivity : Activity() {
         content.addView(box, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(12) })
         status = text("Aguardando consulta…", 16f, true)
         details = text("A posição depende de uma sessão iniciada pelo monitorado.", 12.5f)
-        box.addView(status); box.addView(details)
+        box.addView(status)
+        quality = text("Sem medição de precisão ou idade de posição.", 12f)
+        quality.setPadding(0, dp(5), 0, dp(7))
+        box.addView(quality)
+        box.addView(details)
         refresh = button("Atualizar agora") { load() }
         openMap = button("Mapa externo") { openExternalMap() }.apply { isEnabled = false }
         copy = button("Copiar GPS") { copyCoordinates() }.apply { isEnabled = false }
         actions(content, refresh, openMap, copy)
+        content.addView(text("Uma consulta sem resposta limpa o marcador; o mapa não mostra uma posição antiga como atual. A localização do monitorado precisa continuar ativa e autorizada.", 11f))
         automaticButton = button("Automático: desligado") {
             automatic = !automatic
             automaticButton.text = if (automatic) "Automático: ligado" else "Automático: desligado"
@@ -219,6 +226,7 @@ class RemoteLocationActivity : Activity() {
         inFlight = true
         refresh.isEnabled = false
         status.text = "Consultando localização…"
+        quality.text = "Aguardando resposta autenticada"
         thread(name = "MonitorRemoto-location", isDaemon = true) {
             val response = runCatching { RemoteClient.snapshot(host, secret, applicationContext, method) }
             main.post {
@@ -230,6 +238,7 @@ class RemoteLocationActivity : Activity() {
                         // Não apresentar leitura anterior como posição atual após perda de conexão.
                         clearSample()
                         status.text = "Sem resposta"
+                        quality.text = "Sem posição atual · confira a rede e a sessão no monitorado"
                         details.text = "Última consulta falhou: ${it.message?.take(150) ?: "erro de rede"}"
                     }
             }
@@ -238,6 +247,7 @@ class RemoteLocationActivity : Activity() {
     private fun clearSample() {
         sample = null
         map.clearPosition()
+        quality.text = "Sem leitura válida nesta consulta"
         openMap.isEnabled = false; copy.isEnabled = false
     }
     private fun renderStatus(value: JSONObject?) {
@@ -269,6 +279,9 @@ class RemoteLocationActivity : Activity() {
                 val time = value.optLong("timestampMs", 0L).takeIf { it > 0L }
                     ?.let { DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.MEDIUM).format(Date(it)) } ?: "não informada"
                 status.text = if (value.optString("state") == "antiga") "Última posição (antiga)" else "Posição disponível"
+                quality.text = "${if (value.optString("state") == "antiga") "⚠ Leitura antiga" else "✓ Leitura recebida"}  ·  " +
+                    "idade ${age / 1000}s  ·  " +
+                    (accuracy?.let { "precisão estimada ±${it.toInt()}m" } ?: "precisão não informada")
                 details.text = "${String.format(Locale.US, "%.6f, %.6f", lat, lon)}\n" +
                     "Precisão: ${accuracy?.let { "±${it.toInt()} m (estimada)" } ?: "não informada"} · Fonte: ${value.optString("provider", "desconhecida")}\n" +
                     "Idade: ${age / 1000} s · Atualização: $time\n" +

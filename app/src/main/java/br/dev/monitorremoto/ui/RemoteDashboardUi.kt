@@ -3,6 +3,8 @@ package br.dev.monitorremoto.ui
 import android.app.AlertDialog
 import android.graphics.Color
 import br.dev.monitorremoto.core.BatteryTemperaturePolicy
+import br.dev.monitorremoto.core.RemoteOperationHistory
+import br.dev.monitorremoto.core.RemoteOperationHistoryPolicy
 import android.content.Intent
 import android.view.Gravity
 import android.view.View
@@ -10,6 +12,7 @@ import android.widget.LinearLayout
 import org.json.JSONObject
 import java.util.Locale
 import br.dev.monitorremoto.R
+import br.dev.monitorremoto.core.SettingsStore
 
 /** Painel deliberadamente enxuto. Informações técnicas detalhadas ficam em RemoteDetailsActivity. */
 internal fun MainActivity.displayResult(root: JSONObject, fromCache: Boolean = false) {
@@ -52,6 +55,19 @@ internal fun MainActivity.displayResult(root: JSONObject, fromCache: Boolean = f
                 else "Tipo: $networkType\n${ssid ?: "SSID indisponível"}\n${signal ?: "RSSI indisponível"}")
         }),
     )
+    // Resultado de polling autenticado não significa canal persistente.
+    val liveReading = !fromCache && remoteConnection.state == "connected"
+    container.addView(dialogCardRow(
+        if (liveReading) "✓ Resposta autenticada" else "◷ Dados guardados no controlador",
+        if (liveReading) "Consulta concluída ${formatDate(remoteConnection.lastSuccessMs)} · ${remoteConnection.method}"
+        else "Esta leitura não confirma conexão atual. Última resposta: ${if (remoteConnection.lastSuccessMs > 0L) formatDate(remoteConnection.lastSuccessMs) else "não registrada"}",
+        "ⓘ") {
+        showAppNotice("Estado da conexão", "O Monitor Remoto consulta cada dado mediante requisição autenticada; não mantém um canal conectado permanentemente.\n" +
+            "Estado: ${if (liveReading) "última consulta respondida" else "leitura armazenada"}\n" +
+            "Método: ${remoteConnection.method}\n" +
+            "Última resposta: ${if (remoteConnection.lastSuccessMs > 0L) formatDate(remoteConnection.lastSuccessMs) else "não disponível"}")
+    })
+    sectionGap(container, 9)
     addMetricGrid(container, items)
     sectionGap(container, 8)
     if (deviceState != null) {
@@ -109,7 +125,10 @@ internal fun MainActivity.displayResult(root: JSONObject, fromCache: Boolean = f
     }
     sectionGap(container, 12)
 
-    container.addView(label("Funções remotas", 17f, strong = true).apply { setPadding(0, 0, 0, dp(12)) })
+    container.addView(label("Funções remotas", 17f, strong = true).apply { setPadding(0, 0, 0, dp(5)) })
+    container.addView(label("Cada função respeita as permissões concedidas no monitorado.", 11f, muted = true).apply {
+        setPadding(0, 0, 0, dp(12))
+    })
     val eventCount = root.optJSONArray("events")?.let { events ->
         (0 until events.length()).count { events.optJSONObject(it)?.optString("type") == "notificacao" }
     } ?: 0
@@ -175,6 +194,18 @@ internal fun MainActivity.displayResult(root: JSONObject, fromCache: Boolean = f
         },
     )
     addActionGrid(container, cards)
+    val selectedHost = SettingsStore.getRemoteHost(this)
+    val recent = RemoteOperationHistory.read(this, selectedHost).firstOrNull()
+    if (recent != null) {
+        sectionGap(container, 11)
+        container.addView(dialogCardRow("Atividade recente de arquivos",
+            "${RemoteOperationHistoryPolicy.label(recent.operation)} · ${recent.outcome} · ${recent.done}/${recent.total} item(ns)", "›") {
+            startActivity(Intent(this, RemoteFilesActivity::class.java).apply {
+                putExtra(RemoteFilesActivity.EXTRA_HOST, selectedHost)
+                putExtra(RemoteFilesActivity.EXTRA_METHOD, remoteConnection.method)
+            })
+        })
+    }
     if (fromCache && remoteConnection.state != "connected") {
         sectionGap(container, 12)
         container.addView(label("Exibindo a última leitura armazenada. Aguarde nova consulta para confirmar os dados.", 11f, muted = true))
@@ -265,7 +296,7 @@ private fun MainActivity.compactMetricCard(icon: Int, title: String, value: Stri
             maxLines = 2
             setPadding(0, 0, 0, 0)
         })
-        if (!subtitle.isNullOrBlank()) addView(label(subtitle, 9.5f, muted = true).apply {
+        if (!subtitle.isNullOrBlank()) addView(label(subtitle, 10.5f, muted = true).apply {
             gravity = Gravity.CENTER
             maxLines = 2
             setPadding(dp(2), dp(3), dp(2), 0)
@@ -293,18 +324,18 @@ private fun MainActivity.actionTile(icon: Int, title: String, subtitle: String, 
         gravity = Gravity.CENTER
         background = shape(surface, 18, true)
         setPadding(dp(6), dp(14), dp(6), dp(10))
-        minimumHeight = dp(105)
+        minimumHeight = dp(100)
         isClickable = true
         isFocusable = true
         contentDescription = "$title${if (!enabled) ", em desenvolvimento" else ""}"
         setOnClickListener { onClick() }
         addView(vectorIcon(icon, 28), LinearLayout.LayoutParams(dp(28), dp(28)))
-        addView(label(title, 12f, strong = enabled).apply {
+        addView(label(title, 13f, strong = enabled).apply {
             gravity = Gravity.CENTER
             maxLines = 2
             setPadding(0, dp(10), 0, 0)
         })
-        if (subtitle.isNotBlank()) addView(label(subtitle, 9.5f, muted = true).apply {
+        if (subtitle.isNotBlank()) addView(label(subtitle, 10.5f, muted = true).apply {
             gravity = Gravity.CENTER
             maxLines = 1
             setPadding(0, dp(2), 0, 0)
@@ -312,15 +343,17 @@ private fun MainActivity.actionTile(icon: Int, title: String, subtitle: String, 
     }
 
 private fun MainActivity.addActionGrid(parent: LinearLayout, tiles: List<LinearLayout>) {
-    tiles.chunked(3).forEachIndexed { index, segment ->
+    // Duas colunas para nomes legíveis nos aparelhos menores e alvos de toque amplos.
+    tiles.chunked(2).forEachIndexed { index, segment ->
         val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         segment.forEachIndexed { column, tile ->
             row.addView(tile, LinearLayout.LayoutParams(0, -2, 1f).apply {
-                if (column != segment.lastIndex) rightMargin = dp(8)
+                if (column == 0) rightMargin = dp(8)
             })
         }
+        if (segment.size == 1) row.addView(View(this), LinearLayout.LayoutParams(0, 1, 1f))
         parent.addView(row)
-        if (index == 0) sectionGap(parent, 9)
+        if (index < (tiles.size + 1) / 2 - 1) sectionGap(parent, 9)
     }
 }
 

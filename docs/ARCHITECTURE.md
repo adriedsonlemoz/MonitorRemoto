@@ -1,4 +1,4 @@
-# Arquitetura (0.1.0-alpha.84)
+# Arquitetura (0.1.0-alpha.85)
 
 ```text
 MONITORADO                                      CONTROLE
@@ -31,9 +31,9 @@ A captura usa `ImageReader` RGBA, `Bitmap` JPEG com largura máxima 540 px, taxa
 
 ## Distribuição e assinatura
 
-O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.84` e `versionCode=84`.
+O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.85` e `versionCode=85`.
 
-- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.84.apk`.
+- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.85.apk`.
 - `upload-artifact` sempre distribui um ZIP; GitHub Releases recebe o **arquivo APK direto**.
 - Com quatro Secrets, Gradle gera APK Release assinado e AAB. Sem Secrets, o arquivo é Debug de teste e não preserva necessariamente a assinatura entre execuções.
 - Releases são prévias, não substituem a futura revisão da Google Play e nem os ensaios reais.
@@ -309,3 +309,8 @@ A UI de recuperação usa insets para barras do sistema e estima taxa de cópia 
 ## Mapa interno alpha.82
 
 O renderer `RemoteMapView` recebe exclusivamente coordenadas retornadas por `RemoteClient.snapshot` autorizado, com Web Mercator puro em `MapProjection`. Blocos online OSM são requisitados apenas se a pessoa autorizar no controlador para aquele aparelho, e só na região visível, cacheados no armazenamento privado local; não há download preventivo de áreas ou sincronização para terceiros. Consulta periódica opcional encerra em `Activity.onPause`, sem iniciar GPS remoto; GNSS requer sessão no monitorado.
+
+
+## Alpha.85: histórico local de operações
+
+`core/RemoteOperationHistory` utiliza SharedPreferences privadas e guarda somente código de operação, estado, contagem, bytes e horário, associados a identificador do host derivado de SHA-256 com sal local. Limita a 48 eventos e 30 dias. Sem filenames, URIs, IPs, dados da câmera, SMS ou tokens. Alterações são persistidas após o encerramento da operação, inclusive parciais quando detectados. Sem serviço ou sessão adicional. Este registro NÃO fornece retomada; o download contínuo ainda depende da Activity e permanece integralmente verificado por SHA-256.

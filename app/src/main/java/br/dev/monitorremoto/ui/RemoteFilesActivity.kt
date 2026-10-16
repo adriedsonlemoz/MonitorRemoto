@@ -38,6 +38,8 @@ import br.dev.monitorremoto.core.RemoteBatchPolicy
 import br.dev.monitorremoto.core.RemoteFilePolicy
 import br.dev.monitorremoto.core.RemoteManagePolicy
 import br.dev.monitorremoto.core.SettingsStore
+import br.dev.monitorremoto.core.RemoteOperationHistory
+import br.dev.monitorremoto.core.RemoteOperationHistoryPolicy
 import br.dev.monitorremoto.transport.RemoteClient
 import org.json.JSONObject
 import java.text.DateFormat
@@ -229,9 +231,42 @@ class RemoteFilesActivity : Activity() {
         top.addView(button("↻", action = { if (!copying) listFolder() }).apply {
             textSize = 19f; contentDescription = "Atualizar lista"
         }, LinearLayout.LayoutParams(dp(48), dp(52)).apply { leftMargin = dp(8) })
-        add(top, 15)
+        add(top, 8)
+        add(horizontal(
+            button("◷ Histórico") { showHistory() },
+            button("ⓘ Ajuda") { showHelp() }
+        ), 8)
         status = label("", 13f).apply { setTextColor(muted) }
         add(status, 9)
+    }
+
+    private fun logOperation(operation: String, success: Boolean, done: Int, total: Int, bytes: Long = 0L) {
+        RemoteOperationHistory.record(applicationContext, host, operation,
+            RemoteOperationHistoryPolicy.outcome(success, cancel.get(), done), done, total, bytes)
+    }
+
+    private fun showHistory() {
+        val events = RemoteOperationHistory.read(this, host)
+        val body = panel().apply {
+            addView(label("Histórico neste controlador", 17f, true))
+            addView(label("Apenas tipo, resultado, quantidade, data e tamanho. Nomes, caminhos, IPs e conteúdo não são guardados. Últimos 48 eventos, até 30 dias.", 12f).apply { setTextColor(muted) })
+            if (events.isEmpty()) addView(label("Nenhuma operação finalizada registrada para este aparelho.", 13f))
+            events.take(20).forEach { event ->
+                val date = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(event.timestamp))
+                addView(label("${RemoteOperationHistoryPolicy.label(event.operation)} · ${event.outcome} · ${event.done}/${event.total}", 13f, true))
+                addView(label("$date${if (event.bytes > 0L) " · ${formatBytes(event.bytes)}" else ""}", 11f).apply { setTextColor(muted) })
+            }
+        }
+        val scroll = ScrollView(this).apply { addView(body) }
+        AlertDialog.Builder(this).setTitle("Atividades de arquivos").setView(scroll)
+            .setNeutralButton("Limpar histórico") { _, _ ->
+                AlertDialog.Builder(this).setTitle("Apagar histórico local?")
+                    .setMessage("Apaga apenas os registros deste aparelho neste controlador. Não modifica arquivos remotos.")
+                    .setNegativeButton("Cancelar", null)
+                    .setPositiveButton("Apagar") { _, _ -> RemoteOperationHistory.clear(this, host); status.text = "Histórico local apagado." }
+                    .show()
+            }
+            .setPositiveButton("Fechar", null).show()
     }
 
     private fun showHelp() {
@@ -289,10 +324,13 @@ class RemoteFilesActivity : Activity() {
 
     private fun showListing(truncated: Boolean) {
         screenShell()
+        val previous = RemoteOperationHistory.read(this, host).firstOrNull()
         val crumb = panel().apply {
             addView(label(if (path.isEmpty()) "Pasta compartilhada" else "Pasta /${path.joinToString("/")}", 14f, true))
-            addView(label("${if (writeAllowed) "Gerenciamento autorizado" else "Somente leitura"} · ${entries.size} itens" +
+            addView(label("${if (writeAllowed) "✓ Leitura e escrita autorizadas" else "◉ Somente leitura"} · ${entries.size} itens" +
                 if (truncated) " · lista limitada" else "", 12f).apply { setTextColor(muted) })
+            if (previous != null) addView(label("Última operação: ${RemoteOperationHistoryPolicy.label(previous.operation)} · ${previous.outcome}", 11f)
+                .apply { setTextColor(muted) })
         }
         add(crumb, 7)
         if (writeAllowed) add(horizontal(
@@ -742,9 +780,10 @@ class RemoteFilesActivity : Activity() {
         thread(name = "MonitorRemoto-data-folder") {
             var createdRoot: Uri? = null
             var finished = 0
+            var totalFiles = 0
             val result = runCatching {
                 val items = collectRemoteFolder(sourceRoot)
-                val totalFiles = items.count { it.data != null }
+                totalFiles = items.count { it.data != null }
                 check(totalFiles > 0) { "Pasta sem arquivos válidos para copiar." }
                 check(!cancel.get()) { "Cópia cancelada." }
                 val parentId = DocumentsContract.getTreeDocumentId(tree)
@@ -780,6 +819,7 @@ class RemoteFilesActivity : Activity() {
                     }
                 }
             }
+            logOperation("download", result.isSuccess, finished, totalFiles.coerceAtLeast(1))
             if (result.isFailure) createdRoot?.let { uri ->
                 // Apenas diretório que acabamos de criar, nunca outros documentos do usuário.
                 runCatching { DocumentsContract.deleteDocument(contentResolver, uri) }
@@ -833,6 +873,7 @@ class RemoteFilesActivity : Activity() {
                     completedBytes += file.optLong("size", 0L)
                 }
             }
+            logOperation("download", result.isSuccess, copied, files.size, completedBytes)
             main.post {
                 if (isFinishing || isDestroyed) return@post
                 copying = false; selected.clear(); selecting = false
@@ -860,6 +901,8 @@ class RemoteFilesActivity : Activity() {
                     put(MediaStore.MediaColumns.IS_PENDING, 0)
                 }, null, null) == 1 }.getOrDefault(false) else result.isSuccess
             if (!published) runCatching { contentResolver.delete(destination, null, null) }
+            logOperation("download", published, if (published) 1 else 0, 1,
+                if (published) file.optLong("size").coerceAtLeast(0L) else 0L)
             main.post {
                 if (isFinishing || isDestroyed) return@post
                 copying = false
@@ -1176,6 +1219,7 @@ class RemoteFilesActivity : Activity() {
                     } }
                 }
             }
+            logOperation(action, outcome.isSuccess, completed, names.size)
             main.post { if (!isFinishing && !isDestroyed) {
                 copying = false; selected.clear(); selecting = false
                 screenShell(); status.text = if (outcome.isSuccess) "Operação concluída em $completed item(ns)." else
@@ -1231,6 +1275,7 @@ class RemoteFilesActivity : Activity() {
         screenShell(); showTransferPanel("Enviando ${files.size} arquivo(s) ao monitorado")
         thread(name = "MonitorRemoto-upload") {
             var sent = 0
+            var bytesSent = 0L
             val outcome = runCatching {
                 val items = files.map { source ->
                     var name = ""; var size = -1L
@@ -1294,6 +1339,7 @@ class RemoteFilesActivity : Activity() {
                                 JSONObject().put("session", session).put("sha256", digest))
                         } ?: error("Não foi possível abrir arquivo local.")
                         sent++
+                        bytesSent += file.size
                     } catch (error: Exception) {
                         runCatching { RemoteClient.dataUpload(host, secret, applicationContext, method,
                             "dataUploadAbort", emptyList(), JSONObject().put("session", session)) }
@@ -1301,6 +1347,7 @@ class RemoteFilesActivity : Activity() {
                     }
                 }
             }
+            logOperation("upload", outcome.isSuccess, sent, files.size, bytesSent)
             main.post { if (!isDestroyed && !isFinishing) {
                 copying = false; screenShell()
                 status.text = if (outcome.isSuccess) "$sent arquivo(s) enviados e conferidos." else
@@ -1346,6 +1393,7 @@ class RemoteFilesActivity : Activity() {
                     } catch (e: Exception) { runCatching { contentResolver.delete(target, null, null) }; throw e }
                 }
             }
+            logOperation("download", outcome.isSuccess, finished, items.size)
             main.post { if (!isDestroyed && !isFinishing) {
                 copying = false; screenShell()
                 status.text = if (outcome.isSuccess) "$finished arquivo(s) salvos em Downloads/Monitor Remoto." else
