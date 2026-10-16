@@ -16,7 +16,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.82" and code.group(1) == "82", "Versões incompatíveis"
+assert version == "0.1.0-alpha.83" and code.group(1) == "83", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -902,7 +902,25 @@ camera_viewer = (ui_root / 'RemoteCameraActivity.kt').read_text(encoding='utf-8'
 camera_store = (root / 'app/src/main/java/br/dev/monitorremoto/capture/CameraFrameStore.kt').read_text(encoding='utf-8')
 camera_codec = (root / 'app/src/main/java/br/dev/monitorremoto/capture/CameraImageCodec.kt').read_text(encoding='utf-8')
 assert 'CameraShareActivity' in manifest and 'RemoteCameraActivity' in manifest
-assert 'FOREGROUND_SERVICE_CAMERA' not in manifest and 'foregroundServiceType="camera"' not in manifest
+# Alpha.83: manter CameraShareActivity SEM FGS, mas permitir um serviço separado
+# que SOMENTE é armado quando uma Activity visível do monitorado solicita.
+photo_service = (root / 'app/src/main/java/br/dev/monitorremoto/service/PhotoReadyService.kt').read_text()
+photo_setup = (ui_root / 'RemotePhotoSetupActivity.kt').read_text()
+photo_view = (ui_root / 'RemotePhotoActivity.kt').read_text()
+photo_client = (root / 'app/src/main/java/br/dev/monitorremoto/transport/RemoteClient.kt').read_text()
+assert 'FOREGROUND_SERVICE_CAMERA' in manifest and 'foregroundServiceType="camera"' in manifest
+assert 'android:name=".service.PhotoReadyService"' in manifest and 'android:exported="false"' in manifest
+assert 'android:name=".ui.RemotePhotoSetupActivity"' in manifest and 'android:exported="false"' in manifest
+assert 'android:name=".ui.RemotePhotoActivity"' in manifest
+assert 'startForegroundService(intent)' in photo_setup and 'requestPermissions(arrayOf(Manifest.permission.CAMERA)' in photo_setup
+assert 'PhotoReadyService.stop(context)' in settings
+assert 'PhotoReadyService.stop(this)' in (root / 'app/src/main/java/br/dev/monitorremoto/service/MonitorService.kt').read_text()
+assert 'PhotoReadyService.take(lens)' in server and '"photoTake"' in server
+assert 'takePhoto(host' in photo_client and 'fun takePhoto()' in photo_view
+assert 'START_NOT_STICKY' in photo_service and 'ACTION_STOP' in photo_service
+assert 'android.app.Service' in photo_service and 'Notification.Builder' in photo_service
+assert 'CameraDevice.TEMPLATE_STILL_CAPTURE' in photo_service and 'ImageFormat.JPEG' in photo_service
+assert 'latch.await(12, TimeUnit.SECONDS)' in photo_service and 'PhotoResult' in photo_service
 assert 'cameraFrame' in server and 'store.status(knownSequence)' in server
 assert '"cameraFrame"' in (root / 'app/src/main/java/br/dev/monitorremoto/transport/RemoteClient.kt').read_text()
 assert 'startActivity(Intent(this, CameraShareActivity::class.java))' in (ui_root / 'MonitorScreenUi.kt').read_text()
@@ -914,7 +932,7 @@ assert 'YuvImage(' in camera_codec and 'plane.rowStride' in camera_codec and 'pl
 assert 'MAX_FRAME_BYTES = 110_000' in (root / 'app/src/main/java/br/dev/monitorremoto/core/CameraStreamPolicy.kt').read_text()
 assert 'fun saveStill()' in camera_viewer and 'RemoteImageSaver.save(' in camera_viewer
 assert 'fun requestFrame()' in camera_viewer and 'onPause()' in camera_viewer
-print('PASSOU: alpha.62, câmera visível, JPEG em RAM, câmera sem ativação remota ou FGS')
+print('PASSOU: alpha.62 ao vivo, alpha.83 foto sob demanda somente via FGS camera pré-armado')
 
 # alpha.63: orientação YUV realmente aplicada ANTES da conversão JPEG,
 # sessão de captura por token e revogação também quando serviço para.
@@ -1167,3 +1185,12 @@ assert 'RecentDevices.key(this, host)' in location_ui and 'RemoteClient.snapshot
 assert 'MapProjection.normalizedTileX' in map_ui and 'fun metersPerPixel' in projection
 assert 'INTERMEDIARIO -> 30_000L' in (root / 'app/src/main/java/br/dev/monitorremoto/core/LocationSharePolicy.kt').read_text()
 print('PASSOU: alpha.82, mapa interno, tiles opt-in por aparelho, intervalo local e perfil GPS intermediário.')
+
+# Alpha.83: não fazer start de câmera a partir do servidor remoto/boot, mesmo autenticado.
+assert 'startForegroundService(' not in server and 'startService(' not in server
+assert 'PhotoReadyService' not in (root / 'app/src/main/java/br/dev/monitorremoto/service/BootReceiver.kt').read_text()
+assert 'SettingsStore.isMonitorEnabled(this)' in photo_service and 'MonitorService.isRunning' in photo_service
+assert 'setOngoing(true)' in photo_service and '"Parar câmera remota"' in photo_service
+assert 'PhotoReadyService.armed' in (ui_root / 'MonitorScreenUi.kt').read_text()
+assert 'val lens = regular.optString("lens", "")' in server
+print('PASSOU: alpha.83 foto JPEG única, botão no controlador, notificação e parada local.')

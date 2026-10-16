@@ -12,6 +12,7 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
     <!-- Acesso ao uso precisa de autorização manual nas configurações especiais Android. -->
     <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" />
     <!-- Opcional: somente após autorização explícita no aparelho monitorado. -->
@@ -54,9 +55,11 @@
         android:supportsRtl="true">
 
         <!-- Camera2 local; nenhuma Activity de câmera externa ou componente exportado. -->
-        <!-- Câmera só funciona com Activity visível. Nenhum serviço de câmera em background. -->
+        <!-- Vídeo ao vivo exige Activity visível; foto remota usa FGS camera pré-armado e visível na notificação. -->
         <activity android:name=".ui.CameraShareActivity" android:exported="false" />
         <activity android:name=".ui.RemoteCameraActivity" android:exported="false" />
+        <activity android:name=".ui.RemotePhotoSetupActivity" android:exported="false" />
+        <activity android:name=".ui.RemotePhotoActivity" android:exported="false" />
         <activity android:name=".ui.AdbActivity" android:exported="false" />
         <activity
             android:name=".ui.QrScanActivity"
@@ -107,6 +110,13 @@
             android:exported="false"
             android:foregroundServiceType="connectedDevice"
             android:stopWithTask="false" />
+
+        <!-- Sessão de fotografia armada SOMENTE com Activity visível e permissão CAMERA.
+             Não reiniciar por boot nem ativar câmera silenciosamente por comando remoto. -->
+        <service android:name=".service.PhotoReadyService"
+            android:exported="false"
+            android:stopWithTask="false"
+            android:foregroundServiceType="camera" />
 
         <!-- Apenas após início local explícito. Notificação permanente com ação Parar. -->
         <service android:name=".service.LocationShareService"

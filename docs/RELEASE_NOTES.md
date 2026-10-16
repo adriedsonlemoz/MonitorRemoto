@@ -1,3 +1,12 @@
+# Monitor Remoto v0.1.0-alpha.83 · Foto remota sob demanda
+
+- Novo modo de foto real JPEG única por Camera2 com lente traseira/frontal, sem streaming ou miniaturas em loop.
+- A sessão de câmera deve ser armada previamente com autorização e Activity visível NO monitorado. FGS camera com notificação permanente e ação Parar; não inicia por boot, job nem comando remoto.
+- O controlador solicita somente a foto JPEG pelo socket autenticado AES-GCM e pode visualizar/salvar localmente.
+- Se o Android encerrar a sessão, a foto remota falha explicitamente e é necessária nova ativação presencial. Sem acesso fora da rede LAN/VPN já estabelecida.
+- Limite de JPEG transmitido 320 KiB, timeout 12 s, rate limit 2 s; autorização de pareamento compartilhada entre controladores.
+- Android build e ensaios físicos pendentes.
+
 # Monitor Remoto v0.1.0-alpha.82
 
 - Localização agora tem mapa interno de blocos, precisão, centralizar, seguir, arrastar, zoom e mapa externo.

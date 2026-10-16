@@ -120,7 +120,7 @@ class MonitorServer(private val context: Context) {
                 val regular = runCatching { WireProtocol.decode(permanentKey, encrypted) }.getOrNull()
                 if (regular != null) {
                     if (regular.optInt("v") != WireProtocol.VERSION ||
-                        regular.optString("op") !in setOf("snapshot", "disconnect", "notificationReply", "smsReply", "screenFrame", "screenCapture", "remoteTouch", "audioChunk", "requestScreen", "videoFrame", "wakeScreen", "dataList", "dataChunk", "dataChunks", "dataHash", "dataRead", "dataStream", "dataManage", "dataUploadStart", "dataUploadChunk", "dataUploadFinish", "dataUploadAbort", "dataUploadStatus", "appsList", "appsIcons", "appLaunch", "deviceControl", "cameraFrame", "cameraSwitch")) return
+                        regular.optString("op") !in setOf("snapshot", "disconnect", "notificationReply", "smsReply", "screenFrame", "screenCapture", "remoteTouch", "audioChunk", "requestScreen", "videoFrame", "wakeScreen", "dataList", "dataChunk", "dataChunks", "dataHash", "dataRead", "dataStream", "dataManage", "dataUploadStart", "dataUploadChunk", "dataUploadFinish", "dataUploadAbort", "dataUploadStatus", "appsList", "appsIcons", "appLaunch", "deviceControl", "cameraFrame", "cameraSwitch", "photoTake")) return
                     if (abs(now - regular.optLong("ts")) > 5 * 60 * 1000L) return
                     synchronized(seenNonces) {
                         // Retenção compatível com ±5 minutos de validade do envelope.
@@ -332,6 +332,23 @@ class MonitorServer(private val context: Context) {
                             .put("op", "screenCapture").put("appVersion", AppVersion.NAME)
                             .put("ok", bytes != null).put("sharing", ScreenFrameStore.sharing)
                         if (bytes != null) reply.put("jpeg", Base64.encodeToString(bytes, Base64.NO_WRAP))
+                        WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(permanentKey, reply))
+                        AuthenticatedAccess.authenticated(socket.inetAddress?.hostAddress.orEmpty(),
+                            regular.optString("clientId"), regular.optString("clientName"), regular.optString("accessMethod"))
+                        return
+                    }
+                    if (regular.optString("op") == "photoTake") {
+                        // O serviço de câmera precisa ter sido iniciado visivelmente no monitorado.
+                        // Não inicia serviço, Activity ou permissão por solicitação remota.
+                        val lens = regular.optString("lens", "")
+                        val result = if (SettingsStore.isMonitorEnabled(context) && MonitorService.isRunning)
+                            br.dev.monitorremoto.service.PhotoReadyService.take(lens)
+                        else br.dev.monitorremoto.service.PhotoReadyService.PhotoResult(error = "Monitoramento desativado.")
+                        val reply = JSONObject().put("v", WireProtocol.VERSION)
+                            .put("op", "photoTake").put("appVersion", AppVersion.NAME)
+                            .put("ok", result.jpeg != null)
+                            .put("message", result.error.take(180))
+                        if (result.jpeg != null) reply.put("jpeg", Base64.encodeToString(result.jpeg, Base64.NO_WRAP))
                         WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(permanentKey, reply))
                         AuthenticatedAccess.authenticated(socket.inetAddress?.hostAddress.orEmpty(),
                             regular.optString("clientId"), regular.optString("clientName"), regular.optString("accessMethod"))

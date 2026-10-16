@@ -38,6 +38,7 @@ object SettingsStore {
         // Nunca reutilizar eventos da sessão anterior, mesmo com uma captura em trânsito.
         if (!enabled) {
             br.dev.monitorremoto.service.LocationShareService.stop(context)
+            br.dev.monitorremoto.service.PhotoReadyService.stop(context)
             br.dev.monitorremoto.capture.CameraFrameStore.stop()
             RemotePhysicalControls.stopSound()
             RemotePhysicalControls.stopOwnedTorch()

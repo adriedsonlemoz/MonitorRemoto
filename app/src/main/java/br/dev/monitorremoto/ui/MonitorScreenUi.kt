@@ -128,6 +128,19 @@ internal fun MainActivity.renderMonitor() {
             }
         })
         content.addView(cameraCard)
+        gap(9)
+        val photoCard = panel(12)
+        photoCard.addView(label("Fotografia remota sob demanda", 14f, strong = true))
+        photoCard.addView(label(if (br.dev.monitorremoto.service.PhotoReadyService.armed)
+            "● Sessão armada · foto real sem vídeo contínuo · notificação visível"
+            else "Desarmada · configure antes de deixar este aparelho sem acesso físico", 11f, muted = true))
+        sectionGap(photoCard, 5)
+        photoCard.addView(actionButton(if (br.dev.monitorremoto.service.PhotoReadyService.armed)
+            "Gerenciar / parar foto remota" else "Preparar foto remota", emphasis = false) {
+            startActivity(Intent(this, RemotePhotoSetupActivity::class.java))
+        })
+        content.addView(photoCard)
+
     }
     gap(12)
     if (enabled && running) renderIncomingAccess()

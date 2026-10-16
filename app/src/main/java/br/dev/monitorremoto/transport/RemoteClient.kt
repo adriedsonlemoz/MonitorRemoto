@@ -350,6 +350,35 @@ object RemoteClient {
         }
     }
 
+    /** Solicita apenas uma fotografia JPEG de sessão previamente armada no monitorado. */
+    fun takePhoto(host: String, key: ByteArray, context: Context, method: String, lens: String): ByteArray {
+        require(host.isNotBlank() && host.length <= 253 && !host.contains('/') &&
+            !host.contains(':') && host.none { it.isWhitespace() }) { "Endereço inválido." }
+        require(br.dev.monitorremoto.core.RemotePhotoPolicy.validLens(lens)) { "Lente inválida." }
+        val request = JSONObject().put("v", WireProtocol.VERSION).put("op", "photoTake")
+            .put("lens", lens).put("appVersion", AppVersion.NAME)
+            .put("ts", System.currentTimeMillis())
+            .put("clientId", SettingsStore.controllerId(context))
+            .put("clientName", listOf(Build.MANUFACTURER, Build.MODEL).joinToString(" ").take(72))
+            .put("accessMethod", method)
+        return Socket().use { socket ->
+            socket.connect(InetSocketAddress(host, WireProtocol.PORT), 4500)
+            socket.soTimeout = 17_000
+            WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(key, request))
+            val response = WireProtocol.decode(key, WireProtocol.receive(socket.getInputStream(), 850 * 1024))
+            if (response.optString("op") == "versionMismatch")
+                error(AppVersion.incompatibility(response.optString("appVersion")))
+            check(response.optString("op") == "photoTake" && response.optInt("v") == WireProtocol.VERSION &&
+                AppVersion.compatible(response.optString("appVersion"))) { "Resposta fotográfica inválida." }
+            check(response.optBoolean("ok")) { response.optString("message", "Câmera indisponível.") }
+            val bytes = Base64.decode(response.getString("jpeg"), Base64.NO_WRAP)
+            check(br.dev.monitorremoto.core.RemotePhotoPolicy.validJpeg(bytes)) {
+                "JPEG inválido ou acima do limite."
+            }
+            bytes
+        }
+    }
+
     /** Somente lê quadros de uma sessão Camera2 iniciada LOCALMENTE no monitorado. */
     fun cameraFrame(host: String, key: ByteArray, context: Context, method: String, afterSequence: Long = 0L): JSONObject {
         require(host.isNotBlank() && host.length <= 253 && !host.contains('/') &&
