@@ -1,3 +1,9 @@
+## 0.1.0-alpha.90 (versionCode 90) | 16/10/2026
+- Corrige falha real do workflow GitHub Actions #82 em `:app:compileDebugKotlin`, `RemoteFilesActivity.kt:604-606`, provocada por `scroll` não declarado e acesso a `AlertDialog?` potencialmente nulo.
+- O menu inferior de arquivos agora cria sua própria `ScrollView`, recebe `holder` e utiliza `dialog` local não nulo para `show()` e `window`.
+- Novo teste estrutural de regressão para o menu; versão e novidades sincronizadas. Nenhuma mudança no protocolo, pasta fixa, autorizações, criptografia ou operações de arquivos.
+- Sintaxe/estrutura verificadas localmente; recompilar `:app:testDebugUnitTest :app:assembleDebug` na CI.
+
 ## 0.1.0-alpha.89 (versionCode 89) | 16/10/2026
 - Pasta fixa Downloads/Monitor Remoto (Android 10+) em ambos os aparelhos; criada automaticamente pelo app e usada por todas as opções de download/upload, sem escolher pastas SAF.
 - `FixedDownloadsFolder` usa MediaStore e filtra a propriedade do app, evitando acesso a arquivos de outros aplicativos, com operações de arquivo autenticadas e confirmação de exclusão; pastas vazias virtuais com índice local.

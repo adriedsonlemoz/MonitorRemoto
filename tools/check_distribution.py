@@ -16,7 +16,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.89" and code.group(1) == "89", "Versões incompatíveis"
+assert version == "0.1.0-alpha.90" and code.group(1) == "90", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -649,7 +649,7 @@ assert 'MessageDigest.getInstance("SHA-256")' in client and 'MAX_FILE_BYTES = 2L
 assert 'MANAGE_EXTERNAL_STORAGE' not in manifest and 'READ_EXTERNAL_STORAGE' not in manifest
 assert 'android:name=".ui.RemoteFilesActivity" android:exported="false"' in manifest
 assert (root / 'app/src/test/java/br/dev/monitorremoto/core/RemoteFilePolicyTest.kt').exists()
-print('PASSOU: alpha.89, área fixa MediaStore de arquivos próprios, criptografia, limites e cancelamento')
+print('PASSOU: alpha.90, área fixa MediaStore de arquivos próprios, criptografia, limites e cancelamento')
 
 # Alpha.46: compileDebugKotlin workflow #45 falhou por conflito de nomes com View.foreground: Drawable.
 # O getter foreground do Activity retorna Int; aplicar o receiver explícito nas duas views.
@@ -800,7 +800,7 @@ assert 'Reiniciar normalmente' in dashboard57 and 'iconSectionHeader' in dashboa
 assert 'val deviceCard = card(body, fill = soft)' in ui56
 assert 's?.toString()?.trim() == "REINICIAR"' in ui56
 assert 'adb.requestNormalReboot()' in ui56
-print('PASSOU: alpha.89, cópia múltipla para Downloads fixos, manutenção protegida e interface aprimorada')
+print('PASSOU: alpha.90, cópia múltipla para Downloads fixos, manutenção protegida e interface aprimorada')
 
 # Alpha.58: notificações com diagnóstico e apps com opt-in explícito, sem alcance universal.
 cat58 = (ui_root / 'RemoteCatalogActivity.kt').read_text()
@@ -1149,7 +1149,7 @@ assert 'FixedDownloadsFolder.supported()' in settings and 'Downloads/Monitor Rem
 assert 'confirmBatchDelete' in filesui and 'confirmBatchTrash' in filesui
 assert 'MediaStore.Downloads.EXTERNAL_CONTENT_URI' in filesui and 'PICK_UPLOADS' in filesui
 assert 'FAST_CHUNK_BYTES' in file_policy and 'RemoteClient.dataRead(' in filesui
-print('PASSOU: alpha.89, legado SAF isolado, MediaStore próprio, uploads staged e fast chunks.')
+print('PASSOU: alpha.90, legado SAF isolado, MediaStore próprio, uploads staged e fast chunks.')
 
 # alpha.81: ACK JSON autenticado, desafio por sessão e framing binário AES-GCM.
 stream_server = (root / 'app/src/main/java/br/dev/monitorremoto/transport/MonitorServer.kt').read_text()
@@ -1290,3 +1290,11 @@ assert 'publishStaged(part, item' in activity89 and 'confirmBatchDelete' in acti
 assert (ui_root / 'ThemedPopup.kt').exists() and 'setGravity(Gravity.BOTTOM)' in activity89
 assert 'tiles.chunked(3)' in dashboard88
 print('PASSOU: alpha.89 Downloads fixos de propriedade do app, operações autenticadas e menus modernos.')
+
+# Alpha.90: previne regressão de compilação do menu inferior (workflow #82).
+files90 = (ui_root / 'RemoteFilesActivity.kt').read_text()
+assert 'val scroll = ScrollView(this).apply {' in files90 and 'addView(holder)' in files90, 'Menu sem ScrollView local'
+assert 'val dialog = modernBuilder().setView(scroll).create()' in files90, 'Dialog deve ter tipo nao-nulo'
+assert 'dialog.show()' in files90 and 'dialog.window?.apply' in files90, 'Acesso indevido a AlertDialog?'
+assert 'menu = modernBuilder().setView(scroll).create()' not in files90, 'Regressao: smart cast de var mutavel nullable'
+print('PASSOU: alpha.90 menu de arquivos com ScrollView criada e AlertDialog nao-nulo.')

@@ -15,6 +15,7 @@ internal fun MainActivity.showVersionNews() {
     layout.addView(iconSectionHeader(R.drawable.ic_info, "Novidades · ${AppVersion.NAME}", "Bem-vindo à atualização"))
     sectionGap(layout, 10)
     val entries = listOf(
+        "Correção da compilação" to "Menu de arquivos corrigido: lista rolável própria e diálogo com referência não nula.",
         "Downloads sem escolher pasta" to "Pasta fixa Downloads/Monitor Remoto criada automaticamente em Android 10+.",
         "Envio e recuperação" to "Enviar seleciona os arquivos; baixar usa Downloads/Monitor Remoto, mantendo integridade e retomada.",
         "Arquivos do próprio app" to "Somente arquivos criados pelo Monitor Remoto ficam disponíveis, sem ler downloads de terceiros.",

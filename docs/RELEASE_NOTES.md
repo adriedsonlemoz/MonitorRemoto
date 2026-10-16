@@ -1,3 +1,13 @@
+# Monitor Remoto v0.1.0-alpha.90 · Correção de compilação do menu de arquivos
+
+## Alterações
+- Corrige o erro do GitHub Actions `Gerar APK e Release 82`: `RemoteFilesActivity.kt:604-606`, `scroll` indefinido e tentativa de chamar métodos de `AlertDialog?` sem garantir não nulidade.
+- O menu inferior passa a possuir uma `ScrollView` local com seu conteúdo; a instância `dialog` de tipo não nulo é usada para mostrar e configurar a janela.
+- Mantidos os recursos da alpha.89: Downloads/Monitor Remoto, gerenciamento de arquivos próprios, grade de três colunas, novas Configurações, AES-GCM e SHA-256.
+
+## Validação
+- Verificação sintática/estrutural local não substitui `:app:compileDebugKotlin` real. Reexecutar a CI e instalar a alpha.90 em ambos os aparelhos.
+
 # Monitor Remoto v0.1.0-alpha.89 · Menus modernos e Downloads fixos
 
 ## Novidades

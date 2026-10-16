@@ -1,4 +1,8 @@
-# Monitor Remoto 0.1.0-alpha.89
+# Monitor Remoto 0.1.0-alpha.90
+
+- Alpha.90: workflow `Gerar APK e Release 82` falhou em `RemoteFilesActivity.kt:604–606` porque `scroll` não existia no escopo de `openActions`, seguido de erros com receptor `AlertDialog?`. Manter `val scroll = ScrollView(this).apply { addView(holder) }` e `val dialog = modernBuilder().setView(scroll).create()` para chamadas `dialog.show()` e `dialog.window`. `tools/check_distribution.py` protege esta regressão. Não modificar protocolo nem permissões para corrigir erro de UI; compilar no GitHub Actions. Próxima alpha.91.
+
+## Histórico e convenções anteriores da alpha.89
 # Convenções permanentes do projeto Monitor Remoto
 
 - Toda alteração de código incrementa sequencialmente `versionCode` e `versionName` (ex.: `0.1.0-alpha.8` -> `0.1.0-alpha.9`). Sincronizar tela, README, CHANGELOG, RELEASE_NOTES e documentação.

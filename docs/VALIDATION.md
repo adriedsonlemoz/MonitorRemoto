@@ -1,3 +1,10 @@
+## Alpha.90 (16/10/2026)
+
+- Log do workflow `Gerar APK e Release 82` (16/10/2026): compilação Kotlin falhou com referências indefinidas `scroll`/`create` e uso de `AlertDialog?` como não nulo em `RemoteFilesActivity.kt:604–606`.
+- Causa raiz: `scroll` não fora criada dentro de `openActions`; expressão de construção gerava erros em cascata.
+- Correção: `ScrollView` local adicionada contendo o painel, referência `dialog` não nula, regressão no verificador de distribuição.
+- Compilação Gradle e teste em hardware: pendentes.
+
 ## Alpha.82 (15/10/2026)
 
 - Verificador estrutural inclui manutenção da transferência binária da alpha.81 e o mapa da alpha.82.

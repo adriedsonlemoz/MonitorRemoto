@@ -601,9 +601,16 @@ class RemoteFilesActivity : Activity() {
                 confirmBatchDelete(listOf(item))
             }
         }
-        menu = modernBuilder().setView(scroll).create()
-        menu.show()
-        menu.window?.apply {
+        // A lista rolável pertence a este menu, não à ScrollView da Activity.
+        val scroll = ScrollView(this).apply {
+            isFillViewport = false
+            clipToPadding = false
+            addView(holder)
+        }
+        val dialog = modernBuilder().setView(scroll).create()
+        menu = dialog
+        dialog.show()
+        dialog.window?.apply {
             setBackgroundDrawable(rounded(panelColor, 26, false))
             setGravity(Gravity.BOTTOM)
             setLayout(android.view.WindowManager.LayoutParams.MATCH_PARENT,
