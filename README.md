@@ -1,12 +1,19 @@
-# Monitor Remoto v0.1.0-alpha.90
+# Monitor Remoto v0.1.0-alpha.91
 
-**Correção da alpha.90:** workflow #82 revelou erro de compilação no menu inferior de arquivos: referência `scroll` não declarada e acesso a `AlertDialog?`. Corrigido usando ScrollView local e `dialog` não nulo. Esta versão substitui a alpha.89; funcionalidades e pasta fixa Downloads/Monitor Remoto preservadas. Gerar novo APK pelo GitHub Actions antes de considerar o build validado.
+**Alpha.91:** toque em Bateria ou Temperatura no painel remoto para abrir diálogo central de termometria. Android: bateria, estado térmico, headroom (indicador sem °C) e sensor ambiente somente quando presente. ADB: leitura adicional de zonas térmicas do mesmo IP previamente pareado via comando fixo `dumpsys thermalservice`, sem exigir ADB na consulta comum. Algumas zonas não são expostas pelo fabricante; valor ausente nunca é estimado. Build Android ainda pendente.
+
+**Nota histórica, correção da alpha.90:** workflow #82 revelou erro de compilação no menu inferior de arquivos: referência `scroll` não declarada e acesso a `AlertDialog?`. Corrigido usando ScrollView local e `dialog` não nulo. Esta versão substitui a alpha.89; funcionalidades e pasta fixa Downloads/Monitor Remoto preservadas. Gerar novo APK pelo GitHub Actions antes de considerar o build validado.
 
 # Monitor Remoto
 
 **Foto remota (histórico alpha.84):** no monitorado, ative monitoramento e abra **Preparar foto remota** uma vez para armar a câmera com permissão Android e notificação permanente. No controlador, toque em **Tirar foto**. Apenas um JPEG é capturado por Camera2 (sem prévia/streaming), recebido por AES-GCM e mostrado para salvar. Não funciona se o Android parar a sessão, houver indisponibilidade da câmera ou se o aparelho estiver fora da LAN/VPN. Não rearma por boot nem permite abertura oculta.
 
-**v0.1.0-alpha.90 / versionCode 90** · Android 8.0+ · Kotlin 2.2.21 · AGP 8.13.2 · Gradle 8.13
+**v0.1.0-alpha.93 / versionCode 93** · Android 8.0+ · Kotlin 2.2.21 · AGP 8.13.2 · Gradle 8.13
+
+## Localização: alpha.93
+
+O painel de mapa mostra status real da conexão, idade/precisão do fix e modo Acompanhar durante a tela aberta. A consulta `locationSnapshot` transporta exclusivamente a posição já autorizada, sem ler os demais módulos. O intervalo rápido de 3 s não acelera o GNSS; o custo de rede e bateria pode aumentar quando Acompanhar está ativado. Não supor localização instantânea nem conectividade fora da LAN/VPN.
+
 
 **Novidades alpha.89:** a pasta de transferências é fixa em **Downloads/Monitor Remoto** nos dois aparelhos (Android 10+), criada automaticamente quando o aplicativo abre ou inicia o monitoramento. O envio e download não exigem escolher diretório: ao baixar, salva nessa pasta, com retomada e hash SHA-256, e ao enviar, o controlador escolhe os arquivos individuais, não a pasta remota. O monitorado expõe **somente arquivos que pertencem ao Monitor Remoto** no MediaStore, não todo Downloads nem arquivos de outros aplicativos. O antigo seletor de árvore SAF não aparece na Configuração. A chave pareada autentica operações; excluir exige confirmação no controlador. Menus de arquivos como painel inferior e diálogos temáticos mais coerentes nas telas. Requer Android 10+ neste novo modo; aparelhos antigos não acessam a pasta fixa sem seletor. **Compilação Android e testes físicos pendentes.**
 
@@ -321,7 +328,7 @@ A Home, o Modo Monitorado, a escolha de conexão, os submenus de Configurações
 
 ## Como utilizar
 
-1. Execute GitHub Actions > **Gerar APK e Release** > Run workflow. Para baixar **APK sem ZIP**, use Releases > `v0.1.0-alpha.90` > Assets > **`MonitorRemoto-v0.1.0-alpha.90.apk`**. Em Actions > Artifacts, um APK de contingência (quando presente) continua vindo em ZIP por comportamento padrão do GitHub. Instale o mesmo APK nos dois aparelhos.
+1. Execute GitHub Actions > **Gerar APK e Release** > Run workflow. Para baixar **APK sem ZIP**, use Releases > `v0.1.0-alpha.91` > Assets > **`MonitorRemoto-v0.1.0-alpha.91.apk`**. Em Actions > Artifacts, um APK de contingência (quando presente) continua vindo em ZIP por comportamento padrão do GitHub. Instale o mesmo APK nos dois aparelhos.
 2. No telefone secundário: na nova **Home**, toque em **Monitorar este aparelho**; autorize a notificação de serviço e ative o monitoramento. Em Configurações, conceda apenas as permissões necessárias e selecione os aplicativos cujas notificações deseja compartilhar.
 3. Na página Monitorado, toque no cartão **Gerar QR**. Escolha o IP privado acessível. O QR expira em 2 minutos e é válido para um único pareamento.
 4. No telefone principal: na **Home**, toque em **Conectar novo aparelho > QR Code**, aponte a câmera na janela compacta e confirme os dados do aparelho antes do pareamento. Para um aparelho salvo, use **Aparelhos anteriores > Conectar**. A digitação manual de IP e chave continua disponível.
@@ -348,7 +355,7 @@ Requer Android SDK API 36, Java 17, Gradle 8.13. O repositório ainda não inclu
 gradle :app:testDebugUnitTest :app:assembleDebug
 ```
 
-APK local de teste: `app/build/outputs/apk/debug/app-debug.apk`. O workflow copia esse arquivo ou o Release assinado como **`MonitorRemoto-v0.1.0-alpha.90.apk`**. Baixe diretamente na aba GitHub **Releases**. **O APK não está incluído neste ZIP de código-fonte.** Veja `docs/PAIRING_QR.md` para segurança do QR.
+APK local de teste: `app/build/outputs/apk/debug/app-debug.apk`. O workflow copia esse arquivo ou o Release assinado como **`MonitorRemoto-v0.1.0-alpha.91.apk`**. Baixe diretamente na aba GitHub **Releases**. **O APK não está incluído neste ZIP de código-fonte.** Veja `docs/PAIRING_QR.md` para segurança do QR.
 
 Opcional: configure os quatro Secrets de assinatura para gerar APK Release assinado e AAB. Ver `docs/APK_DOWNLOAD.md`. Preservar a mesma keystore entre builds é essencial para atualizações sem reinstalação.
 

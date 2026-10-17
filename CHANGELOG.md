@@ -1,3 +1,23 @@
+## 0.1.0-alpha.93 (versionCode 93) | 17/10/2026
+- Localização: painel compacto com chips dinâmicos por estado, evitando mostrar “ao vivo” quando o GPS está antigo.
+- Exibe tempo desde a última resposta autenticada, precisão real (se disponível) e idade real da posição GPS; estados de falha não são tratados como localização atual.
+- Novo modo **Acompanhar** durante a tela aberta: consulta GPS autenticada a cada 3 s, sem alterar o perfil GNSS no monitorado nem manter rastreamento invisível após sair da tela.
+- Protocolo `locationSnapshot` dedicado: AES-GCM, versão idêntica e anti-replay; evita esperar pelo snapshot completo de SMS, rede e outros subsistemas.
+- Controles menores e mapa em destaque; mantém modo automático econômico, cache opcional de mapas e ações de GPS.
+- Compilação Android completa e verificação de latência em aparelhos continuam pendentes.
+
+## 0.1.0-alpha.92 (versionCode 92) | 17/10/2026
+- Redesenhada a tela de Localização com cabeçalho compacto, card de status mais limpo, controles inferiores simplificados e atualização mais frequente.
+- Consulta automática padrão reduzida para 10 segundos, opção de 5 segundos adicionada e nova tentativa rápida após leituras antigas ou aguardando GPS.
+- Passou a exibir latência da consulta autenticada em milissegundos para separar atraso de rede da idade real da posição.
+
+## 0.1.0-alpha.91 (versionCode 91) | 17/10/2026
+- Ao tocar Bateria ou Temperatura, diálogo central personalizado mostra temperatura real da bateria, estado térmico e margem térmica quando disponível; sensor ambiente se houver hardware Android.
+- Consulta pontual cifrada `thermalDiagnostics`, sem coletar sensores continuamente; lastro em `BatteryManager`, `PowerManager` e `SensorManager`.
+- Integração ADB opcional para IP igual ao dispositivo selecionado e ADB previamente pareado; `dumpsys thermalservice` fixo, leitura limitada a 64 KiB e parser com deduplicação HAL/cache e filtros de dados inválidos.
+- Exibe indisponibilidade claramente, sem inventar CPU/GPU; mantém comportamento atual dos demais módulos, confirmação de ADB e proteções existentes.
+- Validar build Android completo e leituras reais em Redmi A3 e Redmi Note 11 Pro+.
+
 ## 0.1.0-alpha.90 (versionCode 90) | 16/10/2026
 - Corrige falha real do workflow GitHub Actions #82 em `:app:compileDebugKotlin`, `RemoteFilesActivity.kt:604-606`, provocada por `scroll` não declarado e acesso a `AlertDialog?` potencialmente nulo.
 - O menu inferior de arquivos agora cria sua própria `ScrollView`, recebe `holder` e utiliza `dialog` local não nulo para `show()` e `window`.

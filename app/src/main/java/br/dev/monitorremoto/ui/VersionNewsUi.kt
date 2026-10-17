@@ -15,12 +15,11 @@ internal fun MainActivity.showVersionNews() {
     layout.addView(iconSectionHeader(R.drawable.ic_info, "Novidades · ${AppVersion.NAME}", "Bem-vindo à atualização"))
     sectionGap(layout, 10)
     val entries = listOf(
-        "Correção da compilação" to "Menu de arquivos corrigido: lista rolável própria e diálogo com referência não nula.",
-        "Downloads sem escolher pasta" to "Pasta fixa Downloads/Monitor Remoto criada automaticamente em Android 10+.",
-        "Envio e recuperação" to "Enviar seleciona os arquivos; baixar usa Downloads/Monitor Remoto, mantendo integridade e retomada.",
-        "Arquivos do próprio app" to "Somente arquivos criados pelo Monitor Remoto ficam disponíveis, sem ler downloads de terceiros.",
-        "Menus redesenhados" to "Ações de arquivo em menu inferior e diálogos com estilo coerente nos temas.",
-        "Segurança preservada" to "Chave de pareamento e confirmação de exclusão continuam obrigatórias."
+        "Mapa mais limpo" to "Estados de conexão e GPS em chips, precisão e idade da posição bem destacados.",
+        "Última resposta" to "Mostra tempo desde a consulta autenticada, separado da idade da coordenada.",
+        "Acompanhar" to "Atualiza a consulta GPS a cada 3 segundos enquanto esta tela permanece aberta.",
+        "Consulta enxuta" to "Nova operação cifrada de localização, sem carregar SMS, rede e telemetria completa.",
+        "Privacidade" to "Não força GPS novo nem ultrapassa autorização do monitorado; leituras antigas não aparecem como ao vivo."
     )
     entries.forEach { (title, details) ->
         layout.addView(dialogCardRow(title, details, ""))

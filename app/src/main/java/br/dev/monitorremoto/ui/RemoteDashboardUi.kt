@@ -44,10 +44,10 @@ internal fun MainActivity.displayResult(root: JSONObject, fromCache: Boolean = f
     val items = listOf(
         compactMetricCard(if (chargingIndicator) R.drawable.ic_battery_charging else R.drawable.ic_battery, "Bateria",
             if (chargingIndicator) "$percentage ⚡" else percentage, statusLine, onClick = {
-                showAppNotice("Bateria remota", "Nível: $percentage\nEstado: $statusLine\nOs alertas podem ser ativados em Configurações → Alertas e proteção.")
+                showRemoteThermalDialog(battery, fromCache)
             }),
         compactMetricCard(R.drawable.ic_thermometer, "Temperatura", temperature, BatteryTemperaturePolicy.label(tempZone), tempZone, onClick = {
-            showAppNotice("Temperatura da bateria", "Leitura: $temperature\nFaixa orientativa: ${BatteryTemperaturePolicy.label(tempZone)}.\nA temperatura da bateria não é a da CPU. Configure avisos no aparelho monitorado.")
+            showRemoteThermalDialog(battery, fromCache)
         }),
         compactMetricCard(R.drawable.ic_wifi, "Rede", networkType, wifiNote, onClick = {
             showAppNotice("Rede do monitorado", if (ssid == null && network?.optBoolean("wifiPermission") == false)

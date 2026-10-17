@@ -1,3 +1,18 @@
+# Monitor Remoto v0.1.0-alpha.93 · Localização dinâmica
+
+- Consulta autenticada **somente de localização** (`locationSnapshot`), reduzindo trabalho no servidor sem contornar autorização nem forçar leitura GNSS nova.
+- Novo painel de localização com indicadores de conectividade e estado do GPS que não confundem coordenada antiga com posição atual.
+- Mostra última resposta, idade do fix, precisão e tempo da requisição; modo **Acompanhar** faz pedidos a cada 3 segundos somente com a tela aberta.
+- A posição muda apenas quando o Android monitorado dispõe de um novo fix; consulta de 3 s não garante GPS a cada 3 s.
+- Compilação Gradle e teste em dois aparelhos pendentes.
+
+# Monitor Remoto v0.1.0-alpha.91 · Termometria detalhada
+
+- Janela central ao tocar Bateria ou Temperatura, com leituras reais e fontes identificadas.
+- Android: bateria, estado térmico, margem térmica e ambiente se houver sensor.
+- ADB opcional para host previamente pareado: enumera as zonas expostas via `dumpsys thermalservice`, sem comando remoto arbitrário, root ou acesso a dados pessoais.
+- Leituras indisponíveis não são inferidas; validação Android completa ainda pendente.
+
 # Monitor Remoto v0.1.0-alpha.90 · Correção de compilação do menu de arquivos
 
 ## Alterações

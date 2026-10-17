@@ -1,3 +1,13 @@
+# Monitor Remoto 0.1.0-alpha.93
+
+- A consulta `locationSnapshot` é autenticada com a chave AES-GCM já pareada, controle de nonce, versão exata e registro de acesso. Ela só retorna o último fix permitido pelo `LocationShareStore`, nunca inicia GNSS por comando remoto.
+- O modo Acompanhar só solicita atualização enquanto a Activity está visível, a cada 3 segundos; não cria novo serviço, localização oculta nem altera a frequência do GPS do monitorado. Diferenciar latência de rede, última resposta e idade real do fix.
+- Versionamento sequencial; próxima alpha.94. Executar `tools/check_distribution.py` e CI Gradle antes de instalar.
+
+# Monitor Remoto 0.1.0-alpha.91
+
+- Alpha.91: manter diálogo central ao tocar Bateria e Temperatura; consulta `thermalDiagnostics` usa AES-GCM e a mesma versão em ambos. BatteryManager e PowerManager são confiáveis apenas no que o fabricante oferece; não inventar CPU/GPU. ADB é opcional e só permitido quando o host/IP selecionado corresponde a um histórico ADB já pareado, usando comando fixo `dumpsys thermalservice`, com cliente TLS separado. Não transformar em shell arbitrário, não adicionar leitura sysfs por exceção de permissão e não ampliar acesso a dispositivos desconhecidos. Versionamento sequencial, próximo alpha.92.
+
 # Monitor Remoto 0.1.0-alpha.90
 
 - Alpha.90: workflow `Gerar APK e Release 82` falhou em `RemoteFilesActivity.kt:604–606` porque `scroll` não existia no escopo de `openActions`, seguido de erros com receptor `AlertDialog?`. Manter `val scroll = ScrollView(this).apply { addView(holder) }` e `val dialog = modernBuilder().setView(scroll).create()` para chamadas `dialog.show()` e `dialog.window`. `tools/check_distribution.py` protege esta regressão. Não modificar protocolo nem permissões para corrigir erro de UI; compilar no GitHub Actions. Próxima alpha.91.

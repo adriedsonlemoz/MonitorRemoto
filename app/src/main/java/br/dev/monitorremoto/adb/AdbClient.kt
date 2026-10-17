@@ -51,6 +51,24 @@ class AdbClient(private val context: Context) {
             }
         }
     }
+    /** Diagnóstico somente leitura, sem shell arbitrário ou varredura de arquivos. */
+    fun readThermalService(): String {
+        check(!cancelled && connected()) { "ADB sem sessão TLS ativa" }
+        val active = connection ?: error("ADB desconectado")
+        active.open("shell:dumpsys thermalservice").use { stream ->
+            stream.openInputStream().use { input ->
+                val output = ByteArrayOutputStream()
+                val buffer = ByteArray(4096)
+                while (output.size() < 65536) {
+                    val n = input.read(buffer, 0, minOf(buffer.size, 65536 - output.size()))
+                    if (n < 0) break
+                    output.write(buffer, 0, n)
+                }
+                return output.toString("UTF-8")
+            }
+        }
+    }
+
     /** Apenas pacotes validados e duas ações fixas. ADB sempre exige sessão TLS ativa. */
     fun executeAppAction(packageName: String, action: String): String {
         val command = br.dev.monitorremoto.core.RemoteAppsPolicy.command(packageName, action)

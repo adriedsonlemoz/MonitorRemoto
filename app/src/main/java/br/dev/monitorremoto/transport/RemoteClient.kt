@@ -45,6 +45,36 @@ object RemoteClient {
         }
     }
 
+    /** Somente GPS: retorno pequeno e imediato do último fix autorizado do monitorado.
+     * Não aciona GPS, não contorna permissão e não retorna localização inventada.
+     */
+    fun locationSnapshot(host: String, key: ByteArray, context: Context, method: String): JSONObject {
+        require(host.isNotBlank() && host.length <= 253 &&
+            '/' !in host && ':' !in host && ' ' !in host)
+        val request = JSONObject().put("v", WireProtocol.VERSION).put("op", "locationSnapshot")
+            .put("appVersion", AppVersion.NAME).put("ts", System.currentTimeMillis())
+            .put("clientId", SettingsStore.controllerId(context))
+            .put("clientName", listOf(Build.MANUFACTURER, Build.MODEL).joinToString(" ").take(72))
+            .put("accessMethod", method)
+        return Socket().use { socket ->
+            socket.connect(InetSocketAddress(host, WireProtocol.PORT), 3500)
+            socket.soTimeout = 5500
+            WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(key, request))
+            val reply = WireProtocol.decode(key, WireProtocol.receive(socket.getInputStream(), 12 * 1024))
+            if (reply.optString("op") == "versionMismatch")
+                error(AppVersion.incompatibility(reply.optString("appVersion")))
+            check(reply.optString("op") == "locationSnapshot" &&
+                reply.optInt("v") == WireProtocol.VERSION &&
+                AppVersion.compatible(reply.optString("appVersion")) &&
+                reply.optJSONObject("location") != null) { "Resposta de localização inválida." }
+            reply
+        }
+    }
+
+    /** Termometria pontual autenticada. Sem exigir ADB para as APIs públicas. */
+    fun thermalDiagnostics(host: String, key: ByteArray, context: Context, method: String): JSONObject =
+        remoteScreenCommand(host, key, context, method, "thermalDiagnostics") { }
+
     /** Comandos físicos restritos, cifrados e vinculados à versão e à chave já pareada. */
     fun deviceControl(host: String, key: ByteArray, context: Context, method: String,
         action: String, seconds: Int = 0, confirmation: String = ""): JSONObject {

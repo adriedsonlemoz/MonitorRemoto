@@ -16,7 +16,7 @@ assert match, "versionName ausente"
 version = match.group(1)
 code = re.search(r'\bversionCode\s*=\s*(\d+)', gradle)
 assert code, "versionCode ausente"
-assert version == "0.1.0-alpha.90" and code.group(1) == "90", "Versões incompatíveis"
+assert version == "0.1.0-alpha.93" and code.group(1) == "93", "Versões incompatíveis"
 appver = (root / 'app/src/main/java/br/dev/monitorremoto/transport/AppVersion.kt').read_text()
 assert f'const val NAME = "{version}"' in appver, "AppVersion fora de sincronia com o Gradle"
 assert 'AppVersion.NAME' in ui, "Tela de versão desatualizada"
@@ -1088,7 +1088,7 @@ assert 'LocationShareStore.stop()' in location_service and 'locationManager.remo
 assert 'LocationShareService.stop(context)' in settings and 'LocationShareService.stop(this)' in (root / 'app/src/main/java/br/dev/monitorremoto/service/MonitorService.kt').read_text()
 assert 'startLocationSharingFromSettings' in location_settings and 'ACCESS_COARSE_LOCATION' in location_settings
 assert 'LocationShareStore.snapshot(context)' in server and '"location"' in server
-assert 'RecentDevices.key(this, host)' in location_ui and 'RemoteClient.snapshot' in location_ui
+assert 'RecentDevices.key(this, host)' in location_ui and 'RemoteClient.locationSnapshot' in location_ui
 assert 'geo:$coords?q=$coords' in location_ui and 'locationEnabled' in location_store
 assert 'requestPermissions(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION), 9275)' in location_settings
 print('PASSOU: alpha.75, localização local autorizada, FGS, limpeza e consulta AES-GCM.')
@@ -1181,7 +1181,7 @@ assert '© OpenStreetMap contributors' in location_ui
 assert 'tiles_online_allowed_' in location_ui and 'getBoolean(tileConsentKey, false)' in location_ui
 assert 'setPosition(lat, lon, accuracy)' in location_ui and 'LocationSharePolicy.coordinatesValid' in location_ui
 assert 'onPause()' in location_ui and 'main.removeCallbacks(ticker)' in location_ui
-assert 'RecentDevices.key(this, host)' in location_ui and 'RemoteClient.snapshot' in location_ui
+assert 'RecentDevices.key(this, host)' in location_ui and 'RemoteClient.locationSnapshot' in location_ui
 assert 'MapProjection.normalizedTileX' in map_ui and 'fun metersPerPixel' in projection
 assert 'INTERMEDIARIO -> 30_000L' in (root / 'app/src/main/java/br/dev/monitorremoto/core/LocationSharePolicy.kt').read_text()
 print('PASSOU: alpha.82, mapa interno, tiles opt-in por aparelho, intervalo local e perfil GPS intermediário.')
@@ -1257,7 +1257,7 @@ assert 'LocationRecoveryStarter.tryStart(context)' in (root / "app/src/main/java
 assert 'SettingsStore.setLocationRecoveryEnabled(this, false)' in loc and 'setOngoing(true)' in loc
 assert 'Ativar recuperação automática' in settings87 and 'ACTION_APPLICATION_DETAILS_SETTINGS' in settings87
 assert 'MAPA DE REFERÊNCIA' in map_src and 'private var initialized = true' in map_src
-assert 'private var automatic = true' in location_ui and 'NÃO é localização ao vivo' in location_ui
+assert 'private var automatic = true' in location_ui and '⚠ Posição anterior' in location_ui and '⌖ Sem posição' in location_ui
 assert (root / "app/src/test/java/br/dev/monitorremoto/core/LocationRecoveryModeTest.kt").exists()
 print('PASSOU: alpha.87 proteção opt-in, restauração condicionada ao Android e mapa sem falsa localização.')
 
@@ -1298,3 +1298,33 @@ assert 'val dialog = modernBuilder().setView(scroll).create()' in files90, 'Dial
 assert 'dialog.show()' in files90 and 'dialog.window?.apply' in files90, 'Acesso indevido a AlertDialog?'
 assert 'menu = modernBuilder().setView(scroll).create()' not in files90, 'Regressao: smart cast de var mutavel nullable'
 print('PASSOU: alpha.90 menu de arquivos com ScrollView criada e AlertDialog nao-nulo.')
+
+# Alpha.91: temperatura privada apenas sob demanda, ADB TLS vinculado ao IP salvo.
+thermal = (root / 'app/src/main/java/br/dev/monitorremoto/core/ThermalDiagnostics.kt').read_text()
+adbthermal = (root / 'app/src/main/java/br/dev/monitorremoto/adb/ThermalAdbParser.kt').read_text()
+thermal_ui = (ui_root / 'RemoteThermalDialogUi.kt').read_text()
+server91 = (root / 'app/src/main/java/br/dev/monitorremoto/transport/MonitorServer.kt').read_text()
+client91 = (root / 'app/src/main/java/br/dev/monitorremoto/transport/RemoteClient.kt').read_text()
+assert 'showRemoteThermalDialog(battery, fromCache)' in dashboard88
+assert '"thermalDiagnostics"' in server91 and 'ThermalDiagnostics.snapshot(context)' in server91
+assert 'remoteScreenCommand(host, key, context, method, "thermalDiagnostics")' in client91
+assert 'power.currentThermalStatus' in thermal and 'getThermalHeadroom(0)' in thermal
+assert 'Sensor.TYPE_AMBIENT_TEMPERATURE' in thermal
+assert 'AdbKnownDevices.load(this).filter { it.host == host }' in thermal_ui
+assert 'AdbPolicy.endpoint(known.host, known.port.toString())' in thermal_ui
+assert 'dumpsys thermalservice' in (root / 'app/src/main/java/br/dev/monitorremoto/adb/AdbClient.kt').read_text()
+assert 'Current temperatures from HAL:' in adbthermal and 'Cached temperatures:' in adbthermal
+print('PASSOU: alpha.91 termometria autenticada, modal central e ADB somente para host pareado.')
+
+# Alpha.93: requisição de GPS isolada, status dinâmico e acompanhamento só em tela ativa.
+location93 = (ui_root / 'RemoteLocationActivity.kt').read_text()
+server93 = (root / 'app/src/main/java/br/dev/monitorremoto/transport/MonitorServer.kt').read_text()
+client93 = (root / 'app/src/main/java/br/dev/monitorremoto/transport/RemoteClient.kt').read_text()
+assert '"locationSnapshot"' in server93 and '"locationSnapshot"' in client93
+assert 'LocationShareStore.snapshot(context)' in server93 and 'WireProtocol.encode(permanentKey, reply)' in server93
+assert 'AppVersion.compatible(reply.optString("appVersion"))' in client93
+assert 'RemoteClient.locationSnapshot(' in location93 and 'private var tracking = false' in location93
+assert 'LocationUiPolicy.refreshDelayMs(tracking, automatic, intervalMs)' in location93
+assert 'lastResponseAtMs = System.currentTimeMillis()' in location93 and 'fixAgeAtResponseMs = age' in location93
+assert 'main.removeCallbacks(ticker)' in location93 and 'main.removeCallbacks(statusTicker)' in location93
+print('PASSOU: alpha.93 status dinâmico, posição sem telemetria pesada, rastreamento somente em tela ativa.')

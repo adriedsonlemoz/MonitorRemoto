@@ -1,8 +1,12 @@
-# Arquitetura (0.1.0-alpha.90)
+# Termometria alpha.91
+
+`ThermalDiagnostics.snapshot()` executa pontualmente no monitorado via `thermalDiagnostics` autenticado com AES-GCM e igualdade exata de versão. Sensores disponíveis: BatteryManager, PowerManager e ambiente SensorManager quando presente. `RemoteThermalDialogUi` consulta somente quando aberto, e `AdbClient.readThermalService()` é ativado opcionalmente por host correspondente, ADB TLS salvo previamente, executando apenas `dumpsys thermalservice`. `ThermalAdbParser` distingue HAL atual do cache, limita volume/quantidade e rejeita sentinelas. Headroom é indicador adimensional, não Celsius. Não usa root, `sysfs` nem privilégio oculto.
+
+# Arquitetura (0.1.0-alpha.91)
 
 **Nota alpha.90:** correção de compilação da interface do menu inferior em `RemoteFilesActivity` (ScrollView local e AlertDialog não nulo). Sem mudanças em rede, armazenamento, criptografia ou permissões.
 
-# Arquitetura (0.1.0-alpha.90)
+# Arquitetura (0.1.0-alpha.91)
 
 ```text
 MONITORADO                                      CONTROLE
@@ -45,9 +49,9 @@ A interface de arquivos mantém limite 2 GiB, até 20 itens por lote e diretóri
 
 ## Distribuição e assinatura
 
-O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.90` e `versionCode=90`.
+O mesmo APK atende aos modos Monitorado e Controle. A fonte de versionamento é `app/build.gradle.kts`, com `versionName=0.1.0-alpha.93` e `versionCode=93`.
 
-- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.90.apk`.
+- GitHub Actions compila e testa; copia o `.apk` compilado para `dist/MonitorRemoto-v0.1.0-alpha.93.apk`.
 - `upload-artifact` sempre distribui um ZIP; GitHub Releases recebe o **arquivo APK direto**.
 - Com quatro Secrets, Gradle gera APK Release assinado e AAB. Sem Secrets, o arquivo é Debug de teste e não preserva necessariamente a assinatura entre execuções.
 - Releases são prévias, não substituem a futura revisão da Google Play e nem os ensaios reais.

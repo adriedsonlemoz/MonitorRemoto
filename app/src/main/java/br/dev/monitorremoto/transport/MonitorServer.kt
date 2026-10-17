@@ -120,7 +120,7 @@ class MonitorServer(private val context: Context) {
                 val regular = runCatching { WireProtocol.decode(permanentKey, encrypted) }.getOrNull()
                 if (regular != null) {
                     if (regular.optInt("v") != WireProtocol.VERSION ||
-                        regular.optString("op") !in setOf("snapshot", "disconnect", "notificationReply", "smsReply", "screenFrame", "screenCapture", "remoteTouch", "audioChunk", "requestScreen", "videoFrame", "wakeScreen", "dataList", "dataChunk", "dataChunks", "dataHash", "dataRead", "dataStream", "dataManage", "dataUploadStart", "dataUploadChunk", "dataUploadFinish", "dataUploadAbort", "dataUploadStatus", "appsList", "appsIcons", "appLaunch", "deviceControl", "cameraFrame", "cameraSwitch", "photoTake")) return
+                        regular.optString("op") !in setOf("snapshot", "disconnect", "notificationReply", "smsReply", "screenFrame", "screenCapture", "remoteTouch", "audioChunk", "requestScreen", "videoFrame", "wakeScreen", "dataList", "dataChunk", "dataChunks", "dataHash", "dataRead", "dataStream", "dataManage", "dataUploadStart", "dataUploadChunk", "dataUploadFinish", "dataUploadAbort", "dataUploadStatus", "appsList", "appsIcons", "appLaunch", "deviceControl", "cameraFrame", "cameraSwitch", "photoTake", "thermalDiagnostics", "locationSnapshot")) return
                     if (abs(now - regular.optLong("ts")) > 5 * 60 * 1000L) return
                     synchronized(seenNonces) {
                         // Retenção compatível com ±5 minutos de validade do envelope.
@@ -204,6 +204,16 @@ class MonitorServer(private val context: Context) {
                     }
                     if (regular.optString("op") in setOf("dataList", "dataChunk", "dataChunks", "dataHash", "dataRead", "dataManage", "dataUploadStart", "dataUploadChunk", "dataUploadFinish", "dataUploadAbort", "dataUploadStatus")) {
                         val response = SharedDataFolder.handle(context, regular)
+                        WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(permanentKey, response))
+                        AuthenticatedAccess.authenticated(socket.inetAddress?.hostAddress.orEmpty(),
+                            regular.optString("clientId"), regular.optString("clientName"), regular.optString("accessMethod"))
+                        return
+                    }
+                    if (regular.optString("op") == "thermalDiagnostics") {
+                        val diagnostic = br.dev.monitorremoto.core.ThermalDiagnostics.snapshot(context)
+                        val response = JSONObject().put("v", WireProtocol.VERSION)
+                            .put("op", "thermalDiagnostics").put("appVersion", AppVersion.NAME)
+                            .put("diagnostics", diagnostic)
                         WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(permanentKey, response))
                         AuthenticatedAccess.authenticated(socket.inetAddress?.hostAddress.orEmpty(),
                             regular.optString("clientId"), regular.optString("clientName"), regular.optString("accessMethod"))
@@ -472,6 +482,18 @@ class MonitorServer(private val context: Context) {
                         val reply = JSONObject().put("v", WireProtocol.VERSION)
                             .put("op", "appsIcons").put("appVersion", AppVersion.NAME)
                             .put("ok", allowed && requested.isNotEmpty()).put("icons", icons)
+                        WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(permanentKey, reply))
+                        AuthenticatedAccess.authenticated(socket.inetAddress?.hostAddress.orEmpty(),
+                            regular.optString("clientId"), regular.optString("clientName"), regular.optString("accessMethod"))
+                        return
+                    }
+                    if (regular.optString("op") == "locationSnapshot") {
+                        // Consulta enxuta: evita leitura de SMS, aplicativos, telemetria e eventos.
+                        // Mantém a mesma chave, nonce, janela temporal e verificação de versão.
+                        val reply = JSONObject().put("v", WireProtocol.VERSION)
+                            .put("op", "locationSnapshot").put("appVersion", AppVersion.NAME)
+                            .put("serverMs", System.currentTimeMillis())
+                            .put("location", br.dev.monitorremoto.core.LocationShareStore.snapshot(context))
                         WireProtocol.send(socket.getOutputStream(), WireProtocol.encode(permanentKey, reply))
                         AuthenticatedAccess.authenticated(socket.inetAddress?.hostAddress.orEmpty(),
                             regular.optString("clientId"), regular.optString("clientName"), regular.optString("accessMethod"))

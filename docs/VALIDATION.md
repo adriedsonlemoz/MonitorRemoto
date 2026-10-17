@@ -1,3 +1,7 @@
+## Alpha.91 | 17/10/2026
+- [x] Validador estrutural com novas invariantes de temperatura e ADB.
+- [ ] Compilação Gradle/Android, teste das leituras reais e validação visual da janela central.
+
 ## Alpha.90 (16/10/2026)
 
 - Log do workflow `Gerar APK e Release 82` (16/10/2026): compilação Kotlin falhou com referências indefinidas `scroll`/`create` e uso de `AlertDialog?` como não nulo em `RemoteFilesActivity.kt:604–606`.
